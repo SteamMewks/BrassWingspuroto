@@ -15,12 +15,23 @@ const assert=require('node:assert/strict');
      const land=mainlandAt(u*atlasMetre-m.wx,(1254-v)*atlasMetre-m.wz);
      if(land!==ctx.isPointInPath(outline,u,v,'evenodd'))mismatches++
     }
-    if(localPeaks.length){
-     const r=localPeaks[0],edge=a=>[Math.cos(a)*coast(a,r.phase)*r.r,Math.sin(a)*coast(a,r.phase)*r.r*.82];
-     const a=edge(0),b=edge(tau/24);
-     const height=ground(r.x+.25*(a[0]+b[0]),r.z+.25*(a[1]+b[1]));
-     if(Math.abs(height-(10+.5*r.h))>.001)throw Error('Mountain face and surface height differ');
+    for(const [,,tri] of ridgeFaces){
+     const [X,Y,Z]=[0,1,2].map(k=>tri.reduce((sum,v)=>sum+v[k],0)/3);
+     if(Math.abs(ground(X,Z)-Y)>.001)throw Error('Ridge triangle height');
     }
+    for(const island of shoreMeshes)for(let j=0;j<64;j++){
+     const k=(j+1)%64;
+     for(const tri of [[island.outer[j],island.outer[k],island.inner[k]],[island.outer[j],island.inner[k],island.inner[j]]]){
+      const [X,Y,Z]=[0,1,2].map(k=>tri.reduce((sum,v)=>sum+v[k],0)/3);
+      if(!mainlandAt(X,Z)&&Math.abs(ground(X,Z)-Y)>.001)throw Error('Shore triangle height');
+     }
+    }
+    x=1500;z=2500;updateWorld();
+    const snapshot=JSON.stringify(groves),tree=groves[0];
+    if(!tree||hitObject(tree.X,tree.Z,tree.Y+tree.H*.5)!=='木')throw Error('Tree collision');
+    x+=5000;updateWorld();x-=5000;updateWorld();
+    if(JSON.stringify(groves)!==snapshot)throw Error('Forest regeneration');
+    for(const b of quarters)if(hitObject(b.x,b.z,b.y+b.h-1)!=='建物')throw Error('Building collision');
     x=worldSize-m.wx+1;z=0;limitAirspace();
     if(Math.abs(x+m.wx-worldSize)>.001||returnHeading===null)throw Error('World boundary');
     pause();
