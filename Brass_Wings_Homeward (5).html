@@ -491,6 +491,7 @@ for(const [stage,m] of missions.entries()){
   continents.push([m.wx+nx*offshore-nz*along,m.wz+nz*offshore+nx*along,'赤銅群島',3,(145+32*Math.cos(j))/5,(115+25*Math.sin(j))/5,j+4,.42*j])
  }
 }
+const atlasRivers=['M406 164 Q391 220 266 250 T173 347 T81 409','M411 379 Q438 449 493 467 T516 541 Q521 577 570 605 T598 675 L625 706','M675 525 Q603 547 570 605','M925 185 Q902 242 958 279 T978 345 Q1022 375 1032 393','M1130 261 Q1056 290 978 345','M1061 795 Q1005 827 941 849 T834 899 Q768 942 725 959'];
 function valleyAxis(Z){return -160+300*Math.sin(Z/550)+42*Math.sin(Z/183)}
 // Each cross-section has a floor, crown and depth shared by the mesh and collision.
 const archZ=810,archX=valleyAxis(archZ);
@@ -622,7 +623,7 @@ function buildRegion(){
    const radius=Math.hypot(w,l)/2;
    if(![-1,1].every(a=>[-1,1].every(b=>flat(bx+a*radius,bz+b*radius))))continue;
    if(quarters.some(b=>Math.hypot(b.x-bx,b.z-bz)<radius+b.radius+3))continue;
-   quarters.push({x:bx,z:bz,y:10,w,l,radius,angle,h:10+(stage===2?70:55)*v*v+25*(1-fringe),
+   quarters.push({x:bx,z:bz,y:10,w,l,radius,angle,h:6+(stage===2?16:13)*v*v+8*(1-fringe),
     roof:(stage===2?['#a34c43','#83443c','#bb6951']:['#827864','#668482','#ad7058'])[Math.floor(v*3)],tower:v>.84})
   }
  }
@@ -640,7 +641,7 @@ function atlas(){
  const m=preview||operation(),k=500/worldSize;
  const selectedBase=panel==='title'&&!preview&&airbases[$('free-base').value];
  const marker=panel==='pause'?localToWorld(x,z):selectedBase||m.airspace,sx=marker.wx*k,sy=500-marker.wz*k;
- const rivers=['M406 164 Q391 220 266 250 T173 347 T81 409','M411 379 Q438 449 493 467 T516 541 Q521 577 570 605 T598 675 L625 706','M675 525 Q603 547 570 605','M925 185 Q902 242 958 279 T978 345 Q1022 375 1032 393','M1130 261 Q1056 290 978 345','M1061 795 Q1005 827 941 849 T834 899 Q768 942 725 959'].map(d=>'<path d="'+d+'" fill="none" stroke="#587f78" stroke-width="3"/>').join('');
+ const rivers=atlasRivers.map(d=>'<path d="'+d+'" fill="none" stroke="#587f78" stroke-width="3"/>').join('');
  const shapes='<g transform="scale('+500/1254+')"><path fill="#879661" stroke="#bfad83" stroke-width="3" fill-rule="evenodd" d="'+worldOutline+'"/>'+reliefBands.map((path,i)=>'<path fill="'+['#958665','#ae9779','#d3c5ab'][i]+'" fill-rule="evenodd" d="'+path+'"/>').join('')+rivers+'</g>';
  const islands=continents.map(([cx,cz,,,rx,rz,phase,rotation])=>{
   const points=Array.from({length:96},(_,i)=>{
@@ -683,6 +684,425 @@ let tileKey='';
 const shoreMeshes=[];
 let mainlandPlan,islandPlan;
 const worldMap=document.createElement('canvas');worldMap.width=worldMap.height=128;
+// Surveyed control points use metres east and north of the atlas origin.
+const railSurvey=[
+ {"ends": ["西域貨物", "黄銅港中央"], "points": [[21760, 40080], [21760, 40320], [25200, 43360], [51040, 43280], [51520, 43120], [54160, 43040]]},
+ {"ends": ["黄銅港中央", "東野"], "points": [[54160, 43040], [55440, 43440]]},
+ {"ends": ["黄銅港中央", "黄銅埠頭"], "points": [[54160, 43040], [54240, 41920], [54240, 41746]]},
+ {"ends": ["紫煙中央", "赤棚鉱山"], "points": [[75840, 76240], [75840, 73680], [76480, 73040], [78240, 73120], [78320, 73200], [78480, 74800], [78560, 76480], [78880, 77600], [78880, 78240], [78640, 78480]]},
+ {"ends": ["紫煙中央", "紫煙河口"], "points": [[75840, 76240], [75120, 75840], [75920, 70480], [83040, 55920], [83040, 54720], [83040, 54665]]},
+ {"ends": ["赤銅中央", "赤銅埠頭"], "points": [[83120, 47120], [83040, 48320], [83014, 48445]]},
+ {"ends": ["南谷分岐", "白嶺峠口"], "points": [[78237, 73126], [77592, 73079], [77457, 73239], [77429, 73299], [77394, 73359], [77354, 73419], [77310, 73479], [77265, 73539], [77218, 73599], [77173, 73659], [77131, 73719], [77094, 73779], [77063, 73839], [77037, 73899], [77018, 73959], [77005, 74019], [76997, 74079], [76994, 74139], [76993, 74199], [76994, 74259], [76995, 74319], [76996, 74379], [76996, 74439], [76996, 74499], [76995, 74559], [76994, 74619], [76994, 74679], [76997, 74739], [77004, 74799], [77016, 74859], [77033, 74919], [77057, 74979], [77087, 75039], [77123, 75099], [77164, 75159], [77183, 75219], [77192, 75279], [77201, 75339], [77221, 75399], [77262, 75459], [77298, 75519], [77328, 75579], [77352, 75639], [77369, 75699], [77381, 75759], [77388, 75819], [77391, 75879], [77391, 75939], [77390, 75999], [77389, 76059], [77389, 76119], [77389, 76179], [77390, 76239], [77391, 76299], [77392, 76359], [77391, 76419], [77388, 76479], [77380, 76539], [77367, 76599], [77348, 76659], [77322, 76719], [77291, 76779], [77254, 76839], [77212, 76899], [77167, 76959], [77120, 77019], [77074, 77079], [77031, 77139], [76991, 77199], [76956, 77259]]}
+];
+const railStops=[
+ [[.18,'西原穀倉','farm'],[.49,'樫林製材所','timber'],[.78,'西関煉瓦工場','works']],
+ [[.41,'港北集荷場','farm']],[],[[.17,'西麓林場','timber'],[.43,'南谷鋳造所','works'],[.81,'東麓積替場','mine']],
+ [[.14,'紫煙南工場','works'],[.47,'南原市場','farm'],[.74,'河岸製材所','timber']],[[.56,'要塞兵站庫','works']],[[.19,'谷口製材場','timber'],[.47,'河谷織布場','works'],[.77,'上谷集荷場','farm']]
+];
+const railCells=new Set();
+let railLines=[],railSites=[],railLots=[],railCrossings=[],railClock=0;
+function railSample(line,d){
+ const pts=line.path;d=Math.max(0,Math.min(line.length,d));
+ let lo=0,hi=pts.length-1;
+ while(hi-lo>1){const m=(lo+hi)>>1;if(pts[m].d<=d)lo=m;else hi=m}
+ const a=pts[lo],b=pts[hi],l=b.d-a.d,u=(d-a.d)/l;
+ return {x:a.x+(b.x-a.x)*u,z:a.z+(b.z-a.z)*u,y:a.y+(b.y-a.y)*u,dx:(b.x-a.x)/l,dz:(b.z-a.z)/l}
+}
+function railOffset(p,side,along=0,h=0){return [p.x+p.dz*side+p.dx*along,p.y+h,p.z-p.dx*side+p.dz*along]}
+const shippingSurvey=[
+ [
+  [
+   54240,
+   41728
+  ],
+  [
+   54240,
+   41600
+  ],
+  [
+   59280,
+   41680
+  ],
+  [
+   71840,
+   49120
+  ],
+  [
+   82480,
+   49120
+  ],
+  [
+   82920,
+   48760
+  ],
+  [
+   82960,
+   48640
+  ],
+  [
+   83009,
+   48462
+  ]
+ ],
+ [
+  [
+   83009,
+   48462
+  ],
+  [
+   82960,
+   48640
+  ],
+  [
+   82560,
+   48840
+  ],
+  [
+   82240,
+   50160
+  ],
+  [
+   82480,
+   52720
+  ],
+  [
+   83040,
+   54480
+  ],
+  [
+   83040,
+   54647
+  ]
+ ],
+ [
+  [
+   54456,
+   40846
+  ],
+  [
+   54512,
+   41006
+  ],
+  [
+   54300,
+   41606
+  ],
+  [
+   54247,
+   41729
+  ]
+ ],
+ [
+  [
+   83244,
+   49505
+  ],
+  [
+   83300,
+   49345
+  ],
+  [
+   83074,
+   48585
+  ],
+  [
+   83021,
+   48462
+  ]
+ ]
+];
+let shipping=[];
+// Survey both banks in atlas coordinates, including the narrower valley channel.
+const riverCells=new Map(),riverSegments=[];
+function addRiverReach(a,b,width,valley=false){
+ const segment={a,b,width,valley};riverSegments.push(segment);
+ for(let i=Math.floor((Math.min(a[0],b[0])-width-8)/256);i<=Math.floor((Math.max(a[0],b[0])+width+8)/256);i++)
+  for(let j=Math.floor((Math.min(a[1],b[1])-width-8)/256);j<=Math.floor((Math.max(a[1],b[1])+width+8)/256);j++){
+   const key=i+','+j;if(!riverCells.has(key))riverCells.set(key,[]);riverCells.get(key).push(segment)
+  }
+}
+for(const data of atlasRivers){
+ const path=document.createElementNS('http://www.w3.org/2000/svg','path');path.setAttribute('d',data);
+ const length=path.getTotalLength(),steps=Math.ceil(length*atlasMetre/80);let prev;
+ for(let i=0;i<=steps;i++){const pt=path.getPointAtLength(length*i/steps),next=[pt.x*atlasMetre,(1254-pt.y)*atlasMetre];if(prev)addRiverReach(prev,next,24);prev=next}
+}
+for(let z=-2048;z<2048;z+=64){
+ const point=q=>[regionOrigins[1].wx+valleyAxis(q)+24*Math.sin(q/117),regionOrigins[1].wz+q];
+ addRiverReach(point(z),point(z+64),Math.max(17+5*Math.sin(z/154),17+5*Math.sin((z+64)/154)),true)
+}
+function nearRiver(wx,wz,margin=0){
+ return (riverCells.get(Math.floor(wx/256)+','+Math.floor(wz/256))||[]).some(({a,b,width})=>{
+  const dx=b[0]-a[0],dz=b[1]-a[1],u=Math.max(0,Math.min(1,((wx-a[0])*dx+(wz-a[1])*dz)/(dx*dx+dz*dz)));
+  return Math.hypot(wx-a[0]-u*dx,wz-a[1]-u*dz)<=width+margin
+ })
+}
+function buildRailBridges(line){
+ const m=operation(),spans=[];let previous=-Infinity;
+ for(let d=0;d<=line.length;d+=3){
+  const p=railSample(line,d);
+  if(!nearRiver(p.x+m.wx,p.z+m.wz,6))continue;
+  if(d-previous>32)spans.push({start:d-10,end:d+10});else spans.at(-1).end=d+10;
+  previous=d
+ }
+ line.bridges=spans;
+ const extra=[];
+ for(const span of spans)for(const d of [span.start-210,span.start,span.end,span.end+210]){
+  if(d>0&&d<line.length&&!line.path.some(pt=>Math.abs(pt.d-d)<.01))extra.push({...railSample(line,d),d})
+ }
+ for(const span of spans)for(let d=span.start+4;d<span.end;d+=4)if(!line.path.some(p=>Math.abs(p.d-d)<.01))extra.push({...railSample(line,d),d});
+ line.path.push(...extra);line.path.sort((a,b)=>a.d-b.d);
+ for(const p of line.path)for(const span of spans){
+  const approach=Math.max(0,span.start-p.d,p.d-span.end);
+  p.y=Math.max(p.y,10.65+Math.max(0,4.2-.02*approach))
+ }
+}
+function buildRail(){
+ shipping=shippingSurvey.map(points=>{
+  let length=0;const path=points.map(([wx,wz],i)=>{if(i)length+=Math.hypot(wx-points[i-1][0],wz-points[i-1][1]);return {...worldToLocal(wx,wz),d:length,y:1}});
+  return {length,path}
+ });
+ railCells.clear();railSites=[];railLots=[];const names=new Set();
+ railLines=railSurvey.map(({points,ends},index)=>{
+  const knots=points.map(([wx,wz])=>worldToLocal(wx,wz)),curve=[knots[0]];
+  function toward(a,b,d){const q=d/Math.hypot(a.x-b.x,a.z-b.z);return {x:a.x+(b.x-a.x)*q,z:a.z+(b.z-a.z)*q}}
+  for(let i=1;i<knots.length-1;i++){
+   const p=knots[i],a=knots[i-1],b=knots[i+1],r=Math.min(320,.33*Math.hypot(a.x-p.x,a.z-p.z),.33*Math.hypot(b.x-p.x,b.z-p.z));
+   const s=toward(p,a,r),e=toward(p,b,r);
+   const steps=Math.max(2,Math.ceil(r/28));
+   for(let j=0;j<=steps;j++){const u=j/steps,v=1-u;curve.push({x:v*v*s.x+2*u*v*p.x+u*u*e.x,z:v*v*s.z+2*u*v*p.z+u*u*e.z})}
+  }
+  curve.push(knots.at(-1));const path=[];let length=0;
+  for(let i=0;i<curve.length;i++){
+   const b=curve[i],a=curve[i-1]||b,l=Math.hypot(b.x-a.x,b.z-a.z),count=Math.max(1,Math.ceil(l/48));
+   for(let j=1;j<=count;j++){const x=a.x+(b.x-a.x)*j/count,z=a.z+(b.z-a.z)*j/count;length+=l/count;
+    path.push({x,z,y:10.65,d:length})}
+  }
+  for(let d=0;d<=length;d+=10){const p=railSample({path,length},d);for(const v of [-8,0,8]){const [a,,b]=railOffset(p,v);railCells.add(Math.floor(a/32)+','+Math.floor(b/32))}}
+  const line={path,length,index,stops:[]};buildRailBridges(line);
+  const stations=[[0,ends[0]],...railStops[index],[1,ends[1]]];
+  for(const [fraction,name,type] of stations){
+   const d=fraction===0?60:fraction===1?length-60:fraction*length;line.stops.push(d);
+   if(names.has(name))continue;names.add(name);
+   const kind=type||(name.includes('中央')?'central':/埠頭|河口/.test(name)?'port':name.includes('鉱山')?'mine':'works');
+   const site={...railSample(line,d),kind,name,d,line};railSites.push(site);
+   const central=kind==='central',scale=central?1:.57;
+   function lot(side,along,w,l,h,style){
+    const [x,,z]=railOffset(site,side,along),y=ground(x,z);
+    if(y<8||y>15)return;
+    railLots.push({x,z,y,w,l,h,style,dx:site.dx,dz:site.dz});
+    for(let a=-w/2;a<=w/2+8;a+=8)for(let b=-l/2;b<=l/2+8;b+=8){const [u,,v]=railOffset(site,side+a,along+b);railCells.add(Math.floor(u/32)+','+Math.floor(v/32))}
+   }
+   lot(-29*scale,0,23*scale,96*scale,19*scale,'hall');
+   lot(33,12,17,central?68:29,central?15:9,'shed');
+   lot(49,-28,7,7,central?25:13,'tank');
+   if(central||kind==='works'||kind==='mine'){lot(58,26,19,34,13,'works');lot(68,42,4,4,32,'stack')}
+   if(central){
+    lot(55,-74,16,48,12,'shed');lot(40,77,12,28,5,'coal');
+    if(name==='黄銅港中央')for(let k=0;k<3;k++)lot(85,48*k-50,22,38,11,'shed');
+    if(name==='紫煙中央'){lot(83,0,27,66,18,'works');lot(97,34,5,5,35,'stack')}
+    if(name==='赤銅中央'){lot(78,-25,28,58,13,'shed');lot(78,36,20,30,6,'coal')}
+   }
+   for(let j=0;j<(central?9:4);j++)lot(-54-(j%2)*24,(j-3)*19,10+j%3*2,12+j%2*4,6+j%4,'house');
+   if(kind==='farm')for(let j=0;j<4;j++)lot(76,38*j-55,41,32,.6,'field');
+   if(kind==='timber'||kind==='mine'||kind==='port')for(let j=0;j<5;j++)lot(56,(j-2)*12,18,7,3+j%3,kind==='timber'?'logs':kind==='mine'?'coal':'shed');
+  }
+  return line
+ });
+ railCrossings=[];
+ for(const line of railLines)for(let i=1;i<line.path.length;i++){
+  const a=line.path[i-1],b=line.path[i];
+  for(const road of roads){
+   const cx=(road[0][0]+road[3][0])/2,cz=(road[0][2]+road[3][2])/2;
+   if(Math.abs(cx-a.x)>240||Math.abs(cz-a.z)>240)continue;
+   const u=(road[1][0]+road[2][0])/2-cx,v=(road[1][2]+road[2][2])/2-cz;
+   const dx=b.x-a.x,dz=b.z-a.z,den=dx*v-dz*u;
+   if(Math.abs(den)<1)continue;
+   const t=((cx-a.x)*v-(cz-a.z)*u)/den,r=((cx-a.x)*dz-(cz-a.z)*dx)/den;
+   if(t>=0&&t<1&&r>=0&&r<1)railCrossings.push(railSample(line,a.d+t*(b.d-a.d)))
+  }
+ }
+}
+function terminalTrack(line,d,dir){
+ const distance=dir===1?d:line.length-d;
+ const u=Math.max(0,Math.min(1,(distance-85)/55));
+ return dir*2.5*(2*u*u*(3-2*u)-1)
+}
+function railCars(line,service){
+ const stops=line.stops,legs=[],speed=22,dwell=12;
+ // Each leg has symmetric constant acceleration and braking and a cruise phase.
+ for(let i=1;i<stops.length;i++){
+  const span=stops[i]-stops[i-1],v=Math.min(speed,Math.sqrt(span*.65)),ramp=v/.65;
+  legs.push({span,v,ramp,run:span/v+ramp})
+ }
+ const half=legs.reduce((n,l)=>n+l.run+dwell,0);
+ let clock=(railClock+(service?half:0)+line.index*33)%(2*half),reverse=clock>=half;
+ clock%=half;let d=0;
+ for(let j=0;j<legs.length;j++){
+  const k=reverse?legs.length-1-j:j,l=legs[k];
+  if(clock>l.run+dwell){clock-=l.run+dwell;continue}
+  const u=Math.min(l.run,Math.max(0,clock-dwell));
+  const shift=u<l.ramp?.325*u*u:u>l.run-l.ramp?l.span-.325*(l.run-u)**2:l.v*(u-l.ramp/2);
+  d=reverse?stops[k+1]-shift:stops[k]+shift;break
+ }
+ const dir=reverse?-1:1,cars=[];
+ for(let i=0;i<4;i++){
+  // Leave room at terminal buffers for the entire consist in either direction.
+  const carDistance=d+(service?-1:1)*(15-i*10),p=railSample(line,carDistance);
+  const [x,y,z]=railOffset(p,terminalTrack(line,carDistance,dir));cars.push({...p,x,y,z,dir,engine:i===0,freight:!!service})
+ }
+ return cars
+}
+function nearRail(X,Z){
+ return railCells.has(Math.floor(X/32)+','+Math.floor(Z/32))
+}
+function railHit(X,Z,Y){
+ if(Y<19)for(const l of railLines)for(const span of l.bridges){
+  const a=railSample(l,span.start),b=railSample(l,span.end);
+  if(X<Math.min(a.x,b.x)-15||X>Math.max(a.x,b.x)+15||Z<Math.min(a.z,b.z)-15||Z>Math.max(a.z,b.z)+15)continue;
+  for(let d=span.start;d<span.end;d+=4){
+   const p=railSample(l,d),dx=X-p.x,dz=Z-p.z,side=Math.abs(dx*p.dz-dz*p.dx);
+   if(Math.abs(dx*p.dx+dz*p.dz)<3&&side<5.5&&Y>=p.y-1.3&&Y<=p.y+(side>4.8?3.3:.15))return '鉄道橋'
+  }
+ }
+ for(const s of railSites){
+  const dx=X-s.x,dz=Z-s.z,along=dx*s.dx+dz*s.dz,side=dx*s.dz-dz*s.dx,big=s.kind==='central';
+  if(big&&Math.abs(along)<40.5&&Math.abs(side)<9.5&&Y>=s.y+8.5&&Y<s.y+12.5)return '駅大屋根';
+  if(Math.abs(along)<(big?49:21.5)&&Math.abs((big?Math.abs(side):side)- (big?6:-6))<1.75&&Y<=s.y+1)return 'ホーム'
+ }
+ for(const b of railLots){
+  const u=X-b.x,v=Z-b.z;if(Math.abs(u*b.dz-v*b.dx)<b.w/2&&Math.abs(u*b.dx+v*b.dz)<b.l/2&&Y<b.y+b.h+1)return '駅施設'
+ }
+ if(Y<21)for(const l of railLines)for(const s of [0,1])for(const c of railCars(l,s)){
+  const u=X-c.x,v=Z-c.z;if(Math.abs(u*c.dz-v*c.dx)<2&&Math.abs(u*c.dx+v*c.dz)<5&&Y<c.y+4)return '列車'
+ }
+}
+function drawRail(face){
+ const m=operation();
+ for(let i=Math.floor((x+m.wx-1700)/256);i<=Math.floor((x+m.wx+1700)/256);i++)
+  for(let j=Math.floor((z+m.wz-1700)/256);j<=Math.floor((z+m.wz+1700)/256);j++){
+   for(const r of riverCells.get(i+','+j)||[]){
+    if(Math.floor(r.a[0]/256)!==i||Math.floor(r.a[1]/256)!==j||r.valley&&m.region===1)continue;
+    const a=worldToLocal(...r.a),b=worldToLocal(...r.b),len=Math.hypot(b.x-a.x,b.z-a.z),dx=(b.x-a.x)/len,dz=(b.z-a.z)/len;
+    if(ground(a.x,a.z)!==10||ground(b.x,b.z)!==10)continue;
+    ribbon({...a,dx,dz,y:10.22},{...b,dx,dz,y:10.22},-r.width,r.width,0,'#678f89',-6000)
+   }
+  }
+ const near=(p,r)=>Math.abs(p.x-x)<r&&Math.abs(p.z-z)<r;
+ function ribbon(a,b,left,right,h,color,order=2){face([railOffset(a,left,0,h),railOffset(a,right,0,h),railOffset(b,right,0,h),railOffset(b,left,0,h)],color,order)}
+ function box(p,side,along,w,l,h,color,roof,base=0,pitch=0){
+  const at=(u,v,y)=>railOffset(p,side+u,along+v,base+y);
+  const foot=[at(-w/2,-l/2,0),at(w/2,-l/2,0),at(w/2,l/2,0),at(-w/2,l/2,0)];
+  const top=foot.map(([a,b,c])=>[a,b+h,c]);
+  for(let i=0;i<4;i++){const j=(i+1)%4;face([foot[i],foot[j],top[j],top[i]],color,3)}
+  if(pitch){const a=at(0,-l/2,h+pitch),b=at(0,l/2,h+pitch);face([top[0],top[3],b,a],roof,4);face([a,b,top[2],top[1]],roof,4);face([top[0],a,top[1]],color,4);face([top[3],top[2],b],color,4)}
+  else face(top,roof,4)
+ }
+ // Eight-sided boiler and driving wheels share the vehicle heading through bends.
+ function roundPart(p,axis,side,along,up,radius,length,colors){
+  const ends=[[],[]];
+  for(let e=0;e<2;e++)for(let i=0;i<8;i++){
+   const a=i*Math.PI/4,h=radius*Math.sin(a),v=radius*Math.cos(a),d=(e-.5)*length;
+   ends[e].push(railOffset(p,side+(axis==='axle'?d:v),along+(axis==='axle'?v:d),up+h))
+  }
+  for(let i=0;i<8;i++){const j=(i+1)%8;face([ends[0][i],ends[0][j],ends[1][j],ends[1][i]],colors[i%colors.length],5)}
+  for(const ring of ends)face(ring,colors[0],5)
+ }
+ for(const p of railCrossings)if(near(p,450)){
+  for(const side of [-1,1]){box(p,side*8,-4,1,1,3.5,'#755f48','#c9ad79');box(p,side*8,-1,.4,6,.35,'#a45a45','#d7bf90',2.4)}
+ }
+ for(const id of ['brass-port','red-strait']){
+  const base=airbases[id],p={...worldToLocal(base.wx+265,base.wz),dx:1,dz:0,y:10};
+  if(!near(p,1400))continue;
+  box(p,0,0,17,35,9,'#8c6b52','#6b7366',0,3);
+  box(p,-17,0,8,14,3,'#514b41','#575044');
+  for(let k=0;k<11;k++){box(p,0,32+k*16,9,16,.8,'#826c50','#a48a68');box(p,0,32+k*16,6,2,10,'#716855','#99886d',-10)}
+ }
+ for(const line of shipping){
+  const time=(railClock*7+80)%(2*line.length),p=railSample(line,time>line.length?2*line.length-time:time);
+  if(near(p,2400)){box(p,0,0,9,32,3,'#4e5351','#9b8466');box(p,0,-7,6,8,4,'#b8a182','#72776f',3);box(p,0,-4,1.6,2,5,'#764a3b','#443c37',7);
+   for(const v of [0,6,12])box(p,0,v,5,4,2,'#846047','#aa805a',3)}
+ }
+ for(const l of railLines){
+  for(let i=1;i<l.path.length;i++){
+   const a=l.path[i-1],b=l.path[i];if(!near(a,1850))continue;
+   const p=railSample(l,a.d),q=railSample(l,b.d),close=near(p,440);
+   const bridge=l.bridges.some(span=>a.d>=span.start-.01&&b.d<=span.end+.01);
+   const raised=p.y>10.7||q.y>10.7;
+   ribbon(p,q,-5,5,-.24,raised?'#777c70':'#766a59');
+   if(raised)for(const side of [-5,5]){
+    const outer=bridge?side:side*1.5;
+    face([railOffset(p,outer,0,bridge?-1.25:10-p.y),railOffset(q,outer,0,bridge?-1.25:10-q.y),railOffset(q,side,0,-.23),railOffset(p,side,0,-.23)],bridge?'#485954':'#978775',3)
+   }
+   for(const side of [-2.5,2.5]){
+    if(close)for(let d=2*Math.ceil(a.d/2);d<b.d;d+=2){const s=railSample(l,d);face([railOffset(s,side-1.25,-.14),railOffset(s,side+1.25,-.14),railOffset(s,side+1.25,.14),railOffset(s,side-1.25,.14)],'#524338',3)}
+    for(const u of [-.74,.74])ribbon(p,q,side+u-.11,side+u+.11,.11,'#c8bca3',4)
+   }
+  }
+  for(const span of l.bridges){
+   const mid=railSample(l,(span.start+span.end)/2);if(!near(mid,1700))continue;
+   for(const d of [span.start,span.end]){const p=railSample(l,d);box(p,0,0,12,4,p.y-10.6,'#887d6c','#b6a895',10-p.y)}
+   const panels=Math.ceil((span.end-span.start)/8);
+   for(let j=0;j<panels;j++){
+    const a=railSample(l,span.start+(span.end-span.start)*j/panels),b=railSample(l,span.start+(span.end-span.start)*(j+1)/panels);
+    for(const side of [-5.1,5.1]){
+     const girder=(lo,hi,depth)=>face([railOffset(a,side,0,lo),railOffset(b,side,0,hi),railOffset(b,side,0,hi+depth),railOffset(a,side,0,lo+depth)],'#455b55',5);
+     girder(2.9,2.9,.3);girder(j%2?2.9:.1,j%2?.1:2.9,.33);
+     if(j%8===4&&panels>12)box(a,0,0,10,2.5,a.y-10.8,'#867f70','#a79c86',10-a.y)
+    }
+   }
+  }
+  for(const dir of [-1,1]){
+   const terminal=dir===1?l.path[0]:l.path.at(-1);if(!near(terminal,650))continue;
+   for(let j=85;j<140;j+=5){
+    const d=dir===1?j:l.length-j,next=d+dir*5,a=railSample(l,d),b=railSample(l,next);
+    for(const u of [-.74,.74]){
+     const left=terminalTrack(l,d,dir)+u,right=terminalTrack(l,next,dir)+u;
+     face([railOffset(a,left-.11,0,.14),railOffset(a,left+.11,0,.14),railOffset(b,right+.11,0,.14),railOffset(b,right-.11,0,.14)],'#c8bca3',5)
+    }
+   }
+  }
+  for(const service of [0,1])for(const c of railCars(l,service)){
+   if(!near(c,1500))continue;
+   box(c,0,0,2.9,8.6,1,'#433a34','#5a4d40');
+   box(c,0,0,c.engine?1.7:2.8,c.engine?7:8,c.engine?1.4:2.6,c.engine?'#354642':service?'#80513d':'#793e35',service?'#595046':'#aa9976',1,.35);
+   if(near(c,300))for(const axle of [-3,0,3])for(const side of [-1.43,1.43])roundPart(c,'axle',side,axle,.72,.73,.24,['#423e37','#6d5947']);
+   if(c.engine){roundPart(c,'boiler',0,c.dir*.6,2.25,1.15,5.2,['#45544b','#596257','#37463f','#324139']);box(c,0,-c.dir*2.7,2.9,2.5,2.8,'#475649','#b69c66',1);
+    box(c,0,c.dir*2.4,.8,.8,1.6,'#3b3631','#ae9271',3);
+    for(let j=0;j<4;j++){const u=(railClock*.5+j/4)%1,R=.6+u*1.7;box(c,u*2,c.dir*(2.4-u*8),R,R,R,'rgba(120,115,109,.35)','rgba(170,163,149,.4)',4.6+u*7)}
+   }else if(!service&&near(c,420))for(let j=-3;j<=3;j+=2)box(c,0,j,2.84,1,.85,'#d2b680','#b29574',2)
+  }
+ }
+ for(const s of railSites){
+  if(!near(s,1800))continue;const big=s.kind==='central',L=big?98:43;
+  for(const side of big?[-6,6]:[-6])box(s,side,0,3.5,L,1,'#98836c','#d1bd9e');
+  if(s.kind==='port'){
+   box(s,0,58,42,19,9,'#817566','#b3a083',-9);
+   for(const side of [-15,15]){box(s,side,53,2,2,13,'#5d655a','#a99571');box(s,side,58,1,13,1.4,'#6c7366','#b69568',12)}
+  }
+  if(big){box(s,-51,0,23,104,.18,'#ad997c','#b8a285');
+   for(let j=-35;j<=35;j+=10)box(s,0,j,18,.65,.8,'#54665f','#64756c',10);
+   for(const side of [-7,7])for(let j=-36;j<=36;j+=18)box(s,side,j,.7,.8,9,'#4d5752','#5f6559');
+   box(s,0,0,19,81,.5,'#58685f','#93aaa3',9,3)}
+  const count=big?3:1;
+  for(let n=0;n<count;n++){
+   const offset=11+n*6;
+   for(const u of [-.74,.74])for(const sign of [-1,1]){
+    const start=railOffset(s,2.5+u,sign*(L/2+32)),end=railOffset(s,offset+u,sign*(L/2-4));
+    face([start,end,[end[0]+.3,end[1],end[2]],[start[0]+.3,start[1],start[2]]],'#c9baa0',4);
+    box(s,offset+u,0,.24,L-8,.18,'#797165','#b7b19b')
+   }
+  }
+ }
+ for(const b of railLots){
+  if(b.style==='stack'&&near(b,800))for(let j=0;j<4;j++){const u=(railClock*.14+j/4)%1,R=1+u*3;box(b,2*u,u*5,R,R,R,'rgba(102,99,91,.35)','rgba(126,122,112,.35)',b.h+u*12)}
+  if(!near(b,1700))continue;const colors={field:['#90804f','#aa9657'],coal:['#4c4843','#5c5146'],logs:['#805a3c','#ae8555'],tank:['#625748','#88918a'],stack:['#9a5948','#d1aa84'],house:['#a17a64','#746457'],hall:['#a05d48','#687673'],works:['#995e49','#736759'],shed:['#947459','#70746b']};
+  const [wall,roof]=colors[b.style],gable=['house','hall','shed','works'].includes(b.style);
+  box(b,0,0,b.w,b.l,b.h,wall,roof,0,gable?b.w*.22:0);
+  if(gable&&near(b,600))for(let k=-b.l/2+3;k<b.l/2-1;k+=6)box(b,0,k,b.w+.16,2,2.4,'#dab889','#b79a70',b.h-4);
+  if(b.style==='tank')box(b,0,0,b.w+3,b.l+3,5,'#758080','#9a9b89',b.h-4)
+ }
+}
+
 function buildWorld(){
  terraces.length=isles.length=0;tileCache.clear();tileKey='';
  const m=operation();
@@ -715,7 +1135,8 @@ function buildWorld(){
   for(const [points,y,color] of [[outer,0,'#cfb789'],[inner,10,'#81895c']])
    terraces.push({ring:points.map(([X,Y,Z])=>[X,Z]),cx,cz,rx:bound,rz:bound,y,color})
  }
- buildRegion();
+ buildRegion();buildRail();
+ for(let i=quarters.length-1;i>=0;i--)if(nearRail(quarters[i].x,quarters[i].z))quarters.splice(i,1);
  mainlandPlan=new Path2D();islandPlan=new Path2D();
  const mapContext=worldMap.getContext('2d'),mapScale=worldMap.width/worldSize;
  const worldMainland=new Path2D(),worldIslands=new Path2D();
@@ -730,7 +1151,8 @@ function buildWorld(){
   path.closePath();worldPath.closePath()
  }
  mapContext.clearRect(0,0,worldMap.width,worldMap.height);
- mapContext.fillStyle='#879661';mapContext.fill(worldMainland,'evenodd');mapContext.fill(worldIslands)
+ mapContext.fillStyle='#879661';mapContext.fill(worldMainland,'evenodd');mapContext.fill(worldIslands);
+ for(const survey of railSurvey){mapContext.beginPath();survey.points.forEach(([X,Z],i)=>mapContext[i?'lineTo':'moveTo'](X*mapScale,(worldSize-Z)*mapScale));mapContext.lineWidth=.65;mapContext.strokeStyle='#a97649';mapContext.stroke()}
 }
 function updateWorld(){
  const tx=Math.floor(x/256),tz=Math.floor(z/256);
@@ -747,7 +1169,7 @@ function updateWorld(){
     .map(r=>[Math.min(...r.map(p=>p[0]))-9,Math.max(...r.map(p=>p[0]))+9,Math.min(...r.map(p=>p[2]))-9,Math.max(...r.map(p=>p[2]))+9]);
    for(let n=0;n<100;n++){
     const val=k=>noise(i,j,8*n+k),X=i*256+(n%10+.5+(val(0)-.5)*.45)*25.6,Z=j*256+(Math.floor(n/10)+.5+(val(1)-.5)*.45)*25.6,Y=ground(X,Z);
-    if(!Y)continue;
+    if(!Y||nearRail(X,Z)||nearRiver(X+operation().wx,Z+operation().wz))continue;
     if(nearBases.some(b=>Math.abs(X-b.x)<285&&Math.abs(Z-b.z)<185))continue;
     if(nearRoad.some(([west,east,south,north])=>X>west&&X<east&&Z>south&&Z<north))continue;
     if(nearTown.some(b=>Math.hypot(X-b.x,Z-b.z)<b.radius+16+20*val(5)))continue;
@@ -794,6 +1216,7 @@ function restartFlight(){
  document.querySelector('.card p').innerHTML=flightInstructions
 }
 function hitObject(X,Z,Y){
+ const rail=railHit(X,Z,Y);if(rail)return rail;
  for(const offset of [-3.8,0,3.8]){
   const px=X+offset*Math.cos(yaw),pz=Z-offset*Math.sin(yaw),py=Y-offset*Math.sin(bank*.62);
   if(mode==='combat')for(const e of enemies){
@@ -803,7 +1226,7 @@ function hitObject(X,Z,Y){
    const u=px-b.x,v=pz-b.z;
    if(Math.abs(u)>b.radius||Math.abs(v)>b.radius)continue;
    const dx=Math.abs(u*Math.cos(b.angle)+v*Math.sin(b.angle)),dz=Math.abs(v*Math.cos(b.angle)-u*Math.sin(b.angle));
-   if(dx<b.w/2&&dz<b.l/2&&py<=b.y+b.h||!b.industry&&dx<b.w*.27&&dz<b.l*.3&&py<=b.y+b.h+(b.tower?18:5))return '建物'
+   if(dx<b.w/2&&dz<b.l/2&&py<=b.y+b.h||!b.industry&&dx<=b.w*.5&&dz<=b.l*.5&&py<=b.y+b.h+(4+b.w*.13)*(1-2*dx/b.w))return '建物'
   }
   if(cliffs.length&&hitsArch(px,pz,py))return '岩のアーチ';
   const land=ground(px,pz);if(land&&py-.55<=land)return '地面';
@@ -1251,13 +1674,13 @@ function drawScenery(sn,cs,eye,f,horizon,objects){
  }
  function block(cx,cz,Y,width,length,height,roof){
   const foot=[[-1,-1],[1,-1],[1,1],[-1,1]].map(([u,v])=>[cx+u*width/2,Y,cz+v*length/2]),top=foot.map(([X,y,Z])=>[X,y+height,Z]);
-  for(let j=0;j<4;j++){const n=(j+1)%4;face([foot[j],foot[n],top[n],top[j]],(building?.industry==='stack'?(width>building.w?'#e9c5a1':'#9a5545'):building?.industry==='stock'?roof:['#78766a','#575e58','#939080','#66695e'][j]))}
+  for(let j=0;j<4;j++){const n=(j+1)%4;face([foot[j],foot[n],top[n],top[j]],(building?.industry==='stack'?(width>building.w?'#e9c5a1':'#9a5545'):building?.industry==='stock'?roof:building&&!building.industry?['#a06a52','#875741','#b58062','#916b54'][j]:['#78766a','#575e58','#939080','#66695e'][j]))}
   face(top,roof,.1)
  }
  if(cliffs.length)for(let Z=-2048;Z<2048;Z+=64){
   const bend=q=>valleyAxis(q)+24*Math.sin(q/117),width=q=>17+5*Math.sin(q/154);
   const bank=(q,side)=>[bend(q)+side*width(q),10.22,q];
-  face([bank(Z,-1),bank(Z,1),bank(Z+64,1),bank(Z+64,-1)],'#678f89',1)
+  face([bank(Z,-1),bank(Z,1),bank(Z+64,1),bank(Z+64,-1)],'#678f89',-6000)
  }
  const rock=['#75815d','#918270','#a99680','#bda88c','#89906d','#788365','#70805f'];
  for(const wall of cliffs)for(let row=0;row<wall.length-1;row++){
@@ -1303,14 +1726,19 @@ function drawScenery(sn,cs,eye,f,horizon,objects){
     block(b.x,b.z,b.y+b.h*fraction,b.w+.2,b.l+.2,5,'#e9c5a1');
    continue
   }
-  block(b.x,b.z,b.y+b.h,b.w*.54,b.l*.60,b.tower?18:5,b.tower?'#c49c68':b.roof);
+  const eaves=b.y+b.h,rise=4+b.w*.13,roofPoint=(i,j,h)=>[b.x+i*b.w,eaves+h,b.z+j*b.l];
+  for(const side of [-1,1]){
+   face([roofPoint(side*.52,-.52,0),roofPoint(side*.52,.52,0),roofPoint(0,.52,rise),roofPoint(0,-.52,rise)],b.roof,1);
+   face([roofPoint(-.5,side*.5,0),roofPoint(.5,side*.5,0),roofPoint(0,side*.5,rise)],'#a87960',1)
+  }
+  block(b.x+b.w*.22,b.z-b.l*.2,eaves+b.w*.05,2.2,2.6,rise,'#ad775b');
   if(Math.hypot(x-b.x,z-b.z)<600)for(const side of [-1,1])for(let j=-1;j<=1;j++){
    const X=b.x+j*b.w*.28,Z=b.z+side*(b.l/2+.1);
    for(let Y=b.y+b.h-7;Y>b.y+2;Y-=12){
    face([[X-2,Y,Z],[X+2,Y,Z],[X+2,Y+3,Z],[X-2,Y+3,Z]],'#edbc76',1)}
   }
  }
- building=null;
+ building=null;drawRail(face);
  for(const b of localBases){
   if(Math.hypot(x-b.x,z-b.z)>=3500)continue;
   const Y=b.height;
@@ -1338,6 +1766,7 @@ function drawScenery(sn,cs,eye,f,horizon,objects){
  }
 }
 function draw(dt){
+ if(live)railClock+=dt;
  updateWorld();
  const wasWaiting=deckMode==='moored';
  if(live&&deckAssist(dt)){
