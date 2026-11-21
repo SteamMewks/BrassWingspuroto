@@ -78,7 +78,7 @@ const html=readFileSync(resolve(__dirname,'../Brass_Wings_Homeward (5).html'));
     trigger=false;step(16,fight);
     if(cleared!==wave+1)throw Error('Wave did not complete');
    }
-   if(!returningHome||score!==1500)throw Error('Return or score missing');
+   if(sortiePhase!=='return'||score!==1500)throw Error('Return or score missing');
    x=zone.x;z=zone.z;fight(.05);
    if(!approachReady)throw Error('Return waypoint did not advance');
    const port=goalPort();
