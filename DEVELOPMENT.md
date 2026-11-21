@@ -1,5 +1,7 @@
 # Brass Wings 開発・検証記録
 
+開発時は [AGENTS.md](AGENTS.md) と [開発スキル](.agents/skills/brass-wings-development/SKILL.md) を使用する。起動用の start_skill が利用できる場合は、そのセットアップ後に以下の検証環境を確認する。
+
 ## 調査と優先順位
 
 1. 開始・飛行・衝突・終了を優先。自由飛行の発見と曲技、戦闘の2波×3面、航空基地と補給船の発着、補給、格納庫、セーブを確認した。
@@ -13,11 +15,12 @@ Node.js、Playwright、Chromiumは検証時にだけ必要。Playwrightから解
 
 ```sh
 npm install --no-save playwright
+CHROMIUM_PATH=/usr/bin/chromium node tests/terrain.cjs
 CHROMIUM_PATH=/usr/bin/chromium node tests/smoke.cjs
 CHROMIUM_PATH=/usr/bin/chromium FLIGHT_SCREENSHOTS=/tmp/brass-wings-screenshots node tests/visual.cjs
 ```
 
-`CHROMIUM_PATH` を省略する場合は `npx playwright install chromium` でテスト用ブラウザーを用意する。テストは対象HTMLをローカルHTTPで配信する。
+`CHROMIUM_PATH` を省略する場合は `npx playwright install chromium` でテスト用ブラウザーを用意する。飛行・画面テストは対象HTMLをローカルHTTPで配信し、地形テストはHTMLをChromiumに直接読み込む。
 
 ## 検証範囲
 
