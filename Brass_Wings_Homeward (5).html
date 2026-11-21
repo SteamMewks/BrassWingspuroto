@@ -1,6 +1,32 @@
-<!doctype html><html lang="ja"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"><title>Brass Wings | 群島飛行</title><style>
-*{box-sizing:border-box}body{margin:0;background:#203b46;color:#fff4ce;font:14px system-ui;height:100dvh;overflow:hidden}canvas{width:100%;height:100%;image-rendering:pixelated}header,footer,#place{position:absolute;pointer-events:none;text-shadow:0 1px 4px #183b42}header{inset:20px 20px auto;display:flex;align-items:center;justify-content:space-between}b,small{display:block;letter-spacing:.15em}b{font: bold 19px Georgia}small{font-size:10px;margin-top:4px}button{touch-action:none;color:#fff1c4;background:#203f47de;border:1px solid #ccb783;border-radius:8px;padding:10px 14px;font-weight:bold;pointer-events:auto}footer{bottom:max(22px,env(safe-area-inset-bottom));width:100%;display:flex;align-items:end;justify-content:space-around}#pad{touch-action:none;pointer-events:auto;width:116px;height:116px;border:1px solid #efd6a0aa;border-radius:50%;background:#25444b73;display:grid;place-items:center}#knob{width:42px;height:42px;border-radius:50%;background:#e6cf92b0;border:2px solid #ffe9ad}#place{top:14%;text-align:center;width:100%;letter-spacing:.16em}.card{position:absolute;inset:0;display:grid;place-content:center;text-align:center;background:#13303c55}.card article{background:#193a40ef;padding:24px 30px;border:1px solid #e1c892;border-radius:8px}h1{font:italic 38px Georgia;margin:0}p{line-height:1.8} [hidden]{display:none!important}#thrust{pointer-events:auto;touch-action:none;writing-mode:vertical-lr;direction:rtl;width:42px;height:100px;accent-color:#cba86b;margin:0} footer label{display:grid;justify-items:center;font-size:11px;letter-spacing:.12em}.card article{width:min(88vw,370px);max-height:88dvh;overflow:auto;padding:24px;box-shadow:0 9px 40px #20242d66;background:#233a3def}.card p{margin:14px 0;font-size:14px}.card button{margin:4px;padding:12px 16px}.card button:first-of-type{background:#e6c58c;color:#343b38}#feedback{position:absolute;top:24%;width:100%;text-align:center;color:#ffe5a5;font-weight:700;text-shadow:0 2px 4px #302b35;pointer-events:none}#place{white-space:pre-line}footer{align-items:center}#meter{font-size:12px}.card small{color:#e3c995} @media(max-height:580px){.card article{padding:12px}.card p{font-size:12px;margin:6px}h1{font-size:26px}}header{gap:5px;inset:14px 10px auto}header button{font-size:11px;padding:9px 8px}header b{font-size:16px}#meter{text-align:center;line-height:1.4;white-space:pre-line}#sound{white-space:nowrap}#score{font-variant-numeric:tabular-nums}#place{font-size:13px;text-shadow:0 1px 4px #26242a,0 0 6px #423c48}#feedback{transition:opacity .12s}#fire{touch-action:none;background:#713c39;min-height:44px}#fire:active{background:#bc744c}#atlas svg{width:100%;height:112px;display:block}#atlas{font-size:12px;color:#e4c997}#service button{font-size:13px;padding:8px}</style>
-<canvas></canvas><header><div><b>Brass Wings</b><small>群島飛行</small></div><strong id="meter"></strong><button id="sound" aria-label="サウンド切替" aria-pressed="false">音 OFF</button><button id="pause" aria-label="一時停止">Ⅱ</button></header><div id="place"></div><div id="feedback" role="status"></div><footer><div id="pad" aria-label="操縦桿"><i id="knob"></i></div><div style="display:grid;gap:6px"><button id="fire" hidden>射撃</button><strong id="score">0 pt</strong><label><span>推力</span><input id="thrust" type="range" min="0" max="100" value="0" aria-label="推力"></label></div></footer><div class="card" id="cover"><article><small>夕 暮 れ の 飛 行</small><h1>Brass Wings</h1><p>左右で旋回、上下で上昇・下降。<br>左右に素早く2回でロール、上に2回でループ。<br>右の推力レバーを上げて加速。<br>滑走路で停止した状態から開始。推力72%以上で発進し、自動上昇後に操縦できます。<br>作戦は各面で赤翼機6機を撃退し、指定の空母または基地へ帰投。低空・低推力で着陸補助。</p><div id="atlas"></div><div id="service" hidden><button id="repair">機関補修 · 1</button><button id="magazine">弾倉拡張 · 2</button></div><button id="go" hidden>もう一度飛ぶ</button><button id="combat">作戦出撃・格納庫</button><button id="free">自由飛行</button><button hidden id="menu">タイトルへ</button></article></div><script>
+<!doctype html><html lang="ja"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Brass Wings | 群島飛行</title><style>
+*{box-sizing:border-box}body{margin:0;background:#203b46;color:#fff4ce;font:14px system-ui;height:100dvh;overflow:hidden}canvas{width:100%;height:100%;image-rendering:pixelated}header,footer,#place{position:absolute;pointer-events:none;text-shadow:0 1px 4px #183b42}header{inset:20px 20px auto;display:flex;align-items:center;justify-content:space-between}b,small{display:block;letter-spacing:.15em}b{font: bold 19px Georgia}small{font-size:10px;margin-top:4px}button{touch-action:none;color:#fff1c4;background:#203f47de;border:1px solid #ccb783;border-radius:8px;padding:10px 14px;font-weight:bold;pointer-events:auto}footer{bottom:max(22px,env(safe-area-inset-bottom));width:100%;display:flex;align-items:end;justify-content:space-around}#pad{touch-action:none;pointer-events:auto;width:116px;height:116px;border:1px solid #efd6a0aa;border-radius:50%;background:#25444b73;display:grid;place-items:center}#knob{width:42px;height:42px;border-radius:50%;background:#e6cf92b0;border:2px solid #ffe9ad}#place{top:14%;text-align:center;width:100%;letter-spacing:.16em}.card{position:absolute;inset:0;display:grid;place-content:center;text-align:center;background:#13303c55}.card article{background:#193a40ef;padding:24px 30px;border:1px solid #e1c892;border-radius:8px}h1{font:italic 38px Georgia;margin:0}p{line-height:1.8} [hidden]{display:none!important}#thrust{pointer-events:auto;touch-action:none;writing-mode:vertical-lr;direction:rtl;width:42px;height:100px;accent-color:#cba86b;margin:0} footer label{display:grid;justify-items:center;font-size:11px;letter-spacing:.12em}.card article{width:min(88vw,370px);max-height:88dvh;overflow:auto;padding:24px;box-shadow:0 9px 40px #20242d66;background:#233a3def}.card p{margin:14px 0;font-size:14px}.card button{margin:4px;padding:12px 16px}.card button:first-of-type{background:#e6c58c;color:#343b38}#feedback{position:absolute;top:24%;width:100%;text-align:center;color:#ffe5a5;font-weight:700;text-shadow:0 2px 4px #302b35;pointer-events:none}#place{white-space:pre-line}footer{align-items:center}#meter{font-size:12px}.card small{color:#e3c995} @media(max-height:580px){.card article{padding:12px}.card p{font-size:12px;margin:6px}h1{font-size:26px}}header{gap:5px;inset:14px 10px auto}header button{font-size:11px;padding:9px 8px}header b{font-size:16px}#meter{text-align:center;line-height:1.4;white-space:pre-line}#sound{white-space:nowrap}#score{font-variant-numeric:tabular-nums}#place{font-size:13px;text-shadow:0 1px 4px #26242a,0 0 6px #423c48}#feedback{transition:opacity .12s}#fire{touch-action:none;background:#713c39;min-height:44px}#fire:active{background:#bc744c}#atlas svg{width:100%;height:112px;display:block}#atlas{font-size:12px;color:#e4c997}#service button{font-size:13px;padding:8px}
+body>canvas{display:block}
+header button{min-width:44px;min-height:44px}
+#place{top:max(64px,14%);padding:0 12px;letter-spacing:.08em}
+#feedback{top:max(90px,24%);padding:0 12px}
+footer{padding:0 max(14px,env(safe-area-inset-right)) 0 max(14px,env(safe-area-inset-left))}
+.card article{overscroll-behavior:contain}
+.card button{min-height:44px}
+#go,#combat{background:#e6c58c;color:#343b38}
+@media(max-height:440px) and (min-width:520px){
+ .card article:has(#atlas:not([hidden])){display:grid;grid-template-columns:minmax(0,1fr) minmax(150px,.68fr);gap:4px 14px;width:min(92vw,620px)}
+ .card article>small,.card h1,.card p{grid-column:1;margin:0}
+ .card article #atlas{grid-column:2;grid-row:1/4;align-self:center}
+ .card article #atlas svg{height:92px}
+ .card article .actions{grid-column:1/-1}
+ .card article:has(#atlas:not([hidden])){max-height:96dvh;padding:10px}
+ .card article:has(#atlas:not([hidden])) p{line-height:1.45}
+ .card article:has(#atlas:not([hidden])) button{margin-block:0}
+ footer{justify-content:space-between;padding-right:max(115px,env(safe-area-inset-right))}
+ #place{padding-inline:12px min(27vw,120px);text-align:left}
+ #feedback{padding-inline:12px min(27vw,120px)}
+}
+@media(max-width:519px){
+ .card article:has(#atlas:not([hidden])) #atlas svg{height:84px}
+ .card article:has(#atlas:not([hidden])){padding:14px}
+}
+</style>
+<canvas></canvas><header><div><b>Brass Wings</b><small>群島飛行</small></div><strong id="meter"></strong><button id="sound" aria-label="サウンド切替" aria-pressed="false">音 OFF</button><button id="pause" aria-label="一時停止">Ⅱ</button></header><div id="place"></div><div id="feedback" role="status"></div><footer><div id="pad" aria-label="操縦桿"><i id="knob"></i></div><div style="display:grid;gap:6px"><button id="fire" hidden>射撃</button><strong id="score">0 pt</strong><label><span>推力</span><input id="thrust" type="range" min="0" max="100" value="0" aria-label="推力"></label></div></footer><div class="card" id="cover" role="dialog" aria-modal="true" aria-labelledby="panel-title"><article><small>夕 暮 れ の 飛 行</small><h1 id="panel-title">Brass Wings</h1><p>左右で旋回、上下で上昇・下降。<br>左右に素早く2回でロール、上に2回でループ。<br>右の推力レバーを上げて加速。射撃はボタンまたはスペースキー。<br>滑走路で停止した状態から開始。推力72%以上で発進し、自動上昇後に操縦できます。<br>作戦は各面で赤翼機6機を撃退し、指定の空母または基地へ帰投。低空・低推力で着陸補助。</p><div id="atlas"></div><div id="service" hidden><button id="repair">機関補修 · 1</button><button id="magazine">弾倉拡張 · 2</button></div><div class="actions"><button id="go" hidden>もう一度飛ぶ</button><button id="combat">作戦出撃・格納庫</button><button id="free">自由飛行</button><button hidden id="menu">タイトルへ</button></div></article></div><script>
 const canvas=document.querySelector('canvas'),g=canvas.getContext('2d'),$=s=>document.getElementById(s);
 let w,h,x=0,z=0,alt=0,yaw=0,cameraYaw=0,bank=0,pitch=0,power=0,live=false,t=0,last=0,ax=0,ay=0,id=null;
 const keys=new Set(),found=new Set(),isles=[],tau=Math.PI*2;
@@ -18,16 +44,39 @@ function stick(a,b){
  $('knob').style.transform='translate('+rawX*36+'px,'+rawY*36+'px)'
 }
 function move(e){let r=$('pad').getBoundingClientRect();stick((e.clientX-r.left-r.width/2)/43,(e.clientY-r.top-r.height/2)/43)}
-$('pad').onpointerdown=e=>{if(id!==null)return;id=e.pointerId;$('pad').setPointerCapture(id);move(e)};$('pad').onpointermove=e=>{if(id===e.pointerId)move(e)};$('pad').onlostpointercapture=()=>{id=null;stick(0,0)};
-$('thrust').oninput=e=>{power=Number(e.target.value)/100;syncAudio()};
+const pad=$('pad'),thrust=$('thrust'),fire=$('fire');
+function releaseStick(pointerId=id){
+ if(id===null||pointerId!==id)return;
+ id=null;
+ if(pad.hasPointerCapture(pointerId))pad.releasePointerCapture(pointerId);
+ stick(0,0)
+}
+function clearFlightInput(){
+ keys.clear();trigger=false;releaseStick();stick(0,0)
+}
+pad.onpointerdown=e=>{if(!live||id!==null)return;id=e.pointerId;pad.setPointerCapture(id);move(e)};
+pad.onpointermove=e=>{if(live&&id===e.pointerId)move(e)};
+pad.onpointerup=pad.onpointercancel=pad.onlostpointercapture=e=>releaseStick(e.pointerId);
+thrust.oninput=e=>{power=Number(e.target.value)/100;syncAudio()};
 function pause(){
  if(!live)return;
- live=false;keys.clear();stick(0,0);
+ live=false;clearFlightInput();
  showPanel('pause','一時停止','現在の飛行を再開できます。')
 }
 $('pause').onclick=pause;onblur=pause;
-onkeydown=e=>{if(document.activeElement===$('thrust'))return;if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key)){e.preventDefault();keys.add(e.key);readGesture()}};
-onkeyup=e=>{keys.delete(e.key);readGesture()};
+document.addEventListener('visibilitychange',()=>{if(document.hidden)pause()});
+onkeydown=e=>{
+ if(!live)return;
+ if(e.key==='Escape'){e.preventDefault();pause();return}
+ if(e.code==='Space'&&mode==='combat'&&!deckMode&&(e.target===fire||!e.target.closest?.('button,input'))){
+  e.preventDefault();keys.add('Space');return
+ }
+ if(document.activeElement===thrust)return;
+ if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key)){
+  e.preventDefault();keys.add(e.key);readGesture()
+ }
+};
+onkeyup=e=>{if(e.code==='Space')keys.delete('Space');if(keys.delete(e.key))readGesture()};
 const layers=[];
 function slice(y,color,points){layers.push({y,color,points})}
 function oval(y,rx,rz,cz,c){slice(y,c,Array.from({length:20},(_,i)=>[rx*Math.cos(i*tau/20),cz+rz*Math.sin(i*tau/20)]))}
@@ -105,6 +154,12 @@ function readGesture(rawX=ax,rawY=ay){
 }
 let mode='free',panel='title',message='',messageUntil=0;
 let score=0,spray=[],sprayClock=0;
+const flightControls=[document.querySelector('header'),document.querySelector('footer')];
+function enterFlight(){
+ panel='flight';live=true;$('cover').hidden=true;
+ flightControls.forEach(element=>element.inert=false);
+ syncFireButton();syncAudio()
+}
 function showPanel(state,title,description){
  panel=state;$('atlas').hidden=!['title','hangar'].includes(state);$('service').hidden=state!=='hangar';trigger=false;$('combat').hidden=state!=='title';$('fire').hidden=true;syncAudio();$('cover').hidden=false;
  document.querySelector('.card h1').textContent=title;
@@ -112,6 +167,9 @@ function showPanel(state,title,description){
  $('free').hidden=state!=='title';$('go').hidden=state==='title';
  $('menu').hidden=state==='title';
  $('go').textContent=state==='pause'?'再開':'もう一度飛ぶ';
+ flightControls.forEach(element=>element.inert=true);
+ $(state==='title'?'combat':'go').focus({preventScroll:true})
+
 }
 function titleScreen(){
  live=false;crash=null;showPanel('title','Brass Wings','');
@@ -121,7 +179,7 @@ function startFlight(selectedMode){
  mode=selectedMode;restartFlight();resetCombat();
  buildWorld();parkAtStart();
  if(mode==='combat')selectSector();
- message='';messageUntil=0;updateWorld();panel='flight';live=true;$('fire').hidden=true;syncAudio();$('cover').hidden=true
+ message='';messageUntil=0;updateWorld();enterFlight()
 }
 function award(points,label){
  score+=points;$('score').textContent=score+' pt';message=label+'　+'+points;messageUntil=t+1.5
@@ -396,6 +454,18 @@ function atlas(){
  $('atlas').innerHTML='<svg viewBox="0 0 500 500" aria-label="世界地図と作戦位置"><rect width="500" height="500" fill="#29474e"/>'+shapes+marks+'<circle cx="'+sx+'" cy="'+sy+'" r="12" fill="none" stroke="#ffd880" stroke-width="4"/><rect x="'+(sx-2.5)+'" y="'+(sy-2.5)+'" width="5" height="5" fill="#fff2b2"/></svg>第'+(campaign.stage+1)+'面 '+m.name+'・'+regions[campaign.stage]+' ｜ '+(m.carrier?'沿岸・補給艦と基地':'内陸・航空基地')+' ｜ 作戦空域 5 km 四方'
 }
 const base={x:0,z:0},ship={x:0,z:0};
+const deckHeight=13,deckSections=Array.from({length:11},(_,i)=>{
+ const j=i-5;
+ return {offset:j*21,width:48-Math.max(0,Math.abs(j)-3)*7}
+});
+const shipStructures=[
+ [16,14,13,13,43,13,'#a7997d'],[16,18,26,16,16,7,'#637b7a'],
+ [16,20,33,2,2,15,'#c7ab78'],[15,-1,26,5,6,9,'#564b44']
+];
+function overDeck(X,Z){
+ const section=deckSections[Math.floor((Z-ship.z+115.5)/21)];
+ return operation().carrier&&section&&Math.abs(X-ship.x)<=section.width/2
+}
 let tileKey='';
 function buildWorld(){
  terraces.length=isles.length=0;tileCache.clear();tileKey='';
@@ -455,13 +525,13 @@ function applyClimb(dt){
 }
 const flightInstructions=document.querySelector('.card p').innerHTML;
 $('menu').onclick=titleScreen;$('free').onclick=()=>startFlight('free');
-$('go').onclick=()=>{if(panel==='hangar'){campaign.hangar=false;saveCampaign();startFlight('combat');return}if(panel==='pause'){panel='flight';live=true;syncFireButton();syncAudio();$('cover').hidden=true}else if(panel!=='title')startFlight(mode)};
+$('go').onclick=()=>{if(panel==='hangar'){campaign.hangar=false;saveCampaign();startFlight('combat');return}if(panel==='pause'){enterFlight()}else if(panel!=='title')startFlight(mode)};
 let crash=null;
 function restartFlight(){
  crash=null;yaw=cameraYaw=bank=pitch=t=phase=elapsedTrick=0;
  trick=null;power=0;airspeed=0;score=0;
  spray=[];sprayClock=0;wake.length=0;wakeTime=0;found.clear();
- keys.clear();stick(0,0);$('score').textContent='0 pt';$('thrust').value='0';
+ clearFlightInput();$('score').textContent='0 pt';$('thrust').value='0';
  document.querySelector('.card h1').textContent='Brass Wings';
  document.querySelector('.card p').innerHTML=flightInstructions
 }
@@ -477,6 +547,10 @@ function hitObject(X,Z,Y){
   }
   if(cliffs.length&&hitsArch(px,pz,py))return '岩のアーチ';
   const land=ground(px,pz);if(land&&py-.55<=land)return '地面';
+  if(overDeck(px,pz)&&py-.55<=deckHeight)return '船体';
+  if(operation().carrier)for(const [dx,dz,y,width,length,height] of shipStructures){
+   if(Math.abs(px-ship.x-dx)<=width/2&&Math.abs(pz-ship.z-dz)<=length/2&&py-.55<=y+height&&py+.55>=y)return '艦橋'
+  }
   if(Math.abs(px-base.x)<300&&Math.abs(pz-base.z)<180)
    for(const obj of station)if(Math.abs(px-base.x-obj.x)<obj.w/2&&Math.abs(pz-base.z-obj.z)<obj.l/2&&py<10+obj.h)return '基地施設';
   for(let i=Math.floor((px-11)/256);i<=Math.floor((px+11)/256);i++)for(let j=Math.floor((pz-11)/256);j<=Math.floor((pz+11)/256);j++)for(const tree of tileCache.get(i+","+j)?.trees||[]){
@@ -497,7 +571,7 @@ function impact(px,pz,py){
  return false
 }
 function down(cause){
-  live=false;syncAudio();keys.clear();stick(0,0);
+  live=false;syncAudio();clearFlightInput();
   crash={cause,age:0,pieces:Array.from({length:36},(_,j)=>({dx:(rand()-.5)*.38,dy:-rand()*.31-.035,spin:(rand()-.5)*8,c:['#b18b52','#454c40','#f9be68','#745247'][j%4]}))};
 }
 function wreck(dt){
@@ -507,7 +581,7 @@ function wreck(dt){
   g.fillStyle=bit.c;g.fillRect(-3,-1,7,3);g.restore()
  }
  if(a>=1&&$('cover').hidden){
-  showPanel('crash','GAME OVER',crash.cause+'に接触　'+score+' pt　'+(mode==='combat'?'到達空域 '+sector:'発見 '+found.size))
+  showPanel('crash','GAME OVER',(crash.cause==='エネルギー切れ'?crash.cause:crash.cause+'に接触')+'　'+score+' pt　'+(mode==='combat'?'到達空域 '+sector:'発見 '+found.size))
 
  }
 }
@@ -587,7 +661,7 @@ function openHangar(){
  $('go').textContent='次の面へ出撃';atlas()
 }
 function completeSortie(){
- live=false;keys.clear();stick(0,0);score+=missionHits===0?500:250;
+ live=false;clearFlightInput();score+=missionHits===0?500:250;
  const current=operation().name;
  campaign.wear=Math.min(40,campaign.wear+missionHits*10);campaign.funds+=2+(missionHits===0?1:0);
  if(campaign.stage===missions.length-1){
@@ -624,10 +698,10 @@ function deckAssist(dt){
  const port=deckMode?landingSite:(operation().carrier&&Math.hypot(x-ship.x,z-ship.z)<Math.hypot(x-base.x,z-base.z)?ship:base);
  const runway=port===base,direction=deckMode?landingDirection:(runway&&Math.cos(yaw)<0?-1:1);
  const heading=direction===1?0:Math.PI,side=x-port.x,along=(z-port.z)*direction;
- const touchHeight=runway?runwayHeight+1.5:15,stopZ=port.z+direction*62;
+ const touchHeight=runway?runwayHeight+1.5:deckHeight+2,stopZ=port.z+direction*62;
  if(!deckMode){
-  if(power>.42||alt>32||Math.abs(side)>31||along < -(runway?165:130)||along>55||Math.abs(angleDelta(yaw-heading))>1.7)return false;
-  landingSite=port;landingDirection=direction;deckMode='capture';deckTime=0;trick=null;phase=0;trigger=false;resetGesture();syncFireButton()
+  if(power>.42||alt<touchHeight-1||alt>32||Math.abs(side)>31||along < -(runway?165:130)||along>55||Math.abs(angleDelta(yaw-heading))>1.7)return false;
+  landingSite=port;landingDirection=direction;deckMode='capture';deckTime=0;trick=null;phase=0;returnHeading=null;clearFlightInput();syncFireButton()
  }
  deckTime+=dt;
  const capture=1-Math.exp(-2.4*dt);
@@ -697,7 +771,7 @@ function moveEnemy(e,i,dt){
  const dx=x-e.x,dz=z-e.z,d=Math.hypot(dx,dz),toward=Math.atan2(dx,dz);
  let aim=e.heading,speed=80,height=Math.max(62,alt+i*4);
  if(e.state==='formation'){
-  speed=70;if(trigger||d<128||e.age>4)switchMove(e,'circle')
+  speed=70;if(trigger||keys.has('Space')||d<128||e.age>4)switchMove(e,'circle')
  }else if(e.state==='circle'){
   const a=t*.21+i*tau/3;
   aim=Math.atan2(x+230*Math.sin(a)-e.x,z+230*Math.cos(a)-e.z);
@@ -729,7 +803,7 @@ function moveEnemy(e,i,dt){
  e.x+=Math.sin(e.heading)*speed*dt;e.z+=Math.cos(e.heading)*speed*dt;e.y+=Math.max(-24,Math.min(24,height-e.y))*dt
 }
 function patrolMap(){
- const side=Math.min(108,Math.round(w*.24)),left=w-side-10,top=h*.205;
+ const side=Math.min(108,Math.round(w*.24),Math.round(h*.26)),left=w-side-10,top=Math.max(63,h*.205);
  const zoom=ammo>18&&energy>25&&enemies.some(e=>e.hp>0),scale=(side-8)/(zoom?1250:2*boundary);
  const mx=X=>left+side/2+(X-(zoom?x:0))*scale,my=Z=>top+side/2-(Z-(zoom?z:0))*scale;
  g.fillStyle='rgba(24,40,44,.82)';g.fillRect(left,top,side,side);
@@ -748,7 +822,11 @@ function patrolMap(){
  g.save();g.translate(mx(x),my(z));g.rotate(yaw);poly([[0,-5],[-3.5,4],[0,2],[3.5,4]],'#b7fff0');g.restore();g.restore()
 }
 function fight(dt){
- if(!replenish(dt)||returningHome)return;
+ if(!replenish(dt))return;
+ if(returningHome){
+  if(Math.hypot(x-zone.x,z-zone.z)<150)approachReady=true;
+  return
+ }
  if(!enemies.length&&Math.hypot(x-zone.x,z-zone.z)<=sectorRadius)deploy();
  reload=Math.max(0,reload-dt);
  for(const [i,e] of enemies.entries()){
@@ -760,7 +838,7 @@ function fight(dt){
   if(ready.length){switchMove(ready[0],'attack');ready[0].turn=Math.max(...enemies.map(e=>e.turn))+1;nextAttack=t+1}
  }
  chooseLock();
- if(trigger&&!trick&&reload<=0&&ammo>=1){
+ if((trigger||keys.has('Space'))&&!trick&&reload<=0&&ammo>=1){
   ammo-=1;
   reload=.12;let vx=Math.sin(yaw),vz=Math.cos(yaw),vy=pitch*100/390;
   if(locked&&bearing(locked).angle<.19){
@@ -881,15 +959,14 @@ function drawScenery(sn,cs,eye,f,horizon,objects){
   if(operation().carrier)for(let j=0;j<7;j++)block(base.x-210-j*25,base.z-30,0,25,13,11,'#987f60')
  }
  if(operation().carrier&&Math.hypot(x-ship.x,z-ship.z)<3500){
-  for(let j=-5;j<=5;j++){
-   const Z=ship.z+j*21,width=48-Math.max(0,Math.abs(j)-3)*7;
-   block(ship.x,Z,0,width,21,13,'#625f58');
+  for(const {offset,width} of deckSections){
+   const Z=ship.z+offset;
+   block(ship.x,Z,0,width,21,deckHeight,'#625f58');
    strip(ship.x-4,Z,13.15,1.3,12,'#e5cf96',.4);
    for(const sign of [-1,1]){strip(ship.x+sign*(width/2-2),Z,13.15,1,20,'#c6ad7b',.4);
-    if(j<0)strip(ship.x+sign*(width/2-1),Z-8,13.3,2,2,'#9aefd6',1)}
+    if(offset<0)strip(ship.x+sign*(width/2-1),Z-8,13.3,2,2,'#9aefd6',1)}
   }
-  block(ship.x+16,ship.z+14,13,13,43,13,'#a7997d');block(ship.x+16,ship.z+18,26,16,16,7,'#637b7a');
-  block(ship.x+16,ship.z+20,33,2,2,15,'#c7ab78');block(ship.x+15,ship.z-1,26,5,6,9,'#564b44')
+  for(const [dx,dz,y,width,length,height,color] of shipStructures)block(ship.x+dx,ship.z+dz,y,width,length,height,color)
  }
 }
 function draw(dt){
@@ -954,7 +1031,8 @@ if(mode==='free'){
   const wid=Math.min(44,pt[2]*pixel.width);if(wid<1)continue;
   g.fillStyle=pixel.color;g.fillRect(Math.round(pt[0]),Math.round(pt[1]),Math.ceil(wid),Math.max(1,Math.round(wid*.33)))
  }
- const floorY=ground(x,z),clearance=Math.max(0,alt-floorY);
+ const onCarrier=overDeck(x,z)&&ground(x,z)<deckHeight;
+ const floorY=onCarrier?deckHeight:ground(x,z),clearance=Math.max(0,alt-floorY);
  if(clearance<95&&!crash){
   const offset=clearance*.48,roll=bank*.62+(trick==='roll'?hand*phase:0),loop=trick==='loop'?phase:0;
   const sx=x-Math.sin(.12)*offset,sz=z-Math.cos(.12)*offset;
@@ -1020,7 +1098,7 @@ if(mode==='free'){
   for(const b of hostile)add(b.x,b.z,b.y,(a,y,k)=>ellipse(a,y,Math.max(2,k*.55),Math.max(2,k*.55),"#ff9468"));
   for(const shot of bolts)add(shot.x,shot.z,shot.y,(a,b,k)=>ellipse(a,b,Math.max(1,k*.32),Math.max(1,k*.65),'#fff2a5'));
  }
- objects.sort((a,b)=>b[0]-a[0]);objects.forEach(o=>o[1]());if(crash)wreck(dt);else plane();$('meter').textContent=(alt<3?alt.toFixed(1):Math.round(alt))+' m　'+Math.round(((yaw*180/Math.PI)%360+360)%360)+'°\n地表 '+clearance.toFixed(clearance<10?1:0)+' m';if(mode==='combat'){
+ objects.sort((a,b)=>b[0]-a[0]);objects.forEach(o=>o[1]());if(crash)wreck(dt);else plane();$('meter').textContent=(alt<3?alt.toFixed(1):Math.round(alt))+' m　'+Math.round(((yaw*180/Math.PI)%360+360)%360)+'°\n'+(onCarrier?'甲板':'地表')+' '+clearance.toFixed(clearance<10?1:0)+' m';if(mode==='combat'){
  const aim=project(x+Math.sin(yaw)*190,z+Math.cos(yaw)*190,alt+pitch*100*190/390);
  if(aim&&!crash){g.beginPath();g.arc(aim[0],aim[1],8,0,tau);g.lineWidth=1.5;g.strokeStyle='#fff1c7';g.stroke()}
  if(locked&&locked.hp){const mark=project(locked.x,locked.z,locked.y);if(mark){const [a,b,k]=mark,r=Math.max(11,k*9);g.strokeStyle="#aaf5cd";g.lineWidth=2;g.strokeRect(a-r,b-r,r*2,r*2)}}
@@ -1029,7 +1107,6 @@ if(mode==='free'){
  $('place').textContent=(supplying?'補給中　':returningSupply?'補給地点へ（着陸後に補給）　':'空域 '+sector+'　')+(enemies.length?'撃墜 '+enemies.filter(e=>!e.hp).length+'/3':'指定空域へ')+'　'+['↑','↗','→','↘','↓','↙','←','↖'][(Math.round(dir/(tau/8))%8+8)%8]+' '+Math.round(Math.hypot(targetPlane.x-x,targetPlane.z-z))+' m'
 
  if(returningHome){
-  if(Math.hypot(x-zone.x,z-zone.z)<150)approachReady=true;
   const goal=approachReady?goalPort():zone,bearing=Math.atan2(goal.x-x,goal.z-z)-yaw;
   const arrow=['↑','↗','→','↘','↓','↙','←','↖'][(Math.round(bearing/(tau/8))%8+8)%8];
   $('place').textContent=(approachReady?((operation().carrier?'艦尾':'滑走路')+'へ　高度32 m以下・推力42%以下'):'帰投　進入地点へ')+'　'+arrow+' '+Math.round(Math.hypot(x-goal.x,z-goal.z))+' m'
@@ -1039,6 +1116,6 @@ if(mode==='free'){
  $('feedback').textContent=t<messageUntil?message:'';
  const scoreboard=(mode==='combat'?'弾 '+Math.floor(ammo)+'　EN '+Math.ceil(energy)+'%　':'')+score+' pt';
  if($('score').textContent!==scoreboard)$('score').textContent=scoreboard}
-buildWorld();parkAtStart();atlas();
+buildWorld();parkAtStart();titleScreen();
 function frame(now){if(live||(crash&&panel!=='crash')||!last||needsRedraw)draw(Math.min(.05,(now-last)/1000));needsRedraw=false;last=now;requestAnimationFrame(frame)}requestAnimationFrame(frame);
 </script></html>
