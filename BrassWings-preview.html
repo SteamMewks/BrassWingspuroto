@@ -7,6 +7,8 @@ header button{min-width:44px;min-height:44px}
 footer{padding:0 max(14px,env(safe-area-inset-right)) 0 max(14px,env(safe-area-inset-left))}
 .card article{overscroll-behavior:contain}
 .card button{min-height:44px}
+.flight-picker{grid-column:1/-1;display:flex;justify-content:center;align-items:center;gap:6px}
+.flight-picker select{min-height:36px;max-width:80%;color:#fff1c4;background:#203f47;border:1px solid #ccb783;border-radius:6px;padding:3px 8px}
 #go,#combat{background:#e6c58c;color:#343b38}
 @media(max-height:440px) and (min-width:520px){
  .card article:has(#atlas:not([hidden])){display:grid;grid-template-columns:minmax(0,1fr) minmax(150px,.68fr);gap:4px 14px;width:min(92vw,620px)}
@@ -14,6 +16,10 @@ footer{padding:0 max(14px,env(safe-area-inset-right)) 0 max(14px,env(safe-area-i
  .card article #atlas{grid-column:2;grid-row:1/4;align-self:center}
  .card article #atlas svg{height:92px}
  .card article .actions{grid-column:1/-1}
+ .card article #operation-picker{grid-column:1}
+ .card article #free-picker{grid-column:2}
+ .flight-picker{font-size:12px;white-space:nowrap}
+ .flight-picker select{min-width:0;max-width:calc(100% - 52px)}
  .card article:has(#atlas:not([hidden])){max-height:96dvh;padding:10px}
  .card article:has(#atlas:not([hidden])) p{line-height:1.45}
  .card article:has(#atlas:not([hidden])) button{margin-block:0}
@@ -26,7 +32,7 @@ footer{padding:0 max(14px,env(safe-area-inset-right)) 0 max(14px,env(safe-area-i
  .card article:has(#atlas:not([hidden])){padding:14px}
 }
 </style>
-<canvas></canvas><header><div><b>Brass Wings</b><small>群島飛行</small></div><strong id="meter"></strong><button id="sound" aria-label="サウンド切替" aria-pressed="false">音 OFF</button><button id="pause" aria-label="一時停止">Ⅱ</button></header><div id="place"></div><div id="feedback" role="status"></div><footer><div id="pad" aria-label="操縦桿"><i id="knob"></i></div><div style="display:grid;gap:6px"><button id="fire" hidden>射撃</button><strong id="score">0 pt</strong><label><span>推力</span><input id="thrust" type="range" min="0" max="100" value="0" aria-label="推力"></label></div></footer><div class="card" id="cover" role="dialog" aria-modal="true" aria-labelledby="panel-title"><article><small>夕 暮 れ の 飛 行</small><h1 id="panel-title">Brass Wings</h1><p>左右で旋回、上下で上昇・下降。<br>左右に素早く2回でロール、上に2回でループ。<br>右の推力レバーを上げて加速。射撃はボタンまたはスペースキー。<br>滑走路で停止した状態から開始。推力72%以上で発進し、自動上昇後に操縦できます。<br>作戦は各面で赤翼機6機を撃退し、指定の空母または基地へ帰投。低空・低推力で着陸補助。</p><div id="atlas"></div><div id="service" hidden><button id="repair">機関補修 · 1</button><button id="magazine">弾倉拡張 · 2</button></div><div class="actions"><button id="go" hidden>もう一度飛ぶ</button><button id="combat">作戦出撃・格納庫</button><button id="free">自由飛行</button><button hidden id="menu">タイトルへ</button></div></article></div><script>
+<canvas></canvas><header><div><b>Brass Wings</b><small>群島飛行</small></div><strong id="meter"></strong><button id="sound" aria-label="サウンド切替" aria-pressed="false">音 OFF</button><button id="pause" aria-label="一時停止">Ⅱ</button></header><div id="place"></div><div id="feedback" role="status"></div><footer><div id="pad" aria-label="操縦桿"><i id="knob"></i></div><div style="display:grid;gap:6px"><button id="fire" hidden>射撃</button><strong id="score">0 pt</strong><label><span>推力</span><input id="thrust" type="range" min="0" max="100" value="0" aria-label="推力"></label></div></footer><div class="card" id="cover" role="dialog" aria-modal="true" aria-labelledby="panel-title"><article><small>夕 暮 れ の 飛 行</small><h1 id="panel-title">Brass Wings</h1><p>左右で旋回、上下で昇降。素早く2回でロール（左右）・ループ（上）。<br>推力72%以上で発進。射撃はボタンかスペースキー。<br>作戦は赤翼機を撃退して帰投。低空・低推力で着陸補助。</p><div id="atlas"></div><label class="flight-picker" id="operation-picker">作戦 <select id="operation-choice"><option value="">キャンペーン（3作戦）</option></select></label><label class="flight-picker" id="free-picker">自由飛行 <select id="free-base" aria-label="自由飛行の開始基地"><option value="">現在の作戦地域の基地</option></select></label><div id="service" hidden><button id="repair">機関補修 · 1</button><button id="magazine">弾倉拡張 · 2</button></div><div class="actions"><button id="go" hidden>もう一度飛ぶ</button><button id="combat">作戦出撃・格納庫</button><button id="free">自由飛行</button><button hidden id="menu">タイトルへ</button></div></article></div><script>
 const canvas=document.querySelector('canvas'),g=canvas.getContext('2d'),$=s=>document.getElementById(s);
 let w,h,x=0,z=0,alt=0,yaw=0,cameraYaw=0,bank=0,pitch=0,power=0,live=false,t=0,last=0,ax=0,ay=0,id=null;
 const keys=new Set(),found=new Set(),isles=[],tau=Math.PI*2;
@@ -152,6 +158,7 @@ function readGesture(rawX=ax,rawY=ay){
   tapDir='';
  }else{tapDir=dir;tapAt=now}
 }
+let trial=null,freeOperation=null;
 let mode='free',panel='title',message='',messageUntil=0;
 let score=0,spray=[],sprayClock=0;
 const flightControls=[document.querySelector('header'),document.querySelector('footer')];
@@ -161,7 +168,8 @@ function enterFlight(){
  syncFireButton();syncAudio()
 }
 function showPanel(state,title,description){
- panel=state;$('atlas').hidden=!['title','hangar','pause'].includes(state);$('service').hidden=state!=='hangar';trigger=false;$('combat').hidden=state!=='title';$('fire').hidden=true;syncAudio();$('cover').hidden=false;
+ panel=state;
+ $('operation-picker').hidden=$('free-picker').hidden=state!=='title';$('atlas').hidden=!['title','hangar','pause'].includes(state);$('service').hidden=state!=='hangar';trigger=false;$('combat').hidden=state!=='title';$('fire').hidden=true;syncAudio();$('cover').hidden=false;
  document.querySelector('.card h1').textContent=title;
  document.querySelector('.card p').textContent=description;
  $('free').hidden=state!=='title';$('go').hidden=state==='title';
@@ -172,11 +180,20 @@ function showPanel(state,title,description){
 
 }
 function titleScreen(){
- live=false;crash=null;showPanel('title','Brass Wings','');
+ live=false;crash=null;trial=freeOperation=null;$('operation-choice').value='';$('free-base').value='';showPanel('title','Brass Wings','');
  document.querySelector('.card p').innerHTML=flightInstructions;atlas()
 }
 function startFlight(selectedMode){
- mode=selectedMode;restartFlight();resetCombat();
+ mode=selectedMode;freeOperation=null;
+ if(mode==='free'){
+  trial=null;
+  const departure=$('free-base').value;
+  if(departure){
+   const m=missions[airbases[departure].region??0];
+   freeOperation={...m,departure,bases:{}}
+  }
+ }
+ restartFlight();resetCombat();
  buildWorld();parkAtStart();
  if(mode==='combat')selectSector();
  message='';messageUntil=0;updateWorld();enterFlight()
@@ -345,8 +362,8 @@ function ground(X,Z){
   const rise=first?cross(a,b)/faces[sector].outerArea:1-cross(c,d)/faces[sector].innerArea;
   level=Math.max(level,10*Math.max(0,Math.min(1,rise)))
  }
- if(Math.abs(X-base.x)<300&&Math.abs(Z-base.z)<195)return level;
- if(campaign.stage===1){
+ if(Math.abs(X-regionRunway.x)<300&&Math.abs(Z-regionRunway.z)<195)return level;
+ if(operation().region===1){
   for(const wall of cliffs){
    const row=Math.floor((Z-wall[0][0][2])/64);
    if(row<0||row>=wall.length-1)continue;
@@ -377,11 +394,61 @@ const worldCoasts=worldOutline.match(/M[^Z]+/g).map(path=>
  }));
 const atlasSites=[[677,728],[970,310],[1038,647]];
 const continents=[];
-const missions=['黄昏の帰投','紫煙高地の防衛','赤銅海峡'].map((name,i)=>{
- const [u,v]=atlasSites[i],sea=i===0?-1:1;
- return {name,wx:u*worldSize/1254,wz:(1-v/1254)*worldSize,bx:i===1?1350:0,bz:i===1?-1300:sea*1100,sx:690,sz:sea*1670,carrier:i!==1}
+// Flight coordinates use the fixed scenery origin of the selected region.
+const regionOrigins=atlasSites.map(([u,v])=>({wx:u*atlasMetre,wz:(1254-v)*atlasMetre}));
+function worldToLocal(wx,wz,origin=operation()){return {x:wx-origin.wx,z:wz-origin.wz}}
+function localToWorld(X,Z,origin=operation()){return {wx:origin.wx+X,wz:origin.wz+Z}}
+const runwayHeight=10,runwayWidth=36,runwayLength=300;
+const airbases=Object.freeze(Object.fromEntries([
+ ['brass-port','黄銅港航空基地',0,0,-1100,true],
+ ['smoke-highlands','紫煙高地航空基地',1,1350,-1300,false],
+ ['red-strait','赤銅海峡航空基地',2,0,1100,true],
+ ['port-plain','港北平原飛行場',0,600,300,false],
+ ['east-fields','東野飛行場',0,1800,1500,false],
+ ['valley-east','紫煙東麓飛行場',1,1500,900,false],
+ ['copper-works','赤棚鉱山東飛行場',1,1500,3600,false],
+ ['western-plain','西域平原飛行場',null,22000,40000,false]
+].map(([id,name,region,X,Z,island])=>[id,Object.freeze({id,name,
+ ...(region===null?{wx:X,wz:Z}:localToWorld(X,Z,regionOrigins[region])),
+ height:runwayHeight,width:runwayWidth,length:runwayLength,island,region,
+ islandOrigin:region===null?null:Object.freeze({...regionOrigins[region]})
+})])));
+const missions=['黄昏の帰投','紫煙高地の防衛','赤銅海峡'].map((name,region)=>{
+ const departure=['brass-port','smoke-highlands','red-strait'][region];
+ const sea=region===0?-1:1,carrier=region!==1,origin=regionOrigins[region];
+ return {name,region,...origin,airspace:{...origin},departure,returnTo:carrier?'carrier':departure,
+  carrier,sx:690,sz:sea*1670,objective:'patrol',waves:2,
+  bases:{[departure]:{side:'friendly',roles:region===1?['defend']:[]}}}
 });
-for(const m of missions)if(m.carrier)continents.push([m.wx+m.bx,m.wz+m.bz,'航空基地',2,390,275,1.8,0]);
+const trialMissions={
+ a:{...missions[0],name:'試験A　黄銅港哨戒',carrier:false,returnTo:'brass-port',waves:1},
+ b:{...missions[0],name:'試験B　港北から東野へ',carrier:false,departure:'port-plain',returnTo:'east-fields',
+  airspace:localToWorld(200,150,regionOrigins[0]),waves:1,
+  bases:{'brass-port':{side:'enemy',roles:[]},'port-plain':{side:'friendly',roles:[]},
+   'east-fields':{side:'friendly',roles:[]}},firstSector:{x:100,z:-800}}
+};
+const baseSides={friendly:'味方',enemy:'敵管理',neutral:'中立'};
+const baseRoles={departure:'出撃',return:'帰投',defend:'防衛',attack:'攻撃目標'};
+const baseColors={friendly:'#b7fff0',enemy:'#ff8074',neutral:'#e3bd79'};
+function baseAssignment(m,id){
+ const settings=m.bases[id],roles=[...(settings?.roles||[])];
+ if(m.departure===id)roles.push('departure');
+ if(m.returnTo===id)roles.push('return');
+ return {side:settings?.side||'neutral',roles}
+}
+for(const [id,m] of Object.entries(trialMissions))$('operation-choice').add(new Option(m.name,id));
+$('operation-choice').onchange=()=>{
+ const m=trialMissions[$('operation-choice').value];
+ document.querySelector('.card p').innerHTML=m
+  ? '推力72%以上で発進。指定空域で赤翼機3機を撃退し、指定基地に帰投。高度32 m以下・推力42%以下で滑走路へ進入。'
+  : flightInstructions;
+ atlas()
+};
+for(const b of Object.values(airbases)){
+ $('free-base').add(new Option(b.name,b.id));
+ if(b.island)continents.push([b.wx,b.wz,b.name,2,390,275,1.8,0,b.islandOrigin])
+}
+$('free-base').onchange=atlas;
 const shoreRows=new Map(),shoreTiles=new Map();
 function cutCoast(){
  shoreRows.clear();shoreTiles.clear();
@@ -416,7 +483,8 @@ function mainlandAt(X,Z){
 const regions=['黄銅港市','紫煙の屈曲谷','赤銅要塞群島'];
 const quarters=[],cliffs=[];
 for(const [stage,m] of missions.entries()){
- const normal=Math.hypot(m.bx,m.bz),nx=m.bx/normal,nz=m.bz/normal;
+ const {x:bx,z:bz}=worldToLocal(airbases[m.departure].wx,airbases[m.departure].wz,m);
+ const normal=Math.hypot(bx,bz),nx=bx/normal,nz=bz/normal;
  m.town=stage===1?[-1450,1450]:[-nx*1780,-nz*1780];
  if(stage===2)for(let j=-2;j<=2;j++){
   const offshore=(1600+220*Math.cos(j*2))/5,along=j*610/5;
@@ -487,7 +555,7 @@ function buildCopperPass(){
 }
 function buildRegion(){
  quarters.length=cliffs.length=roads.length=0;ridgeCells.clear();ridgeFaces.length=0;
- const m=operation(),stage=campaign.stage,[cx,cz]=m.town;
+ const m=operation(),stage=m.region,[cx,cz]=m.town;
  if(stage!==1){
   const inland=stage===0?1:-1;
   function vertex(i,j){
@@ -565,9 +633,13 @@ const saveKey='brassWings.worldCampaign.v1';
 try{const v=JSON.parse(localStorage.getItem(saveKey));if(v&&Number.isInteger(v.stage)&&v.stage>=0&&v.stage<missions.length)
  campaign={stage:v.stage,funds:Math.max(0,v.funds|0),wear:Math.min(40,Math.max(0,v.wear|0)),mag:Math.min(3,Math.max(0,v.mag|0)),hangar:!!v.hangar}}catch{}
 function saveCampaign(){try{localStorage.setItem(saveKey,JSON.stringify(campaign))}catch{}}
-function operation(){return missions[campaign.stage]}
+for(const m of Object.values(trialMissions))m.town=missions[m.region].town;
+function operation(){return trial||freeOperation||missions[campaign.stage]}
 function atlas(){
- const m=operation(),k=500/worldSize,sx=(m.wx+(panel==='hangar'?0:x))*k,sy=500-(m.wz+(panel==='hangar'?0:z))*k;
+ const preview=panel==='title'&&trialMissions[$('operation-choice').value];
+ const m=preview||operation(),k=500/worldSize;
+ const selectedBase=panel==='title'&&!preview&&airbases[$('free-base').value];
+ const marker=panel==='pause'?localToWorld(x,z):selectedBase||m.airspace,sx=marker.wx*k,sy=500-marker.wz*k;
  const rivers=['M406 164 Q391 220 266 250 T173 347 T81 409','M411 379 Q438 449 493 467 T516 541 Q521 577 570 605 T598 675 L625 706','M675 525 Q603 547 570 605','M925 185 Q902 242 958 279 T978 345 Q1022 375 1032 393','M1130 261 Q1056 290 978 345','M1061 795 Q1005 827 941 849 T834 899 Q768 942 725 959'].map(d=>'<path d="'+d+'" fill="none" stroke="#587f78" stroke-width="3"/>').join('');
  const shapes='<g transform="scale('+500/1254+')"><path fill="#879661" stroke="#bfad83" stroke-width="3" fill-rule="evenodd" d="'+worldOutline+'"/>'+reliefBands.map((path,i)=>'<path fill="'+['#958665','#ae9779','#d3c5ab'][i]+'" fill-rule="evenodd" d="'+path+'"/>').join('')+rivers+'</g>';
  const islands=continents.map(([cx,cz,,,rx,rz,phase,rotation])=>{
@@ -577,10 +649,24 @@ function atlas(){
   });
   return '<polygon fill="#879661" points="'+points.join(' ')+'"/>'
  }).join('');
+ const bases=Object.values(airbases).map(b=>{
+  const {side,roles}=baseAssignment(m,b.id);
+  const label=b.name+' '+[baseSides[side],...roles.map(role=>baseRoles[role])].join('・');
+  return '<circle cx="'+b.wx*k+'" cy="'+(500-b.wz*k)+'" r="3" fill="'+baseColors[side]+'"><title>'+label+'</title></circle>'
+ }).join('');
  const marks=missions.map((v,i)=>'<rect x="'+(v.wx*k-2)+'" y="'+(498-v.wz*k)+'" width="4" height="4" fill="'+['#f4d49c','#d2bfab','#ea8774'][i]+'"/>').join('');
- $('atlas').innerHTML='<svg viewBox="0 0 500 500" aria-label="世界地図と作戦位置"><rect width="500" height="500" fill="#29474e"/>'+shapes+islands+marks+'<circle cx="'+sx+'" cy="'+sy+'" r="12" fill="none" stroke="#ffd880" stroke-width="4"/><rect x="'+(sx-2.5)+'" y="'+(sy-2.5)+'" width="5" height="5" fill="#fff2b2"/></svg>第'+(campaign.stage+1)+'面 '+m.name+'・'+regions[campaign.stage]+' ｜ '+(m.carrier?'沿岸・補給艦と基地':'内陸・航空基地')+' ｜ 世界 100 km 四方・作戦空域 5 km 四方'
+ $('atlas').innerHTML='<svg viewBox="0 0 500 500" aria-label="世界地図と作戦位置"><rect width="500" height="500" fill="#29474e"/>'+shapes+islands+marks+bases+'<circle id="atlas-position" cx="'+sx+'" cy="'+sy+'" r="12" fill="none" stroke="#ffd880" stroke-width="4"/><rect x="'+(sx-2.5)+'" y="'+(sy-2.5)+'" width="5" height="5" fill="#fff2b2"/></svg>'+(preview||trial?m.name:'第'+(campaign.stage+1)+'面 '+m.name+'・'+regions[m.region])+
+  ' ｜ 世界 100 km 四方・作戦空域 5 km 四方';
+ if(preview||trial){
+  const brief=Object.entries(m.bases).map(([id])=>{
+   const {side,roles}=baseAssignment(m,id);
+   return airbases[id].name+' '+[baseSides[side],...roles.map(role=>baseRoles[role])].join('・')
+  });
+  $('atlas').append(document.createElement('br'),brief.join(' ｜ '))
+ }
 }
-const base={x:0,z:0},ship={x:0,z:0};
+let base,regionRunway,localBases=[],landingPorts=[];
+const ship={x:0,z:0};
 const deckHeight=13,deckSections=Array.from({length:11},(_,i)=>{
  const j=i-5;
  return {offset:j*21,width:48-Math.max(0,Math.abs(j)-3)*7}
@@ -596,20 +682,27 @@ function overDeck(X,Z){
 let tileKey='';
 const shoreMeshes=[];
 let mainlandPlan,islandPlan;
+const worldMap=document.createElement('canvas');worldMap.width=worldMap.height=128;
 function buildWorld(){
  terraces.length=isles.length=0;tileCache.clear();tileKey='';
- const m=operation();base.x=m.bx;base.z=m.bz;ship.x=m.sx;ship.z=m.sz;
+ const m=operation();
+ localBases=Object.values(airbases).map(b=>({...b,...worldToLocal(b.wx,b.wz,m),...baseAssignment(m,b.id)}));
+ base=localBases.find(b=>b.id===m.departure);
+ regionRunway=localBases.find(b=>b.id===missions[m.region].departure);
+ ship.x=m.sx;ship.z=m.sz;
+ landingPorts=localBases.filter(b=>b.side!=='enemy');
+ if(m.carrier)landingPorts.push(ship);
  cutCoast();
  for(const l of continents){
-  const X=l[0]-m.wx,Z=l[1]-m.wz;
+  const {x:X,z:Z}=worldToLocal(l[0],l[1],m);
   isles.push([X,Z,...l.slice(2)])
  }
  shoreMeshes.length=0;
- for(const [cx,cz,,,rx,rz,phase,rotation] of isles){
+ for(const [cx,cz,,,rx,rz,phase,rotation,anchor] of isles){
   const outer=[],inner=[],faces=[],c=Math.cos(rotation),s=Math.sin(rotation);
   for(let j=0;j<64;j++){
    const a=j*tau/64,r=coast(a,phase),u=rx*r*Math.cos(a),v=rz*r*Math.sin(a);
-   const dx=u*c-v*s,dz=u*s+v*c,inset=.08+.27*field(cx+dx,cz+dz,175,37);
+   const dx=u*c-v*s,dz=u*s+v*c,inset=.08+.27*field(cx+dx+(anchor?m.wx-anchor.wx:0),cz+dz+(anchor?m.wz-anchor.wz:0),175,37);
    outer.push([cx+dx,0,cz+dz]);inner.push([cx+dx*(1-inset),10,cz+dz*(1-inset)])
   }
   for(let j=0;j<64;j++){
@@ -624,13 +717,20 @@ function buildWorld(){
  }
  buildRegion();
  mainlandPlan=new Path2D();islandPlan=new Path2D();
+ const mapContext=worldMap.getContext('2d'),mapScale=worldMap.width/worldSize;
+ const worldMainland=new Path2D(),worldIslands=new Path2D();
  for(const layer of terraces){
   if(!layer.mainland&&layer.y!==0)continue;
-  const path=layer.mainland?mainlandPlan:islandPlan;
-  layer.ring.forEach(([X,Z],i)=>i?path.lineTo(X,Z):path.moveTo(X,Z));
-  path.closePath()
+  const path=layer.mainland?mainlandPlan:islandPlan,worldPath=layer.mainland?worldMainland:worldIslands;
+  layer.ring.forEach(([X,Z],i)=>{
+   const {wx,wz}=localToWorld(X,Z,m);
+   if(i){path.lineTo(X,Z);worldPath.lineTo(wx*mapScale,(worldSize-wz)*mapScale)}
+   else{path.moveTo(X,Z);worldPath.moveTo(wx*mapScale,(worldSize-wz)*mapScale)}
+  });
+  path.closePath();worldPath.closePath()
  }
-
+ mapContext.clearRect(0,0,worldMap.width,worldMap.height);
+ mapContext.fillStyle='#879661';mapContext.fill(worldMainland,'evenodd');mapContext.fill(worldIslands)
 }
 function updateWorld(){
  const tx=Math.floor(x/256),tz=Math.floor(z/256);
@@ -641,18 +741,19 @@ function updateWorld(){
   const key=i+','+j;keep.add(key);let tile=tileCache.get(key);
   if(!tile){
    tile={trees:[],pixels:[]};
+   const nearBases=localBases.filter(b=>Math.abs(b.x-(i+.5)*256)<420&&Math.abs(b.z-(j+.5)*256)<320);
    const nearTown=quarters.filter(b=>Math.abs(b.x-(i+.5)*256)<240&&Math.abs(b.z-(j+.5)*256)<240);
    const nearRoad=roads.filter(r=>r.some(([X,,Z])=>Math.abs(X-(i+.5)*256)<280&&Math.abs(Z-(j+.5)*256)<280))
     .map(r=>[Math.min(...r.map(p=>p[0]))-9,Math.max(...r.map(p=>p[0]))+9,Math.min(...r.map(p=>p[2]))-9,Math.max(...r.map(p=>p[2]))+9]);
    for(let n=0;n<100;n++){
     const val=k=>noise(i,j,8*n+k),X=i*256+(n%10+.5+(val(0)-.5)*.45)*25.6,Z=j*256+(Math.floor(n/10)+.5+(val(1)-.5)*.45)*25.6,Y=ground(X,Z);
     if(!Y)continue;
-    if(Math.abs(X-base.x)<285&&Math.abs(Z-base.z)<185)continue;
+    if(nearBases.some(b=>Math.abs(X-b.x)<285&&Math.abs(Z-b.z)<185))continue;
     if(nearRoad.some(([west,east,south,north])=>X>west&&X<east&&Z>south&&Z<north))continue;
     if(nearTown.some(b=>Math.hypot(X-b.x,Z-b.z)<b.radius+16+20*val(5)))continue;
     if(cliffs.length&&Math.abs(X-valleyAxis(Z)-24*Math.sin(Z/117))<27)continue;
     if(cliffs.length&&Math.abs(X-archX)<205&&Math.abs(Z-archZ)<95)continue;
-    if(campaign.stage===1&&Z>=passStart&&Z<=passStart+passRows*64){
+    if(operation().region===1&&Z>=passStart&&Z<=passStart+passRows*64){
      const offset=X-passAxis(Z);
      if(Math.abs(offset)<50||offset>50&&offset<540&&quarryWeight((Z-passStart)/64)>.4)continue
     }
@@ -670,7 +771,6 @@ function updateWorld(){
  }
  for(const key of tileCache.keys())if(!keep.has(key))tileCache.delete(key)
 }
-updateWorld();
 function branchRadius(tree,dy){
  if(dy<0||dy>tree.H)return 0;
  return dy<tree.H*.25?1.2:tree.R*Math.max(.12,1-(dy/tree.H-.25)/.75)
@@ -711,8 +811,11 @@ function hitObject(X,Z,Y){
   if(operation().carrier)for(const [dx,dz,y,width,length,height] of shipStructures){
    if(Math.abs(px-ship.x-dx)<=width/2&&Math.abs(pz-ship.z-dz)<=length/2&&py-.55<=y+height&&py+.55>=y)return '艦橋'
   }
-  if(Math.abs(px-base.x)<300&&Math.abs(pz-base.z)<180)
-   for(const obj of station)if(Math.abs(px-base.x-obj.x)<obj.w/2&&Math.abs(pz-base.z-obj.z)<obj.l/2&&py<10+obj.h)return '基地施設';
+  for(const b of localBases){
+   if(Math.abs(px-b.x)>400||Math.abs(pz-b.z)>180)continue;
+   for(const obj of b.island?coastalStation:station)
+    if(Math.abs(px-b.x-obj.x)<obj.w/2&&Math.abs(pz-b.z-obj.z)<obj.l/2&&py<=b.height+obj.y+obj.h&&py>=b.height+obj.y)return '基地施設'
+  }
   for(let i=Math.floor((px-11)/256);i<=Math.floor((px+11)/256);i++)for(let j=Math.floor((pz-11)/256);j<=Math.floor((pz+11)/256);j++)for(const tree of tileCache.get(i+","+j)?.trees||[]){
    if(Math.abs(tree.X-px)>11||Math.abs(tree.Z-pz)>11)continue;
    const r=branchRadius(tree,py-tree.Y);if(r&&Math.hypot(px-tree.X,pz-tree.Z)<r+.55)return '木'
@@ -808,12 +911,15 @@ const cloudArt=Array.from({length:5},(_,v)=>artwork(120,38,c=>{
 }));
 const shadowOutline=[[0,4],[.8,2.7],[5.7,2],[5.8,.7],[1,.5],[.5,-2.8],[2,-3.4],[2,-4],[0,-3.8],[-2,-4],[-2,-3.4],[-.5,-2.8],[-1,.5],[-5.8,.7],[-5.7,2],[-.8,2.7]];
 const enemyFrames=new Map();let enemies=[],bolts=[],trigger=false,reload=0;
-$('combat').onclick=()=>campaign.hangar?openHangar():startFlight('combat');
+$('combat').onclick=()=>{
+ trial=trialMissions[$('operation-choice').value]||null;
+ if(!trial&&campaign.hangar)openHangar();else startFlight('combat')
+};
 $('fire').onpointerdown=e=>{if(live&&mode==='combat'&&!deckMode){$('fire').setPointerCapture(e.pointerId);trigger=true}};
 $('fire').onpointerup=$('fire').onlostpointercapture=$('fire').onpointercancel=()=>{trigger=false};
 const boundary=2500, sectorRadius=210;
 let sector=0,zone=null,returnHeading=null;
-let cleared=0,returningHome=false,approachReady=false,missionHits=0;
+let cleared=0,sortiePhase='departure',approachReady=false,missionHits=0;
 function openHangar(){
  showPanel('hangar','整備格納庫','整備券 '+campaign.funds+' 枚　出撃EN '+(100-campaign.wear)+'%　装弾数 '+(90+campaign.mag*20)+' 発');
  $('repair').disabled=campaign.funds<1||!campaign.wear;
@@ -821,7 +927,9 @@ function openHangar(){
  $('go').textContent='次の面へ出撃';atlas()
 }
 function completeSortie(){
- live=false;clearFlightInput();score+=missionHits===0?500:250;
+ if(sortiePhase!=='return')return;
+ sortiePhase='result';live=false;clearFlightInput();score+=missionHits===0?500:250;
+ if(trial){showPanel('result','試験作戦完了',goalPort().name+' 帰還成功　'+score+' pt');return}
  const current=operation().name;
  campaign.wear=Math.min(40,campaign.wear+missionHits*10);campaign.funds+=2+(missionHits===0?1:0);
  if(campaign.stage===missions.length-1){
@@ -836,31 +944,50 @@ $('repair').onclick=()=>{if(panel==='hangar'&&campaign.wear&&campaign.funds){cam
 $('magazine').onclick=()=>{if(panel==='hangar'&&campaign.mag<3&&campaign.funds>=2){campaign.mag++;campaign.funds-=2;saveCampaign();openHangar()}};
 function selectSector(){
  sector++;
- if(sector===1){zone={x:base.x-300,z:base.z+1250};return}
+ const center=airspaceCenter();
+ if(sector===1){
+  const waypoint=operation().firstSector;
+  zone=waypoint?{x:center.x+waypoint.x,z:center.z+waypoint.z}:{x:base.x-300,z:base.z+1250};
+  return
+ }
  const heading=yaw+sector*2.39996;
  for(let i=0;i<12;i++){
   const a=heading+i*tau/12,xx=x+1250*Math.sin(a),zz=z+1250*Math.cos(a);
-  if(Math.abs(xx)<boundary-450&&Math.abs(zz)<boundary-450){zone={x:xx,z:zz};return}
+  if(Math.abs(xx-center.x)<boundary-450&&Math.abs(zz-center.z)<boundary-450){zone={x:xx,z:zz};return}
  }
- zone={x:x*.35,z:z*.35}
+ zone={x:center.x+(x-center.x)*.35,z:center.z+(z-center.z)*.35}
 }
 let locked=null, hostile=[], grace=0, nextAttack=0;
 let ammo=90,energy=100,supplying=false;
 let deckMode='',deckTime=0,landingSite=null,landingDirection=1;
-const runwayHeight=10;
 function parkAtStart(){
  landingSite=base;landingDirection=1;deckMode='moored';deckTime=0;
- x=base.x;z=base.z-95;alt=runwayHeight+1.5
+ x=base.x;z=base.z-95;alt=base.height+1.5
 }
 function syncFireButton(){$('fire').hidden=mode!=='combat'||Boolean(deckMode)}
-function goalPort(){return operation().carrier?ship:base}
+function goalPort(){
+ const id=operation().returnTo;
+ return id==='carrier'?ship:localBases.find(b=>b.id===id)
+}
 function deckAssist(dt){
- const port=deckMode?landingSite:(operation().carrier&&Math.hypot(x-ship.x,z-ship.z)<Math.hypot(x-base.x,z-base.z)?ship:base);
- const runway=port===base,direction=deckMode?landingDirection:(runway&&Math.cos(yaw)<0?-1:1);
- const heading=direction===1?0:Math.PI,side=x-port.x,along=(z-port.z)*direction;
- const touchHeight=runway?runwayHeight+1.5:deckHeight+2,stopZ=port.z+direction*62;
+ let port=landingSite;
  if(!deckMode){
-  if(power>.42||alt<touchHeight-1||alt>32||Math.abs(side)>31||along < -(runway?165:130)||along>55||Math.abs(angleDelta(yaw-heading))>1.7)return false;
+  if(power>.42||alt>32)return false;
+  port=null;let nearest=Infinity;
+  for(const b of landingPorts){
+   const direction=b!==ship&&Math.cos(yaw)<0?-1:1;
+   const side=Math.abs(x-b.x),along=(z-b.z)*direction,range=side*side+along*along;
+   const height=b===ship?deckHeight+2:b.height+1.5;
+   if(alt<height-1||side>31||along < -(b===ship?130:b.length/2+15)||along>55||range>=nearest)continue;
+   port=b;nearest=range
+  }
+  if(!port)return false
+ }
+ const runway=port!==ship,direction=deckMode?landingDirection:(runway&&Math.cos(yaw)<0?-1:1);
+ const heading=direction===1?0:Math.PI,side=x-port.x;
+ const touchHeight=runway?port.height+1.5:deckHeight+2,stopZ=port.z+direction*62;
+ if(!deckMode){
+  if(Math.abs(angleDelta(yaw-heading))>1.7)return false;
   landingSite=port;landingDirection=direction;deckMode='capture';deckTime=0;trick=null;phase=0;returnHeading=null;clearFlightInput();syncFireButton()
  }
  deckTime+=dt;
@@ -869,7 +996,7 @@ function deckAssist(dt){
  if(deckMode==='capture'){
   x-=side*capture;z+=(stopZ-z)*(1-Math.exp(-.72*dt));
   alt+=(touchHeight-alt)*(1-Math.exp(-1.45*dt));airspeed*=Math.exp(-1.5*dt);
-  if(deckTime>3.4){deckMode='moored';airspeed=0;alt=touchHeight;x=port.x;z=stopZ;if(returningHome&&port===goalPort()){completeSortie();return true}}
+  if(deckTime>3.4){deckMode='moored';airspeed=0;alt=touchHeight;x=port.x;z=stopZ;if(sortiePhase==='return'&&port===goalPort()){completeSortie();return true}}
  }else if(deckMode==='moored'){
   if(power>=.72){deckMode='launch';deckTime=0}
  }else{
@@ -878,6 +1005,7 @@ function deckAssist(dt){
   if(impact(x,prevZ,prevAlt))return true;
   if(deckTime>=2.2){
    deckMode='';cameraYaw=yaw;
+   if(mode==='combat'&&sortiePhase==='departure')sortiePhase='scenario';
    if(document.activeElement===$('thrust'))$('thrust').blur();
    syncFireButton()
   }
@@ -892,13 +1020,17 @@ function replenish(dt){
  return true
 }
 function resetCombat(){
- cleared=0;returningHome=false;approachReady=false;missionHits=0;locked=null;hostile=[];grace=0;nextAttack=0;
+ cleared=0;sortiePhase='departure';approachReady=false;missionHits=0;locked=null;hostile=[];grace=0;nextAttack=0;
  enemies=[];bolts=[];trigger=false;reload=0;sector=0;zone=null;returnHeading=null;
  ammo=90+20*campaign.mag;energy=100-campaign.wear;supplying=false;
 }
+function airspaceCenter(){
+ const {wx,wz}=operation().airspace;
+ return worldToLocal(wx,wz)
+}
 function airspaceOffset(){
- const m=operation();
- return mode==='combat'?[x,z,boundary]:[x+m.wx-worldSize/2,z+m.wz-worldSize/2,worldSize/2]
+ const center=mode==='combat'?airspaceCenter():worldToLocal(worldSize/2,worldSize/2);
+ return [x-center.x,z-center.z,mode==='combat'?boundary:worldSize/2]
 }
 function limitAirspace(){
  const [dx,dz,limit]=airspaceOffset();
@@ -962,15 +1094,33 @@ function moveEnemy(e,i,dt){
   const chased=d<245&&Math.abs(angleDelta(toward-e.heading))>2.55&&bearing(e).angle<.38;
   e.tail=chased?e.tail+dt:0;if(e.tail>1.15)switchMove(e,'evade')
  }
- if(Math.max(Math.abs(e.x),Math.abs(e.z))>boundary-200)aim=Math.atan2(-e.x,-e.z);
+ const center=airspaceCenter();
+ if(Math.max(Math.abs(e.x-center.x),Math.abs(e.z-center.z))>boundary-200)aim=Math.atan2(center.x-e.x,center.z-e.z);
  const rate=Math.max(-1.32,Math.min(1.32,angleDelta(aim-e.heading)*2));
  e.bank+=(rate*.46-e.bank)*(1-Math.exp(-5*dt));e.heading+=rate*dt;
  e.x+=Math.sin(e.heading)*speed*dt;e.z+=Math.cos(e.heading)*speed*dt;e.y+=Math.max(-24,Math.min(24,height-e.y))*dt
 }
+function minimapBox(){
+ const side=Math.min(108,Math.round(w*.24),Math.round(h*.26));
+ return {side,left:w-side-10,top:Math.max(63,h*.205)}
+}
+function worldMinimap(){
+ const {side,left,top}=minimapBox(),scale=(side-8)/worldSize;
+ const X=wx=>left+4+wx*scale,Z=wz=>top+4+(worldSize-wz)*scale;
+ g.fillStyle='rgba(24,40,44,.82)';g.fillRect(left,top,side,side);
+ g.drawImage(worldMap,left+4,top+4,side-8,side-8);
+ g.strokeStyle='#d3b783';g.lineWidth=1;g.strokeRect(left+4,top+4,side-8,side-8);
+ g.fillStyle='#e3bd79';
+ for(const b of Object.values(airbases))g.fillRect(X(b.wx)-1,Z(b.wz)-1,2,2);
+ const {wx,wz}=localToWorld(x,z);
+ g.save();g.translate(X(wx),Z(wz));g.rotate(yaw);
+ poly([[0,-4],[-3,3],[0,2],[3,3]],'#b7fff0');g.restore()
+}
 function patrolMap(){
- const side=Math.min(108,Math.round(w*.24),Math.round(h*.26)),left=w-side-10,top=Math.max(63,h*.205);
+ const {side,left,top}=minimapBox();
  const zoom=ammo>18&&energy>25&&enemies.some(e=>e.hp>0),scale=(side-8)/(zoom?1250:2*boundary);
- const mx=X=>left+side/2+(X-(zoom?x:0))*scale,my=Z=>top+side/2-(Z-(zoom?z:0))*scale;
+ const center=airspaceCenter();
+ const mx=X=>left+side/2+(X-(zoom?x:center.x))*scale,my=Z=>top+side/2-(Z-(zoom?z:center.z))*scale;
  g.fillStyle='rgba(24,40,44,.82)';g.fillRect(left,top,side,side);
  g.strokeStyle='#d3b783';g.lineWidth=1;g.strokeRect(left+4,top+4,side-8,side-8);
  g.save();g.beginPath();g.rect(left+4,top+4,side-8,side-8);g.clip();
@@ -979,20 +1129,26 @@ function patrolMap(){
  for(const wall of cliffs)poly([...wall.map(row=>row[2]),...wall.map(row=>row[6]).reverse()].map(([X,Y,Z])=>[mx(X),my(Z)]),'#a5987e');
  if(cliffs.length){g.fillStyle='#e2bd8e';g.fillRect(mx(archX-165),my(archZ),330*scale,2)}
  for(const b of quarters){g.fillStyle=b.roof;g.fillRect(mx(b.x),my(b.z),Math.max(1,b.w*scale),Math.max(1,b.l*scale))}
- if(!operation().carrier){g.fillStyle='#a7ae8b';g.fillRect(mx(base.x)-1,my(base.z)-5,2,10)}
+
  if(operation().carrier){g.fillStyle='#b6eaf0';g.fillRect(mx(ship.x)-2,my(ship.z)-2,4,4)}
- g.fillStyle='#e3bd79';g.fillRect(mx(base.x)-2,my(base.z)-2,4,4);
- g.beginPath();g.arc(mx(returningHome&&approachReady?goalPort().x:zone.x),my(returningHome&&approachReady?goalPort().z:zone.z),Math.max(4,sectorRadius*scale),0,tau);
+ for(const b of localBases){
+  g.fillStyle=baseColors[b.side];g.fillRect(mx(b.x)-2,my(b.z)-2,4,4)
+ }
+ g.beginPath();g.arc(mx(sortiePhase==='return'&&approachReady?goalPort().x:zone.x),my(sortiePhase==='return'&&approachReady?goalPort().z:zone.z),Math.max(4,sectorRadius*scale),0,tau);
  g.strokeStyle='#ffe39a';g.stroke();
  for(const e of enemies)if(e.hp>0){g.fillStyle=e===locked?'#b7fff0':e.state==='attack'?'#ffdd7c':'#ff8074';g.fillRect(mx(e.x)-1.5,my(e.z)-1.5,3,3)}
  g.save();g.translate(mx(x),my(z));g.rotate(yaw);poly([[0,-5],[-3.5,4],[0,2],[3.5,4]],'#b7fff0');g.restore();g.restore()
 }
 function fight(dt){
  if(!replenish(dt))return;
- if(returningHome){
+ if(sortiePhase==='return'){
   if(Math.hypot(x-zone.x,z-zone.z)<150)approachReady=true;
   return
  }
+ if(sortiePhase==='scenario')scenarioUpdates[operation().objective](dt)
+}
+const scenarioUpdates={patrol:updatePatrol};
+function updatePatrol(dt){
  if(!enemies.length&&Math.hypot(x-zone.x,z-zone.z)<=sectorRadius)deploy();
  reload=Math.max(0,reload-dt);
  for(const [i,e] of enemies.entries()){
@@ -1036,14 +1192,25 @@ function fight(dt){
  bolts=bolts.filter(b=>b.life>0);
  if(enemies.length&&enemies.every(e=>!e.hp&&e.fall>.65)){
   enemies=[];bolts=[];hostile=[];locked=null;cleared++;
-  if(cleared>=2){returningHome=true;zone={x:goalPort().x,z:goalPort().z-330};message='全空域確保　'+(operation().carrier?'空母':'基地')+'に帰投せよ'}
-  else{selectSector();message='第1空域確保　次の哨戒地点へ'}
+  if(cleared>=operation().waves)beginReturn();
+  else{selectSector();message='空域 '+cleared+' 確保　次の哨戒地点へ'}
   messageUntil=t+4
  }
+}
+function beginReturn(){
+ sortiePhase='return';
+ const port=goalPort();
+ zone={x:port.x,z:port.z-330};
+ message='全空域確保　'+(port===ship?'空母':port.name)+'へ帰投'
 }
 const station=[];
 for(const side of [-1,1])for(let j=-1;j<=1;j++)station.push({x:side*105,z:j*70,w:55,l:39,h:15,roof:'#657670'});
 station.push({x:61,z:90,w:17,l:18,h:31,roof:'#bca277'},{x:-189,z:-38,w:44,l:26,h:10,roof:'#9d705d'},{x:-189,z:4,w:44,l:26,h:10,roof:'#9d705d'});
+for(const obj of station)obj.y=0;
+station.push({x:61,z:90,y:26,w:24,l:23,h:6,roof:'#c7b68e'});
+const coastalStation=[...station,...Array.from({length:7},(_,j)=>({
+ x:-210-j*25,z:-30,y:-10,w:25,l:13,h:11,roof:'#987f60'
+}))];
 // All architecture uses world coordinates, including the near-plane clipping used on deck.
 function drawScenery(sn,cs,eye,f,horizon,objects){
  let building=null;
@@ -1144,19 +1311,20 @@ function drawScenery(sn,cs,eye,f,horizon,objects){
   }
  }
  building=null;
- if(Math.hypot(x-base.x,z-base.z)<3500){
-  for(let j=-7;j<=7;j++){
-   const Z=base.z+j*20;
-   strip(base.x,Z,runwayHeight+.1,36,20,'#535959');strip(base.x,Z,10.2,1.5,10,'#e1d4ae',.3);
-   for(const u of [-1,1]){strip(base.x+u*16,Z,10.2,.8,20,'#cabfa0',.3);strip(base.x+u*62,Z,10.1,10,20,'#99917a')}
+ for(const b of localBases){
+  if(Math.hypot(x-b.x,z-b.z)>=3500)continue;
+  const Y=b.height;
+  for(let offset=10-b.length/2;offset<b.length/2;offset+=20){
+   const Z=b.z+offset;
+   strip(b.x,Z,Y+.1,b.width,20,'#535959');strip(b.x,Z,Y+.2,1.5,10,'#e1d4ae',.3);
+   for(const u of [-1,1]){strip(b.x+u*16,Z,Y+.2,.8,20,'#cabfa0',.3);strip(b.x+u*62,Z,Y+.1,10,20,'#99917a')}
   }
-  for(const obj of station){
-   const X=base.x+obj.x,Z=base.z+obj.z;
-   strip(X,Z,10.15,obj.w+18,obj.l+9,'#a39b83');block(X,Z,10,obj.w,obj.l,obj.h,obj.roof);
-   if(obj.h===31)block(X,Z,36,24,23,6,'#c7b68e');
-   else if(obj.h===15){strip(X,Z,25.2,obj.w-3,3,'#99a294',.5);strip((X+base.x)/2,Z,10.25,Math.abs(obj.x)-32,8,'#a29b89',.5)}
+  for(const obj of b.island?coastalStation:station){
+   const X=b.x+obj.x,Z=b.z+obj.z;
+   if(obj.y===0)strip(X,Z,Y+.15,obj.w+18,obj.l+9,'#a39b83');
+   block(X,Z,Y+obj.y,obj.w,obj.l,obj.h,obj.roof);
+   if(obj.h===15){strip(X,Z,Y+15.2,obj.w-3,3,'#99a294',.5);strip((X+b.x)/2,Z,Y+.25,Math.abs(obj.x)-32,8,'#a29b89',.5)}
   }
-  if(operation().carrier)for(let j=0;j<7;j++)block(base.x-210-j*25,base.z-30,0,25,13,11,'#987f60')
  }
  if(operation().carrier&&Math.hypot(x-ship.x,z-ship.z)<3500){
   for(const {offset,width} of deckSections){
@@ -1203,8 +1371,8 @@ for(let i=-6;i<=6;i++)for(let j=-6;j<=6;j++){let A=Math.floor(x/240)+i,B=Math.fl
   g.fillRect(Math.round(p[0]),Math.round(p[1]),Math.max(1,length),Math.max(1,p[2]*.12));
  }
 if(mode==='free'){
- const landmarks=[...isles,[...operation().town,regions[campaign.stage]]];
- if(campaign.stage===1)landmarks.push([passAxis(4992),4992,'白嶺峠'],[passAxis(3648)+270,3648,'赤棚鉱山市']);
+ const landmarks=[...isles,[...operation().town,regions[operation().region]]];
+ if(operation().region===1)landmarks.push([passAxis(4992),4992,'白嶺峠'],[passAxis(3648)+270,3648,'赤棚鉱山市']);
  if(operation().carrier)landmarks.push([ship.x,ship.z,'補給船']);
  for(const [X,Z,name,kind] of landmarks){
   if(kind===2)continue;
@@ -1318,13 +1486,13 @@ if(mode==='free'){
  patrolMap();const returningSupply=ammo<19||energy<26;const targetPlane=returningSupply?goalPort():enemy||zone,dir=Math.atan2(targetPlane.x-x,targetPlane.z-z)-yaw;
  $('place').textContent=(supplying?'補給中　':returningSupply?'補給地点へ（着陸後に補給）　':'空域 '+sector+'　')+(enemies.length?'撃墜 '+enemies.filter(e=>!e.hp).length+'/3':'指定空域へ')+'　'+['↑','↗','→','↘','↓','↙','←','↖'][(Math.round(dir/(tau/8))%8+8)%8]+' '+Math.round(Math.hypot(targetPlane.x-x,targetPlane.z-z))+' m'
 
- if(returningHome){
+ if(sortiePhase==='return'){
   const goal=approachReady?goalPort():zone,bearing=Math.atan2(goal.x-x,goal.z-z)-yaw;
   const arrow=['↑','↗','→','↘','↓','↙','←','↖'][(Math.round(bearing/(tau/8))%8+8)%8];
-  $('place').textContent=(approachReady?((operation().carrier?'艦尾':'滑走路')+'へ　高度32 m以下・推力42%以下'):'帰投　進入地点へ')+'　'+arrow+' '+Math.round(Math.hypot(x-goal.x,z-goal.z))+' m'
- }else if(!enemies.length&&!returningSupply)$('place').textContent+='　任務 '+cleared+'/2';
- }else{let dir=target?Math.atan2(target[0]-x,target[1]-z)-yaw:0;$('place').textContent=target?['↑','↗','→','↘','↓','↙','←','↖'][(Math.round(dir/(tau/8))%8+8)%8]+' '+target[2]+'　'+(nearest/1000).toFixed(1)+' km　'+'発見 '+found.size:'自由飛行'}
- if(deckMode&&live)$('place').textContent=deckMode==='capture'?(landingSite===base?'着陸補助　滑走路へ':'着艦補助　甲板へ'):deckMode==='moored'?(supplying?'補給中　':'待機中　')+'推力72%以上で発進':(landingSite===base?'離陸中':'発艦中');
+  $('place').textContent=(approachReady?((goalPort()===ship?'艦尾':'滑走路')+'へ　高度32 m以下・推力42%以下'):('帰投　'+(goalPort()===ship?'空母':goalPort().name)+'進入地点へ'))+'　'+arrow+' '+Math.round(Math.hypot(x-goal.x,z-goal.z))+' m'
+ }else if(!enemies.length&&!returningSupply)$('place').textContent+='　任務 '+cleared+'/'+operation().waves;
+ }else{worldMinimap();let dir=target?Math.atan2(target[0]-x,target[1]-z)-yaw:0;$('place').textContent=target?['↑','↗','→','↘','↓','↙','←','↖'][(Math.round(dir/(tau/8))%8+8)%8]+' '+target[2]+'　'+(nearest/1000).toFixed(1)+' km　'+'発見 '+found.size:'自由飛行'}
+ if(deckMode&&live)$('place').textContent=deckMode==='capture'?(landingSite!==ship?'着陸補助　滑走路へ':'着艦補助　甲板へ'):deckMode==='moored'?(trial?landingSite.name+'　':supplying?'補給中　':'待機中　')+'推力72%以上で発進':(landingSite!==ship?'離陸中':'発艦中');
  $('feedback').textContent=t<messageUntil?message:'';
  const scoreboard=(mode==='combat'?'弾 '+Math.floor(ammo)+'　EN '+Math.ceil(energy)+'%　':'')+score+' pt';
  if($('score').textContent!==scoreboard)$('score').textContent=scoreboard}
