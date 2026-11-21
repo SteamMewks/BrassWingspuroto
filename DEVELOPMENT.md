@@ -2,6 +2,20 @@
 
 開発時は [AGENTS.md](AGENTS.md) と [開発スキル](.agents/skills/brass-wings-development/SKILL.md) を使用する。起動用の start_skill が利用できる場合は、そのセットアップ後に以下の検証環境を確認する。
 
+## 大陸鉄道と中央大海
+
+現在の配置は[32拠点の一覧表・配置図](docs/continental-registry.md)を参照。下記の8基地表と試験A/Bの記録は旧配置での検証履歴。試験Cは中央大海の「遠洋母艦アホウドリ」から発艦し、同艦に帰投する。作戦空域は引き続き5 km四方で、地形の原点と哨戒地点の基準となる空域中心を別々に保持する。
+
+`airbases` と `carriers` は固定世界座標の定義で、`outposts` が両者のIDをまとめる。作戦側の `departure`、`returnTo`、`bases` は陸上・海上共通のIDを使う。空母の heading は北を0とする時計回りのラジアン。描画・甲板衝突・進入・発艦では同じ艦首座標系を使う。
+
+```sh
+CHROMIUM_PATH=/usr/bin/chromium node tests/railway.cjs
+CHROMIUM_PATH=/usr/bin/chromium node tests/ocean.cjs
+CHROMIUM_PATH=/usr/bin/chromium CONTINENTAL_SCREENSHOTS=/tmp/brass-continental node tests/continental-visual.cjs
+```
+
+`operations.cjs` は全陸上基地の施設・滑走路・発着・地面衝突を、`ocean.cjs` は外洋の接続、全空母の甲板と哨戒作戦の帰投判定を検査する。海域と基地各規模の画像、縦横の計測結果、駅と拠点の世界座標は `continental-visual.cjs` の出力先に生成する。
+
 ## 調査と優先順位
 
 1. 開始・飛行・衝突・終了を優先。自由飛行の発見と曲技、戦闘の2波×3面、航空基地と補給船の発着、補給、格納庫、セーブを確認した。

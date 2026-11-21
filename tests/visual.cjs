@@ -53,7 +53,8 @@ const layouts=[['portrait',360,640],['landscape',640,360],['desktop',1100,700],[
     await step(3);
     assert(await page.evaluate(()=>ax>.2&&bank>0&&trigger&&ammo<90),'multitouch steering and firing');
     await cdp.send('Input.dispatchTouchEvent',{type:'touchCancel',touchPoints:[]});
-    assert(await page.evaluate(()=>ax===0&&!trigger&&id===null),'touch cancel');
+    // CDP can acknowledge cancellation before Blink delivers both pointer events.
+    await page.waitForFunction(()=>ax===0&&!trigger&&id===null,null,{polling:20,timeout:1500});
    }else{
     await page.keyboard.down('Space');await step(3);await page.keyboard.up('Space');
     assert(await page.evaluate(()=>ammo<90&&!keys.has('Space')),'keyboard firing');

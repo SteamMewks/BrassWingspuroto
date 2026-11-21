@@ -21,7 +21,7 @@ const output=process.env.OPERATION_SCREENSHOTS||'/tmp/brass-operations';
   await page.goto(url);
   const bases=await page.evaluate(()=>{
    const check=(valid,label)=>{if(!valid)throw Error(label)};
-   check(Object.keys(airbases).length===8,'base count');
+   check(Object.keys(airbases).length===24,'base count');
    for(let stage=0;stage<3;stage++){
     campaign.stage=stage;startFlight('free');
     for(const b of localBases){
@@ -29,7 +29,7 @@ const output=process.env.OPERATION_SCREENSHOTS||'/tmp/brass-operations';
      check(Math.abs(wx-b.wx)<.001&&Math.abs(wz-b.wz)<.001&&wx>0&&wx<worldSize&&wz>0&&wz<worldSize,b.id+' coordinates');
      for(let dx=-b.width/2;dx<=b.width/2;dx+=6)for(let dz=-b.length/2;dz<=b.length/2;dz+=5)
       check(ground(b.x+dx,b.z+dz)===b.height,b.id+' runway '+stage);
-     for(const building of station.filter(obj=>obj.y===0)){
+     for(const building of baseFacilities(b).filter(obj=>obj.y===0)){
       for(const dx of [-1,1])for(const dz of [-1,1]){
        const X=b.x+building.x+dx*building.w/2,Z=b.z+building.z+dz*building.l/2;
        check(ground(X,Z)===b.height,b.id+' building footprint '+stage+' '+X+','+Z)
@@ -57,6 +57,8 @@ const output=process.env.OPERATION_SCREENSHOTS||'/tmp/brass-operations';
     yaw=cameraYaw=Math.PI;x=base.x;z=base.z+110;alt=25;power=.35;
     for(let i=0;i<75;i++)draw(.05);
     check(deckMode==='moored'&&landingSite===base&&live&&!crash&&airspeed===0,'landing');
+    deckMode='';alt=base.height-.5;
+    check(impact(x,z,base.height+3)&&crash.cause==='地面','runway ground collision');
     titleScreen();
    },b);
   }
