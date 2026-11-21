@@ -1,8 +1,8 @@
 <!doctype html><html lang="ja"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"><title>Brass Wings | 群島飛行</title><style>
-*{box-sizing:border-box}body{margin:0;background:#203b46;color:#fff4ce;font:14px system-ui;height:100dvh;overflow:hidden}canvas{width:100%;height:100%;image-rendering:pixelated}header,footer,#place{position:absolute;pointer-events:none;text-shadow:0 1px 4px #183b42}header{inset:20px 20px auto;display:flex;align-items:center;justify-content:space-between}b,small{display:block;letter-spacing:.15em}b{font: bold 19px Georgia}small{font-size:10px;margin-top:4px}button{touch-action:none;color:#fff1c4;background:#203f47de;border:1px solid #ccb783;border-radius:8px;padding:10px 14px;font-weight:bold;pointer-events:auto}footer{bottom:max(22px,env(safe-area-inset-bottom));width:100%;display:flex;align-items:end;justify-content:space-around}#pad{touch-action:none;pointer-events:auto;width:116px;height:116px;border:1px solid #efd6a0aa;border-radius:50%;background:#25444b73;display:grid;place-items:center}#knob{width:42px;height:42px;border-radius:50%;background:#e6cf92b0;border:2px solid #ffe9ad}#place{top:14%;text-align:center;width:100%;letter-spacing:.16em}.card{position:absolute;inset:0;display:grid;place-content:center;text-align:center;background:#13303c55}.card article{background:#193a40ef;padding:24px 30px;border:1px solid #e1c892;border-radius:8px}h1{font:italic 38px Georgia;margin:0}p{line-height:1.8} [hidden]{display:none!important}#thrust{pointer-events:auto;touch-action:none;writing-mode:vertical-lr;direction:rtl;width:42px;height:100px;accent-color:#cba86b;margin:0} footer label{display:grid;justify-items:center;font-size:11px;letter-spacing:.12em}.card article{width:min(88vw,370px);max-height:88dvh;overflow:auto;padding:24px;box-shadow:0 9px 40px #20242d66;background:#233a3def}.card p{margin:14px 0;font-size:14px}.card button{margin:4px;padding:12px 16px}.card button:first-of-type{background:#e6c58c;color:#343b38}#route{width:100%;margin-top:16px;background:#384a49;color:#fff1cc;border:1px solid #aa9976;padding:9px;font-size:15px}#feedback{position:absolute;top:24%;width:100%;text-align:center;color:#ffe5a5;font-weight:700;text-shadow:0 2px 4px #302b35;pointer-events:none}#place{white-space:pre-line}footer{align-items:center}#meter{font-size:12px}.card small{color:#e3c995} @media(max-height:580px){.card article{padding:12px}.card p{font-size:12px;margin:6px}h1{font-size:26px}}header{gap:5px;inset:14px 10px auto}header button{font-size:11px;padding:9px 8px}header b{font-size:16px}#meter{text-align:center;line-height:1.4;white-space:pre-line}#sound{white-space:nowrap}#score{font-variant-numeric:tabular-nums}.card p#record{font-size:12px;color:#dcc59d}.card article select{margin-top:8px}#place{font-size:13px;text-shadow:0 1px 4px #26242a,0 0 6px #423c48}#feedback{transition:opacity .12s}#fire{touch-action:none;background:#713c39;min-height:44px}#fire:active{background:#bc744c}#atlas svg{width:100%;height:112px;display:block}#atlas{font-size:12px;color:#e4c997}#service button{font-size:13px;padding:8px}</style>
-<canvas></canvas><header><div><b>Brass Wings</b><small>群島飛行</small></div><strong id="meter"></strong><button id="sound" aria-label="サウンド切替" aria-pressed="false">音 OFF</button><button id="pause" aria-label="一時停止">Ⅱ</button></header><div id="place"></div><div id="feedback" role="status"></div><footer><div id="pad" aria-label="操縦桿"><i id="knob"></i></div><div style="display:grid;gap:6px"><button id="fire" hidden>射撃</button><strong id="score">0 pt</strong><label><span>推力</span><input id="thrust" type="range" min="0" max="100" value="0" aria-label="推力"></label></div></footer><div class="card" id="cover"><article><small>夕 暮 れ の 航 空 競 技</small><h1>Brass Wings</h1><select id="route" aria-label="飛行コース"><option>灯台航路</option><option>海峡横断</option><option>森林周回</option></select><p>左右で旋回、上下で上昇・下降。<br>左右に素早く2回でロール、上に2回でループ。<br>右の推力レバーを上げて加速。<br>金色のリングを順に通過。中央は150点。<br>曲技を終えて5秒以内の通過で＋75点。<br>作戦は各面で赤翼機6機を撃退し、指定の空母または基地へ帰投。低空・低推力で着陸補助。</p><p id="record"></p><div id="atlas"></div><div id="service" hidden><button id="repair">機関補修 · 1</button><button id="magazine">弾倉拡張 · 2</button></div><button id="go">曲芸飛行（リング）</button><button id="combat">作戦出撃・格納庫</button><button id="free">自由飛行</button><button hidden id="menu">航路選択</button></article></div><script>
+*{box-sizing:border-box}body{margin:0;background:#203b46;color:#fff4ce;font:14px system-ui;height:100dvh;overflow:hidden}canvas{width:100%;height:100%;image-rendering:pixelated}header,footer,#place{position:absolute;pointer-events:none;text-shadow:0 1px 4px #183b42}header{inset:20px 20px auto;display:flex;align-items:center;justify-content:space-between}b,small{display:block;letter-spacing:.15em}b{font: bold 19px Georgia}small{font-size:10px;margin-top:4px}button{touch-action:none;color:#fff1c4;background:#203f47de;border:1px solid #ccb783;border-radius:8px;padding:10px 14px;font-weight:bold;pointer-events:auto}footer{bottom:max(22px,env(safe-area-inset-bottom));width:100%;display:flex;align-items:end;justify-content:space-around}#pad{touch-action:none;pointer-events:auto;width:116px;height:116px;border:1px solid #efd6a0aa;border-radius:50%;background:#25444b73;display:grid;place-items:center}#knob{width:42px;height:42px;border-radius:50%;background:#e6cf92b0;border:2px solid #ffe9ad}#place{top:14%;text-align:center;width:100%;letter-spacing:.16em}.card{position:absolute;inset:0;display:grid;place-content:center;text-align:center;background:#13303c55}.card article{background:#193a40ef;padding:24px 30px;border:1px solid #e1c892;border-radius:8px}h1{font:italic 38px Georgia;margin:0}p{line-height:1.8} [hidden]{display:none!important}#thrust{pointer-events:auto;touch-action:none;writing-mode:vertical-lr;direction:rtl;width:42px;height:100px;accent-color:#cba86b;margin:0} footer label{display:grid;justify-items:center;font-size:11px;letter-spacing:.12em}.card article{width:min(88vw,370px);max-height:88dvh;overflow:auto;padding:24px;box-shadow:0 9px 40px #20242d66;background:#233a3def}.card p{margin:14px 0;font-size:14px}.card button{margin:4px;padding:12px 16px}.card button:first-of-type{background:#e6c58c;color:#343b38}#feedback{position:absolute;top:24%;width:100%;text-align:center;color:#ffe5a5;font-weight:700;text-shadow:0 2px 4px #302b35;pointer-events:none}#place{white-space:pre-line}footer{align-items:center}#meter{font-size:12px}.card small{color:#e3c995} @media(max-height:580px){.card article{padding:12px}.card p{font-size:12px;margin:6px}h1{font-size:26px}}header{gap:5px;inset:14px 10px auto}header button{font-size:11px;padding:9px 8px}header b{font-size:16px}#meter{text-align:center;line-height:1.4;white-space:pre-line}#sound{white-space:nowrap}#score{font-variant-numeric:tabular-nums}#place{font-size:13px;text-shadow:0 1px 4px #26242a,0 0 6px #423c48}#feedback{transition:opacity .12s}#fire{touch-action:none;background:#713c39;min-height:44px}#fire:active{background:#bc744c}#atlas svg{width:100%;height:112px;display:block}#atlas{font-size:12px;color:#e4c997}#service button{font-size:13px;padding:8px}</style>
+<canvas></canvas><header><div><b>Brass Wings</b><small>群島飛行</small></div><strong id="meter"></strong><button id="sound" aria-label="サウンド切替" aria-pressed="false">音 OFF</button><button id="pause" aria-label="一時停止">Ⅱ</button></header><div id="place"></div><div id="feedback" role="status"></div><footer><div id="pad" aria-label="操縦桿"><i id="knob"></i></div><div style="display:grid;gap:6px"><button id="fire" hidden>射撃</button><strong id="score">0 pt</strong><label><span>推力</span><input id="thrust" type="range" min="0" max="100" value="0" aria-label="推力"></label></div></footer><div class="card" id="cover"><article><small>夕 暮 れ の 飛 行</small><h1>Brass Wings</h1><p>左右で旋回、上下で上昇・下降。<br>左右に素早く2回でロール、上に2回でループ。<br>右の推力レバーを上げて加速。<br>滑走路で停止した状態から開始。推力72%以上で発進し、自動上昇後に操縦できます。<br>作戦は各面で赤翼機6機を撃退し、指定の空母または基地へ帰投。低空・低推力で着陸補助。</p><div id="atlas"></div><div id="service" hidden><button id="repair">機関補修 · 1</button><button id="magazine">弾倉拡張 · 2</button></div><button id="go" hidden>もう一度飛ぶ</button><button id="combat">作戦出撃・格納庫</button><button id="free">自由飛行</button><button hidden id="menu">タイトルへ</button></article></div><script>
 const canvas=document.querySelector('canvas'),g=canvas.getContext('2d'),$=s=>document.getElementById(s);
-let w,h,x=0,z=550,alt=22,yaw=0,cameraYaw=0,bank=0,pitch=0,power=0,live=false,t=0,last=0,ax=0,ay=0,id=null;
+let w,h,x=0,z=0,alt=0,yaw=0,cameraYaw=0,bank=0,pitch=0,power=0,live=false,t=0,last=0,ax=0,ay=0,id=null;
 const keys=new Set(),found=new Set(),isles=[],tau=Math.PI*2;
 function resize(){let k=Math.max(innerWidth/1080,innerHeight/900,1);canvas.width=w=Math.round(innerWidth/k);canvas.height=h=Math.round(innerHeight/k)}
 let needsRedraw=true;onresize=()=>{resize();needsRedraw=true};resize();
@@ -103,60 +103,29 @@ function readGesture(rawX=ax,rawY=ay){
   tapDir='';
  }else{tapDir=dir;tapAt=now}
 }
-const courses=[
- {name:'灯台航路',spawn:[0,550,22],points:[[0,830,22],[10,1130,42],[65,1440,67],[195,1790,68],[340,2090,55],[550,2380,42],[610,2690,28],[550,3020,22]]},
- {name:'海峡横断',spawn:[2520,-1330,32],points:[[2520,-1050,32],[2590,-740,26],[2500,-390,23],[2400,-75,43],[2290,240,65],[2450,540,52],[2610,760,35],[2800,1050,24]]},
- {name:'森林周回',spawn:[-1630,-1740,65],points:[[-1630,-1410,64],[-1740,-1100,60],[-1950,-870,68],[-2130,-650,62],[-2070,-320,71],[-1780,-230,65],[-1490,-360,69],[-1320,-610,64],[-1320,-920,70],[-1460,-1200,65]]}
-];
-let hoops=[],mode='rally',panel='title',courseIndex=0,passed=0,centres=0,message='',messageUntil=0;
+let mode='free',panel='title',message='',messageUntil=0;
 let score=0,spray=[],sprayClock=0;
-function routeRings(points,start){
- return points.map(([x,z,y],i)=>{
-  const previous=i?points[i-1]:start,dx=x-previous[0],dz=z-previous[1],len=Math.hypot(dx,dz)||1;
-  return {x,z,y,nx:dx/len,nz:dz/len}
- })
-}
-function recordNumber(key){
- try{const n=Number(localStorage.getItem('brassRally.'+key));return Number.isFinite(n)&&n>0?n:0}catch{return 0}
-}
-function writeRecord(key,n){try{localStorage.setItem('brassRally.'+key,String(n))}catch{}}
-function recordText(){
- const i=$('route').selectedIndex,best=recordNumber(i+'.score'),time=recordNumber(i+'.time');
- const summary=['海岸から灯台へ抜ける入門航路','島沿いに降下し、海峡を越える航路','連続旋回で森林を一周する航路'][i];
- $('record').textContent=summary+'　／　'+(best?'自己最高 '+best+' pt　最速 '+time.toFixed(1)+' 秒':'全 '+courses[i].points.length+' リング')
-}
 function showPanel(state,title,description){
  panel=state;$('atlas').hidden=!['title','hangar'].includes(state);$('service').hidden=state!=='hangar';trigger=false;$('combat').hidden=state!=='title';$('fire').hidden=true;syncAudio();$('cover').hidden=false;
  document.querySelector('.card h1').textContent=title;
  document.querySelector('.card p').textContent=description;
- $('route').hidden=$('record').hidden=$('free').hidden=state!=='title';
+ $('free').hidden=state!=='title';$('go').hidden=state==='title';
  $('menu').hidden=state==='title';
- $('go').textContent=state==='pause'?'再開':state==='title'?'曲芸飛行（リング）':'もう一度飛ぶ';
+ $('go').textContent=state==='pause'?'再開':'もう一度飛ぶ';
 }
 function titleScreen(){
- live=false;crash=null;showPanel('title','Brass Wings','金色のリングを順に通過。中央を抜けると精密通過ボーナス。');
- document.querySelector('.card p').innerHTML=flightInstructions;recordText();atlas()
+ live=false;crash=null;showPanel('title','Brass Wings','');
+ document.querySelector('.card p').innerHTML=flightInstructions;atlas()
 }
 function startFlight(selectedMode){
- mode=selectedMode;terraces.length=isles.length=0;tileCache.clear();tileKey='';updateWorld();courseIndex=$('route').selectedIndex;restartFlight();
- const course=courses[mode==='rally'?courseIndex:0];[x,z,alt]=course.spawn;
- if(mode==='rally'&&ground(x,z))alt=Math.max(ground(x,z)+90,alt);
- resetCombat();hoops=mode==='combat'?[]:routeRings(course.points.map(([X,Z,Y])=>[X,Z,ground(X,Z)?Math.max(Y,ground(X,Z)+90):Y]),course.spawn);passed=centres=0;
- message='';messageUntil=0;updateWorld();panel='flight';live=true;$('fire').hidden=mode!=='combat';syncAudio();$('cover').hidden=true
-}
-function finishRally(){
- live=false;keys.clear();stick(0,0);
- const timeKey=courseIndex+'.time',scoreKey=courseIndex+'.score';
- const elapsed=Math.max(.1,t),bestTime=recordNumber(timeKey),bestScore=recordNumber(scoreKey);
- if(!bestTime||elapsed<bestTime)writeRecord(timeKey,elapsed);
- if(score>bestScore)writeRecord(scoreKey,score);
- const personalBest=bestTime&&elapsed<bestTime?'　最速更新':bestScore&&score>bestScore?'　最高得点更新':'';
- showPanel('finish','航路完走',courses[courseIndex].name+'　'+elapsed.toFixed(1)+' 秒 ／ '+score+' pt　中央通過 '+centres+' / '+hoops.length+personalBest)
+ mode=selectedMode;restartFlight();resetCombat();
+ buildWorld();parkAtStart();
+ if(mode==='combat')selectSector();
+ message='';messageUntil=0;updateWorld();panel='flight';live=true;$('fire').hidden=true;syncAudio();$('cover').hidden=true
 }
 function award(points,label){
  score+=points;$('score').textContent=score+' pt';message=label+'　+'+points;messageUntil=t+1.5
 }
-let recentTrick=-Infinity;
 let soundOn=false,audioCtx=null,motor=null,volume=null;
 function syncAudio(){
  if(!audioCtx)return;
@@ -175,46 +144,6 @@ $('sound').onclick=async()=>{
   $('sound').textContent=soundOn?'音 ON':'音 OFF';$('sound').setAttribute('aria-pressed',String(soundOn));syncAudio()
  }catch{soundOn=false;$('sound').textContent='音 OFF';syncAudio()}
 };
-function chime(clean){
- if(!audioCtx||!soundOn)return;
- const now=audioCtx.currentTime;
- for(const [i,note] of (clean?[587,880]:[587]).entries()){
-  const osc=audioCtx.createOscillator(),gain=audioCtx.createGain(),at=now+i*.08;
-  osc.frequency.value=note;gain.gain.setValueAtTime(.0001,at);gain.gain.exponentialRampToValueAtTime(.055,at+.008);
-  gain.gain.exponentialRampToValueAtTime(.0001,at+.22);osc.connect(gain);gain.connect(audioCtx.destination);osc.start(at);osc.stop(at+.23);
-  osc.onended=()=>{osc.disconnect();gain.disconnect()}
- }
-}
-const freeTaken=new Set();let freeRegion='';
-function explorationRings(){
- if(mode!=='free'||freeRegion===regionKey)return;
- freeRegion=regionKey;
- const local=[];
- for(const [cx,cz,name,,rx,rz] of isles){
-  for(let i=0;i<5;i++){
-   const a=i*tau/5+.35,R=1.3,xx=cx+Math.sin(a)*Math.min(2100,rx)*R,zz=cz+Math.cos(a)*Math.min(1800,rz)*R;
-   const id=cx+','+cz+','+i;
-   local.push({x:xx,z:zz,y:38+i%3*9,nx:Math.cos(a),nz:-Math.sin(a),id,taken:freeTaken.has(id)})
-  }
- }
- hoops=local
-}
-function checkHoops(px,pz,py){
- for(const r of (mode==='rally'?[hoops[passed]]:hoops)){
-  if(!r||r.taken)continue;
-  const a=(px-r.x)*r.nx+(pz-r.z)*r.nz,b=(x-r.x)*r.nx+(z-r.z)*r.nz;
-  if(a*b>0||a===b)continue;
-  const u=a/(a-b),sx=px+(x-px)*u-r.x,sz=pz+(z-pz)*u-r.z;
-  const error=Math.hypot(sx*r.nz-sz*r.nx,py+(alt-py)*u-r.y);
-  if(error>=15)continue;
-  r.taken=true;passed++;if(error<5)centres++;
-  const acro=t-recentTrick<5;
-  const points=(error<5?150:100)+(acro?75:0);
-  award(points,(error<5?'中央通過':'リング通過')+(acro?'・曲技':''));chime(error<5);
-  if(acro)recentTrick=-Infinity;if(r.id)freeTaken.add(r.id);
-  if(mode==='rally'&&passed===hoops.length)finishRally();
- }
-}
 function updateSpray(dt){
  spray=spray.filter(p=>t-p.birth<.6);sprayClock-=dt;
  if(alt>=3.2||ground(x,z)||sprayClock>0)return;
@@ -327,16 +256,12 @@ function noise(i,j,tag){
  n=Math.imul(n^(n>>>16),0x45d9f3b);return ((n^(n>>>16))>>>0)/4294967296
 }
 function coast(a,phase){return 1+.12*Math.sin(3*a+phase)+.075*Math.cos(5*a-phase)+.04*Math.sin(9*a+phase)}
-const ridges=Array.from({length:15},(_,i)=>{
- const d=(i-7)*1290;
- return {x:-830+d+230*Math.sin(i*2),z:390+d,r:630+190*Math.cos(i),h:95+85*(.5+.5*Math.sin(i*2.7)),phase:i*.8}
-});
 function ridgeHeight(r,X,Z){
  const u=(X-r.x)/r.r,v=(Z-r.z)/(r.r*.82);
  return Math.max(0,1-Math.hypot(u,v)/coast(Math.atan2(v,u),r.phase))*r.h
 }
 function ground(X,Z){
- let level=mode==='combat'&&mainlandAt(X,Z)?10:0;
+ let level=mainlandAt(X,Z)?10:0;
  for(const [cx,cz,,,rx,rz,phase,rotation] of isles){
   const dx=X-cx,dz=Z-cz,c=Math.cos(rotation),sn=Math.sin(rotation);
   const u=(dx*c+dz*sn)/rx,v=(-dx*sn+dz*c)/rz;
@@ -344,8 +269,8 @@ function ground(X,Z){
   const r=Math.hypot(u,v)/coast(Math.atan2(v,u),phase);
   if(r<1)level=Math.max(level,Math.min(10,2+2*Math.floor((1-r)/.085)))
  }
- if(mode==='combat'&&Math.abs(X-base.x)<300&&Math.abs(Z-base.z)<195)return level;
- if(mode==='combat'&&campaign.stage===1){
+ if(Math.abs(X-base.x)<300&&Math.abs(Z-base.z)<195)return level;
+ if(campaign.stage===1){
   const row=Math.floor((Z+2048)/64);
   if(row>=0&&row<64)for(const wall of cliffs){
    const a=wall[row],b=wall[row+1],v=(Z-a[0][2])/64;
@@ -361,7 +286,7 @@ function ground(X,Z){
   }
   return level
  }
- if(level===10)for(const r of (mode==='combat'?localPeaks:ridges))if(Math.abs(X-r.x)<r.r*1.3&&Math.abs(Z-r.z)<r.r*1.2)level=Math.max(level,10+ridgeHeight(r,X,Z));
+ if(level===10)for(const r of localPeaks)if(Math.abs(X-r.x)<r.r*1.3&&Math.abs(Z-r.z)<r.r*1.2)level=Math.max(level,10+ridgeHeight(r,X,Z));
  return level
 }
 // Atlas coordinates are metres, measured east and north from the southwest corner.
@@ -426,7 +351,6 @@ function hitsArch(X,Z,Y){
 const portBlocks={columns:4,rows:3,dx:132,dz:150};
 function buildRegion(){
  quarters.length=cliffs.length=localPeaks.length=0;
- if(mode!=='combat')return;
  const m=operation(),stage=campaign.stage,[cx,cz]=m.town;
  if(stage!==1){
   const inland=stage===0?1:-1;
@@ -471,25 +395,25 @@ function atlas(){
  const marks=missions.map((v,i)=>'<rect x="'+(v.wx*k-2)+'" y="'+(498-v.wz*k)+'" width="4" height="4" fill="'+['#f4d49c','#d2bfab','#ea8774'][i]+'"/>').join('');
  $('atlas').innerHTML='<svg viewBox="0 0 500 500" aria-label="世界地図と作戦位置"><rect width="500" height="500" fill="#29474e"/>'+shapes+marks+'<circle cx="'+sx+'" cy="'+sy+'" r="12" fill="none" stroke="#ffd880" stroke-width="4"/><rect x="'+(sx-2.5)+'" y="'+(sy-2.5)+'" width="5" height="5" fill="#fff2b2"/></svg>第'+(campaign.stage+1)+'面 '+m.name+'・'+regions[campaign.stage]+' ｜ '+(m.carrier?'沿岸・補給艦と基地':'内陸・航空基地')+' ｜ 作戦空域 5 km 四方'
 }
-const regionKey='south-base',base={x:2450,z:-2450},ship={x:1920,z:-2450};
+const base={x:0,z:0},ship={x:0,z:0};
 let tileKey='';
-function updateWorld(){
- if(!terraces.length){
-  if(mode==='combat'){
-   const m=operation();base.x=m.bx;base.z=m.bz;ship.x=m.sx;ship.z=m.sz;
-   cutCoast();
-   for(const l of continents){const X=l[0]-m.wx,Z=l[1]-m.wz;
-    if((l[3]===3&&Math.hypot(X,Z)<3500)||(l[3]===2&&Math.hypot(X-base.x,Z-base.z)<1))isles.push([X,Z,...l.slice(2)])}
-  }else{base.x=2450;base.z=-2450;ship.x=1920;ship.z=-2450;
-   isles.push([-650,300,'黄銅大陸',0,17500,2050,.7,Math.PI/4],[base.x,base.z,'南東航空基地',2,390,275,1.8,0])}
-  buildRegion();
-  for(const [cx,cz,,,rx,rz,phase,rotation] of isles)for(let k=0;k<5;k++){
-   const ring=[],c=Math.cos(rotation),sn=Math.sin(rotation);
-   for(let j=0;j<384;j++){const a=j*tau/384,q=(1-k*.085)*coast(a,phase);
-    const u=rx*q*Math.cos(a),v=rz*q*Math.sin(a);ring.push([cx+u*c-v*sn,cz+u*sn+v*c])}
-   terraces.push({ring,cx,cz,rx:Math.hypot(rx*c,rz*sn),rz:Math.hypot(rx*sn,rz*c),y:2+k*2,color:terrainColors[k]})
-  }
+function buildWorld(){
+ terraces.length=isles.length=0;tileCache.clear();tileKey='';
+ const m=operation();base.x=m.bx;base.z=m.bz;ship.x=m.sx;ship.z=m.sz;
+ cutCoast();
+ for(const l of continents){
+  const X=l[0]-m.wx,Z=l[1]-m.wz;
+  if((l[3]===3&&Math.hypot(X,Z)<3500)||(l[3]===2&&Math.hypot(X-base.x,Z-base.z)<1))isles.push([X,Z,...l.slice(2)])
  }
+ buildRegion();
+ for(const [cx,cz,,,rx,rz,phase,rotation] of isles)for(let k=0;k<5;k++){
+  const ring=[],c=Math.cos(rotation),sn=Math.sin(rotation);
+  for(let j=0;j<384;j++){const a=j*tau/384,q=(1-k*.085)*coast(a,phase);
+   const u=rx*q*Math.cos(a),v=rz*q*Math.sin(a);ring.push([cx+u*c-v*sn,cz+u*sn+v*c])}
+  terraces.push({ring,cx,cz,rx:Math.hypot(rx*c,rz*sn),rz:Math.hypot(rx*sn,rz*c),y:2+k*2,color:terrainColors[k]})
+ }
+}
+function updateWorld(){
  const tx=Math.floor(x/256),tz=Math.floor(z/256);
  if(tileKey===tx+','+tz)return;
  tileKey=tx+','+tz;groves.length=groundPixels.length=0;
@@ -508,8 +432,7 @@ function updateWorld(){
     }
     if(cliffs.length&&Math.abs(X-valleyAxis(Z)-24*Math.sin(Z/117))<27)continue;
     if(cliffs.length&&Math.abs(X-archX)<205&&Math.abs(Z-archZ)<95)continue;
-    if(n<(mode==='combat'?36+24*Math.sin(i*.8+j*.55):25)&&Y>=6&&Y<180&&Math.abs(X-13*Math.sin((Z-940)/65))>19&&
-      !isles.some(([cx,cz])=>Math.hypot(X-cx-50,Z-cz)<20))
+    if(n<(36+24*Math.sin(i*.8+j*.55))&&Y>=6&&Y<180&&Math.abs(X-13*Math.sin((Z-940)/65))>19)
      tile.trees.push({X,Z,Y,H:19+val(2)*17,R:5+val(3)*4});
     else tile.pixels.push({X,Z,Y,width:1+val(2)*5,color:Y<5?'#dbc299':val(3)<.5?'#859565':'#657f58'})
    }
@@ -525,20 +448,19 @@ function branchRadius(tree,dy){
  return dy<tree.H*.25?1.2:tree.R*Math.max(.12,1-(dy/tree.H-.25)/.75)
 }
 const wake=[];let wakeTime=0;
-let airspeed=78,elapsedTrick=0;
+let airspeed=0,elapsedTrick=0;
 function applyClimb(dt){
  const delta=pitch*dt*46;
  alt+=delta>0?Math.min(delta,Math.max(0,320-alt)):Math.max(delta,Math.min(0,.65-alt))
 }
 const flightInstructions=document.querySelector('.card p').innerHTML;
-$('menu').onclick=titleScreen;$('free').onclick=()=>startFlight('free');$('route').onchange=recordText;
-$('go').onclick=()=>{if(panel==='hangar'){campaign.hangar=false;saveCampaign();startFlight('combat');return}if(panel==='pause'){panel='flight';live=true;$('fire').hidden=mode!=='combat';syncAudio();$('cover').hidden=true}else startFlight(panel==='title'?'rally':mode)};
-recordText();
+$('menu').onclick=titleScreen;$('free').onclick=()=>startFlight('free');
+$('go').onclick=()=>{if(panel==='hangar'){campaign.hangar=false;saveCampaign();startFlight('combat');return}if(panel==='pause'){panel='flight';live=true;syncFireButton();syncAudio();$('cover').hidden=true}else if(panel!=='title')startFlight(mode)};
 let crash=null;
 function restartFlight(){
- crash=null;x=0;z=550;alt=22;yaw=cameraYaw=bank=pitch=t=phase=elapsedTrick=0;
- trick=null;power=0;airspeed=78;score=0;recentTrick=-Infinity;freeRegion='';freeTaken.clear();
- spray=[];sprayClock=0;wake.length=0;wakeTime=0;found.clear();hoops.forEach(r=>r.taken=false);
+ crash=null;yaw=cameraYaw=bank=pitch=t=phase=elapsedTrick=0;
+ trick=null;power=0;airspeed=0;score=0;
+ spray=[];sprayClock=0;wake.length=0;wakeTime=0;found.clear();
  keys.clear();stick(0,0);$('score').textContent='0 pt';$('thrust').value='0';
  document.querySelector('.card h1').textContent='Brass Wings';
  document.querySelector('.card p').innerHTML=flightInstructions
@@ -555,9 +477,6 @@ function hitObject(X,Z,Y){
   }
   if(cliffs.length&&hitsArch(px,pz,py))return '岩のアーチ';
   const land=ground(px,pz);if(land&&py-.55<=land)return '地面';
-  for(const [cx,cz,,i] of isles){
-   if(i<2&&Math.hypot(px-cx-50,pz-cz)<[4.8,7,9][i]&&py<10+[55,36,18][i])return '建物'
-  }
   if(Math.abs(px-base.x)<300&&Math.abs(pz-base.z)<180)
    for(const obj of station)if(Math.abs(px-base.x-obj.x)<obj.w/2&&Math.abs(pz-base.z-obj.z)<obj.l/2&&py<10+obj.h)return '基地施設';
   for(let i=Math.floor((px-11)/256);i<=Math.floor((px+11)/256);i++)for(let j=Math.floor((pz-11)/256);j<=Math.floor((pz+11)/256);j++)for(const tree of tileCache.get(i+","+j)?.trees||[]){
@@ -588,7 +507,7 @@ function wreck(dt){
   g.fillStyle=bit.c;g.fillRect(-3,-1,7,3);g.restore()
  }
  if(a>=1&&$('cover').hidden){
-  showPanel('crash','GAME OVER',crash.cause+'に接触　'+score+' pt　'+(mode==='rally'?'リング '+passed+' / '+hoops.length:mode==='combat'?'到達空域 '+sector:'発見 '+found.size))
+  showPanel('crash','GAME OVER',crash.cause+'に接触　'+score+' pt　'+(mode==='combat'?'到達空域 '+sector:'発見 '+found.size))
 
  }
 }
@@ -619,7 +538,7 @@ function advance(dt){
   const endWeight=Math.min(1,Math.max(0,(u-.82)/.18));
   const startWeight=Math.max(0,1-u/.18);
   applyClimb(dt*(startWeight+endWeight*endWeight*(3-2*endWeight)));
-  if(elapsedTrick>=duration){trick=null;phase=0;recentTrick=t}
+  if(elapsedTrick>=duration){trick=null;phase=0}
  }
  x+=Math.sin(yaw)*forward+Math.cos(yaw)*side;
  z+=Math.cos(yaw)*forward-Math.sin(yaw)*side;
@@ -642,19 +561,6 @@ const pines=Array.from({length:6},(_,variant)=>artwork(112,216,c=>{
   for(let k=0;k<9;k++){const u=Math.sin(k*24+i*33+variant);rect(54+u*r*.68,cy+16+Math.cos(k*13+i)*4,3,2,'#87a275')}
  }
 }));
-const buildings=[55,36,18].map((height,index)=>artwork(128,240,c=>{
- function rect(x,y,w,h,col){c.fillStyle=col;c.fillRect(x,y,w,h)}
- function shape(points,col){c.fillStyle=col;c.beginPath();points.forEach(([x,y],i)=>i?c.lineTo(x,y):c.moveTo(x,y));c.closePath();c.fill()}
- const wide=[29,42,53][index],roof=[36,48,58][index];
- for(let y=39;y<240;y++){let r=wide*(.68+.32*y/240);
-  rect(64-r,y,r*2,1,index===2?'#bf966b':'#e4d2a5');
-  rect(64+r*.27,y,r*.73,1,index===2?'#846052':'#b49c79');
-  if(y%16===0)rect(64-r,y,2*r,1,'#ae936e')
- }
- if(index===0){for(let y of [88,159])rect(43,y,43,12,'#ad5041');rect(39,18,50,22,'#394d51');for(let x=43;x<86;x+=11)rect(x,21,7,14,'#ffdc81')}
- for(let y of [68,122,169])for(let x of (index===2?[38,63,86]:[61])){rect(x-4,y,10,15,'#554d44');rect(x-2,y+2,5,8,'#8bb2ac');rect(x-5,y+15,12,2,'#ecd39a')}
- rect(57,206,14,34,'#55463c');shape([[64-roof,39],[64,1],[64+roof,39]],'#a6503d');shape([[64,1],[64+roof,39],[72,39]],'#793d35');rect(64-roof,39,2*roof,4,'#794e3d')
-}));
 const cloudArt=Array.from({length:5},(_,v)=>artwork(120,38,c=>{
  const bumps=Array.from({length:7},(_,j)=>[12+j*15,9+12*noise(j,v,34),10+11*noise(j,v,67)]);
  for(let x=0;x<120;x+=2){
@@ -669,7 +575,7 @@ const cloudArt=Array.from({length:5},(_,v)=>artwork(120,38,c=>{
 const shadowOutline=[[0,4],[.8,2.7],[5.7,2],[5.8,.7],[1,.5],[.5,-2.8],[2,-3.4],[2,-4],[0,-3.8],[-2,-4],[-2,-3.4],[-.5,-2.8],[-1,.5],[-5.8,.7],[-5.7,2],[-.8,2.7]];
 const enemyFrames=new Map();let enemies=[],bolts=[],trigger=false,reload=0;
 $('combat').onclick=()=>campaign.hangar?openHangar():startFlight('combat');
-$('fire').onpointerdown=e=>{if(live&&mode==='combat'){$('fire').setPointerCapture(e.pointerId);trigger=true}};
+$('fire').onpointerdown=e=>{if(live&&mode==='combat'&&!deckMode){$('fire').setPointerCapture(e.pointerId);trigger=true}};
 $('fire').onpointerup=$('fire').onlostpointercapture=$('fire').onpointercancel=()=>{trigger=false};
 const boundary=2500, sectorRadius=210;
 let sector=0,zone=null,returnHeading=null;
@@ -707,15 +613,21 @@ function selectSector(){
 let locked=null, hostile=[], grace=0, nextAttack=0;
 let ammo=90,energy=100,supplying=false;
 let deckMode='',deckTime=0,landingSite=null,landingDirection=1;
+const runwayHeight=10;
+function parkAtStart(){
+ landingSite=base;landingDirection=1;deckMode='moored';deckTime=0;
+ x=base.x;z=base.z-95;alt=runwayHeight+1.5
+}
+function syncFireButton(){$('fire').hidden=mode!=='combat'||Boolean(deckMode)}
 function goalPort(){return operation().carrier?ship:base}
 function deckAssist(dt){
  const port=deckMode?landingSite:(operation().carrier&&Math.hypot(x-ship.x,z-ship.z)<Math.hypot(x-base.x,z-base.z)?ship:base);
  const runway=port===base,direction=deckMode?landingDirection:(runway&&Math.cos(yaw)<0?-1:1);
  const heading=direction===1?0:Math.PI,side=x-port.x,along=(z-port.z)*direction;
- const touchHeight=runway?11.5:15,stopZ=port.z+direction*62;
+ const touchHeight=runway?runwayHeight+1.5:15,stopZ=port.z+direction*62;
  if(!deckMode){
   if(power>.42||alt>32||Math.abs(side)>31||along < -(runway?165:130)||along>55||Math.abs(angleDelta(yaw-heading))>1.7)return false;
-  landingSite=port;landingDirection=direction;deckMode='capture';deckTime=0;trick=null;phase=0;trigger=false;resetGesture()
+  landingSite=port;landingDirection=direction;deckMode='capture';deckTime=0;trick=null;phase=0;trigger=false;resetGesture();syncFireButton()
  }
  deckTime+=dt;
  const capture=1-Math.exp(-2.4*dt);
@@ -727,10 +639,16 @@ function deckAssist(dt){
  }else if(deckMode==='moored'){
   if(power>=.72){deckMode='launch';deckTime=0}
  }else{
+  const prevZ=z,prevAlt=alt;
   airspeed=Math.min(105,airspeed+64*dt);z+=direction*airspeed*dt;alt+=Math.min(26,deckTime*14)*dt;
-  if(deckTime>2.2)deckMode=''
+  if(impact(x,prevZ,prevAlt))return true;
+  if(deckTime>=2.2){
+   deckMode='';cameraYaw=yaw;
+   if(document.activeElement===$('thrust'))$('thrust').blur();
+   syncFireButton()
+  }
  }
- cameraYaw+=angleDelta(yaw-cameraYaw)*capture;replenish(dt);return true
+ cameraYaw+=angleDelta(yaw-cameraYaw)*capture;if(mode==='combat')replenish(dt);return true
 }
 function replenish(dt){
  supplying=deckMode==='moored'&&airspeed===0;
@@ -742,7 +660,7 @@ function replenish(dt){
 function resetCombat(){
  cleared=0;returningHome=false;approachReady=false;missionHits=0;locked=null;hostile=[];grace=0;nextAttack=0;
  enemies=[];bolts=[];trigger=false;reload=0;sector=0;zone=null;returnHeading=null;
- deckMode='';deckTime=0;landingSite=null;landingDirection=1;ammo=90+20*campaign.mag;energy=100-campaign.wear;supplying=false;if(mode==='combat'){x=base.x;z=base.z+135;alt=65;selectSector()}
+ ammo=90+20*campaign.mag;energy=100-campaign.wear;supplying=false;
 }
 function limitAirspace(){
  if(returnHeading===null&&(Math.abs(x)>=boundary||Math.abs(z)>=boundary)){
@@ -896,7 +814,7 @@ function drawScenery(sn,cs,eye,f,horizon,objects){
   if(screen.every(p=>p[0]<0)||screen.every(p=>p[0]>w)||screen.every(p=>p[1]>h))return;
   objects.push([clipped.reduce((sum,p)=>sum+p[2],0)/clipped.length-order,()=>poly(screen,color)])
  }
- for(const r of (mode==='combat'?localPeaks:ridges)){
+ for(const r of localPeaks){
   if(Math.hypot(x-r.x,z-r.z)>6500)continue;
   const ring=(j,k)=>{let a=j*tau/24,q=1-k/4,rad=r.r*coast(a,r.phase)*q;
    return [r.x+rad*Math.cos(a),10+r.h*(1-q),r.z+.82*rad*Math.sin(a)]};
@@ -951,7 +869,7 @@ function drawScenery(sn,cs,eye,f,horizon,objects){
  if(Math.hypot(x-base.x,z-base.z)<3500){
   for(let j=-7;j<=7;j++){
    const Z=base.z+j*20;
-   strip(base.x,Z,10.1,36,20,'#535959');strip(base.x,Z,10.2,1.5,10,'#e1d4ae',.3);
+   strip(base.x,Z,runwayHeight+.1,36,20,'#535959');strip(base.x,Z,10.2,1.5,10,'#e1d4ae',.3);
    for(const u of [-1,1]){strip(base.x+u*16,Z,10.2,.8,20,'#cabfa0',.3);strip(base.x+u*62,Z,10.1,10,20,'#99917a')}
   }
   for(const obj of station){
@@ -960,9 +878,9 @@ function drawScenery(sn,cs,eye,f,horizon,objects){
    if(obj.h===31)block(X,Z,36,24,23,6,'#c7b68e');
    else if(obj.h===15){strip(X,Z,25.2,obj.w-3,3,'#99a294',.5);strip((X+base.x)/2,Z,10.25,Math.abs(obj.x)-32,8,'#a29b89',.5)}
   }
-  if(mode!=='combat'||operation().carrier)for(let j=0;j<7;j++)block(base.x-210-j*25,base.z-30,0,25,13,11,'#987f60')
+  if(operation().carrier)for(let j=0;j<7;j++)block(base.x-210-j*25,base.z-30,0,25,13,11,'#987f60')
  }
- if((mode!=='combat'||operation().carrier)&&Math.hypot(x-ship.x,z-ship.z)<3500){
+ if(operation().carrier&&Math.hypot(x-ship.x,z-ship.z)<3500){
   for(let j=-5;j<=5;j++){
    const Z=ship.z+j*21,width=48-Math.max(0,Math.abs(j)-3)*7;
    block(ship.x,Z,0,width,21,13,'#625f58');
@@ -974,14 +892,20 @@ function drawScenery(sn,cs,eye,f,horizon,objects){
   block(ship.x+16,ship.z+20,33,2,2,15,'#c7ab78');block(ship.x+15,ship.z-1,26,5,6,9,'#564b44')
  }
 }
-function draw(dt){updateWorld();explorationRings();if(live&&mode==='combat'&&deckAssist(dt)){t+=dt}else if(live){let lr=ax+Number(keys.has('ArrowRight'))-Number(keys.has('ArrowLeft')),ud=-ay+Number(keys.has('ArrowUp'))-Number(keys.has('ArrowDown'));const px=x,pz=z,py=alt;
+function draw(dt){
+ updateWorld();
+ const wasWaiting=deckMode==='moored';
+ if(live&&deckAssist(dt)){
+  if(!wasWaiting)t+=dt
+ }else if(live){
+  let lr=ax+Number(keys.has('ArrowRight'))-Number(keys.has('ArrowLeft')),ud=-ay+Number(keys.has('ArrowUp'))-Number(keys.has('ArrowDown'));const px=x,pz=z,py=alt;
  const returning=mode==='combat'&&returnHeading!==null;
  if(returning){
   const error=Math.atan2(Math.sin(returnHeading-yaw),Math.cos(returnHeading-yaw));
   lr=Math.max(-1,Math.min(1,error*2.6));
   if(Math.abs(error)<.12&&Math.max(Math.abs(x),Math.abs(z))<boundary-30)returnHeading=null
  }
- bank+=(Math.max(-1,Math.min(1,lr))-bank)*(1-Math.exp(-8*dt));pitch+=(Math.max(-1,Math.min(1,ud))-pitch)*(1-Math.exp(-6*dt));yaw+=bank*dt*(returning?2:1.03+.15*power);if(!trick)applyClimb(dt);advance(dt);if(mode==="combat")limitAirspace();if(!impact(px,pz,py)){if(mode==="combat")fight(dt);else checkHoops(px,pz,py);updateSpray(dt)}cameraYaw+=(yaw-cameraYaw)*(1-Math.exp(-5.6*dt));t+=dt}
+ bank+=(Math.max(-1,Math.min(1,lr))-bank)*(1-Math.exp(-8*dt));pitch+=(Math.max(-1,Math.min(1,ud))-pitch)*(1-Math.exp(-6*dt));yaw+=bank*dt*(returning?2:1.03+.15*power);if(!trick)applyClimb(dt);advance(dt);if(mode==="combat")limitAirspace();if(!impact(px,pz,py)){if(mode==="combat")fight(dt);updateSpray(dt)}cameraYaw+=(yaw-cameraYaw)*(1-Math.exp(-5.6*dt));t+=dt}
 let horizon=h*(.36+pitch*.09),f=h*(.62-.10*Math.max(0,(airspeed-78)/54));let sky=g.createLinearGradient(0,0,0,horizon);sky.addColorStop(0,'#52496b');sky.addColorStop(.65,'#c87976');sky.addColorStop(1,'#f4b479');g.fillStyle=sky;g.fillRect(0,0,w,horizon+1);const sunAngle=.12-cameraYaw;if(Math.cos(sunAngle)>.1){let sunX=w/2+f*Math.tan(sunAngle),radius=h*.033;ellipse(sunX,horizon-radius*(1.7-Math.min(1,t/180)*2.5),radius,radius,'#ffda9b')}const seaBands=['#bc9294','#ac858e','#9b7c8a','#8a7587','#7c6e80','#72697d','#646477','#585e70','#50596a','#495465'];
 for(let i=0;i<seaBands.length;i++){
  const y0=Math.floor(horizon+(h-horizon)*(i/10)**1.7),y1=Math.ceil(horizon+(h-horizon)*((i+1)/10)**1.7);
@@ -1000,7 +924,16 @@ for(let i=-6;i<=6;i++)for(let j=-6;j<=6;j++){let A=Math.floor(x/240)+i,B=Math.fl
   g.fillStyle=glow?'#deaa91':n>.55?'#a998a3':'#777789';
   g.fillRect(Math.round(p[0]),Math.round(p[1]),Math.max(1,length),Math.max(1,p[2]*.12));
  }
-isles.forEach(([X,Z,name,i])=>{const key=X+','+Z;let d=Math.hypot(x-X,z-Z);if(live&&d<145&&!found.has(key)){found.add(key);if(mode==='free')award(250,name+' 発見')}if(!found.has(key)&&d<nearest){nearest=d;target=[X,Z,name]}if(i>=2)return;add(X+50,Z,10,(a,b,s)=>{const tall=[55,36,18][i]*s,width=[24,28,31][i]*s;g.imageSmoothingEnabled=false;g.drawImage(buildings[i],a-width/2,b-tall,width,tall);if(i===1)for(let l=0;l<4;l++){let r=t+l*tau/4;poly([[a,b-32*s],[a+18*s*Math.cos(r),b-32*s+18*s*Math.sin(r)],[a+15*s*Math.cos(r+.22),b-32*s+15*s*Math.sin(r+.22)]],'#f2dbac')}})});
+if(mode==='free'){
+ const landmarks=[...isles,[...operation().town,regions[campaign.stage]]];
+ if(operation().carrier)landmarks.push([ship.x,ship.z,'補給船']);
+ for(const [X,Z,name,kind] of landmarks){
+  if(kind===2)continue;
+  const key=X+','+Z,d=Math.hypot(x-X,z-Z);
+  if(live&&!deckMode&&d<145&&!found.has(key)){found.add(key);award(250,name+' 発見')}
+  if(!found.has(key)&&d<nearest){nearest=d;target=[X,Z,name]}
+ }
+}
  // Clip each horizontal land slice at the camera before projecting it.
  const sn=Math.sin(cameraYaw),cs=Math.cos(cameraYaw),eye=alt+(.58*h-horizon)*32/f;
  for(const layer of terraces){
@@ -1045,22 +978,12 @@ isles.forEach(([X,Z,name,i])=>{const key=X+','+Z;let d=Math.hypot(x-X,z-Z);if(li
   g.imageSmoothingEnabled=false;
   g.drawImage(pines[Math.abs(Math.floor(tree.X))%pines.length],a-width/2,b-height,width,height);
  });
- for(const r of (mode==='rally'?hoops.slice(passed,passed+2):hoops)){
-  if(r.taken||Math.hypot(r.x-x,r.z-z)>2200)continue;
-  for(let i=0;i<32;i++){const point=n=>{
-   const angle=n*tau/32,side=15*Math.cos(angle);
-   return project(r.x+r.nz*side,r.z-r.nx*side,r.y+15*Math.sin(angle))
-  };
-  const a=point(i),b=point(i+1);if(!a||!b)continue;
-  objects.push([(a[3]+b[3])/2,()=>{g.beginPath();g.moveTo(a[0],a[1]);g.lineTo(b[0],b[1]);const active=mode!=='rally'||r===hoops[passed],width=Math.max(active?2:1,a[2]*(active?1.05:.55));if(active){g.lineWidth=width+2;g.strokeStyle='#795843';g.stroke()}g.lineWidth=width;g.strokeStyle=active?(i%8<2?'#d49955':'#fff0a9'):'#b1ae9f';g.stroke()}])
-  }
- }
  for(const p of spray){
   const age=t-p.birth,height=Math.max(.05,.2+p.vy*age-12*age*age);
   add(p.x+p.vx*age,p.z+p.vz*age,height,(sx,sy,k)=>ellipse(sx,sy,Math.max(.6,p.r*k),Math.max(.7,p.r*k*1.35),'rgba(255,231,216,'+Math.max(0,1-age/.6)+')'))
  }
  // Sample both wing tips in world space so the wake stays behind the aircraft.
- if(live&&t>=wakeTime){
+ if(live&&airspeed>0&&t>=wakeTime){
   wakeTime=t+.035;
   const roll=bank*.62+(trick==='roll'?hand*phase:0), tilt=trick==='loop'?phase:0;
   const span=Math.min(w/79,h/115)*26*32/f;
@@ -1097,11 +1020,7 @@ isles.forEach(([X,Z,name,i])=>{const key=X+','+Z;let d=Math.hypot(x-X,z-Z);if(li
   for(const b of hostile)add(b.x,b.z,b.y,(a,y,k)=>ellipse(a,y,Math.max(2,k*.55),Math.max(2,k*.55),"#ff9468"));
   for(const shot of bolts)add(shot.x,shot.z,shot.y,(a,b,k)=>ellipse(a,b,Math.max(1,k*.32),Math.max(1,k*.65),'#fff2a5'));
  }
- objects.sort((a,b)=>b[0]-a[0]);objects.forEach(o=>o[1]());if(crash)wreck(dt);else plane();$('meter').textContent=(alt<3?alt.toFixed(1):Math.round(alt))+' m　'+Math.round(((yaw*180/Math.PI)%360+360)%360)+'°\n地表 '+clearance.toFixed(clearance<10?1:0)+' m';if(mode==='rally'&&hoops[passed]){
- const r=hoops[passed],distance=Math.hypot(x-r.x,z-r.z),dy=r.y-alt;
- const dir=Math.atan2(r.x-x,r.z-z)-yaw,arrow=['↑','↗','→','↘','↓','↙','←','↖'][(Math.round(dir/(tau/8))%8+8)%8];
- $('place').textContent=arrow+' リング '+(passed+1)+' / '+hoops.length+'　'+Math.round(distance)+' m　'+(Math.abs(dy)<5?'水平':(dy>0?'上 ':'下 ')+Math.round(Math.abs(dy))+' m')
- }else if(mode==='combat'){
+ objects.sort((a,b)=>b[0]-a[0]);objects.forEach(o=>o[1]());if(crash)wreck(dt);else plane();$('meter').textContent=(alt<3?alt.toFixed(1):Math.round(alt))+' m　'+Math.round(((yaw*180/Math.PI)%360+360)%360)+'°\n地表 '+clearance.toFixed(clearance<10?1:0)+' m';if(mode==='combat'){
  const aim=project(x+Math.sin(yaw)*190,z+Math.cos(yaw)*190,alt+pitch*100*190/390);
  if(aim&&!crash){g.beginPath();g.arc(aim[0],aim[1],8,0,tau);g.lineWidth=1.5;g.strokeStyle='#fff1c7';g.stroke()}
  if(locked&&locked.hp){const mark=project(locked.x,locked.z,locked.y);if(mark){const [a,b,k]=mark,r=Math.max(11,k*9);g.strokeStyle="#aaf5cd";g.lineWidth=2;g.strokeRect(a-r,b-r,r*2,r*2)}}
@@ -1115,10 +1034,11 @@ isles.forEach(([X,Z,name,i])=>{const key=X+','+Z;let d=Math.hypot(x-X,z-Z);if(li
   const arrow=['↑','↗','→','↘','↓','↙','←','↖'][(Math.round(bearing/(tau/8))%8+8)%8];
   $('place').textContent=(approachReady?((operation().carrier?'艦尾':'滑走路')+'へ　高度32 m以下・推力42%以下'):'帰投　進入地点へ')+'　'+arrow+' '+Math.round(Math.hypot(x-goal.x,z-goal.z))+' m'
  }else if(!enemies.length&&!returningSupply)$('place').textContent+='　任務 '+cleared+'/2';
- if(deckMode)$('place').textContent=deckMode==='capture'?(landingSite===base?'着陸補助　滑走路へ':'着艦補助　甲板へ'):deckMode==='moored'?'補給中　推力72%以上で発進':(landingSite===base?'離陸中':'発艦中');
- }else{let dir=target?Math.atan2(target[0]-x,target[1]-z)-yaw:0;$('place').textContent=target?['↑','↗','→','↘','↓','↙','←','↖'][(Math.round(dir/(tau/8))%8+8)%8]+' '+target[2]+'　'+(nearest/1000).toFixed(1)+' km　'+'発見 '+found.size:'自由飛行'}$('feedback').textContent=t<messageUntil?message:'';
- const scoreboard=(mode==='combat'?'弾 '+Math.floor(ammo)+'　EN '+Math.ceil(energy)+'%　':'')+score+' pt'+(mode==='rally'?'　'+Math.floor(t)+'秒':'');
+ }else{let dir=target?Math.atan2(target[0]-x,target[1]-z)-yaw:0;$('place').textContent=target?['↑','↗','→','↘','↓','↙','←','↖'][(Math.round(dir/(tau/8))%8+8)%8]+' '+target[2]+'　'+(nearest/1000).toFixed(1)+' km　'+'発見 '+found.size:'自由飛行'}
+ if(deckMode&&live)$('place').textContent=deckMode==='capture'?(landingSite===base?'着陸補助　滑走路へ':'着艦補助　甲板へ'):deckMode==='moored'?(supplying?'補給中　':'待機中　')+'推力72%以上で発進':(landingSite===base?'離陸中':'発艦中');
+ $('feedback').textContent=t<messageUntil?message:'';
+ const scoreboard=(mode==='combat'?'弾 '+Math.floor(ammo)+'　EN '+Math.ceil(energy)+'%　':'')+score+' pt';
  if($('score').textContent!==scoreboard)$('score').textContent=scoreboard}
-atlas();
+buildWorld();parkAtStart();atlas();
 function frame(now){if(live||(crash&&panel!=='crash')||!last||needsRedraw)draw(Math.min(.05,(now-last)/1000));needsRedraw=false;last=now;requestAnimationFrame(frame)}requestAnimationFrame(frame);
 </script></html>
