@@ -347,8 +347,9 @@ function ground(X,Z){
  }
  if(Math.abs(X-base.x)<300&&Math.abs(Z-base.z)<195)return level;
  if(campaign.stage===1){
-  const row=Math.floor((Z+2048)/64);
-  if(row>=0&&row<64)for(const wall of cliffs){
+  for(const wall of cliffs){
+   const row=Math.floor((Z-wall[0][0][2])/64);
+   if(row<0||row>=wall.length-1)continue;
    const a=wall[row],b=wall[row+1],v=(Z-a[0][2])/64;
    for(let i=0;i<a.length-1;i++){
     const left=a[i][0]*(1-v)+b[i][0]*v,right=a[i+1][0]*(1-v)+b[i+1][0]*v;
@@ -440,6 +441,50 @@ function hitsArch(X,Z,Y){
 }
 const roads=[];
 const portBlocks={columns:4,rows:3,dx:132,dz:150};
+// The northern pass and its workings share the valley's 64 m cross-section mesh.
+const passStart=2048,passRows=64;
+function passAxis(Z){return 180*Math.sin((Z-passStart)/510)+85*Math.sin((Z-passStart)/295)}
+function quarryWeight(row){return Math.min(1,Math.max(0,(row-10)/6),Math.max(0,(42-row)/6))}
+function buildCopperPass(){
+ for(const side of [-1,1]){
+  const wall=[];
+  for(let row=0;row<=passRows;row++){
+   const Z=passStart+64*row,mid=passAxis(Z);
+   const taper=Math.min(1,row/9,(passRows-row)/10);
+   const saddle=Math.exp(-(((row-46)/5)**2));
+   const summit=(390+135*field(Z,side*180,380,76)+58*field(Z,side*90,150,77)-265*saddle)*taper;
+   const floor=10+taper*(22+48*saddle),lip=65+22*field(Z,0,310,73);
+   const cut=side===1?quarryWeight(row):0;
+   const offsets=[0,lip,lip+55,lip+140,lip+162,lip+252,lip+278,lip+375,lip+510,lip+740,lip+1080];
+   const natural=[0,.04,.27,.49,.54,.69,.74,.89,1,.51,0];
+   const bench=[0,0,49,49,104,104,163,163,0,0,0];
+   wall.push(offsets.map((offset,k)=>{
+    const height=k===10?10:floor+natural[k]*summit;
+    const level=k===0?floor:k<8?height+(10+bench[k]-height)*cut:height;
+    const spread=1+.10*Math.sin(row*.24+side)+.08*(field(Z,side,215,79)-.5);
+    return [mid+side*offset*spread,level,Z]
+   }));
+  }
+  wall.passSide=side;cliffs.push(wall);
+  if(side===1){
+   // The three level haul benches carry different parts of the town.
+   const place=(row,lane,fraction,kind,w,l,h,roof,dz=0)=>{
+    const a=wall[row][lane],b=wall[row][lane+1],X=a[0]+(b[0]-a[0])*fraction;
+    quarters.push({x:X,z:a[2]+dz,y:a[1],w,l,h,roof,angle:0,radius:Math.hypot(w,l)/2,industry:kind})
+   };
+   for(let row=17;row<=35;row+=2){
+    place(row,6,.34,'housing',24,23,14+8*noise(row,1,67),'#876959');
+    place(row,6,.72,'housing',17,20,12,'#708181')
+   }
+   for(const row of [19,25,32]){
+    place(row,4,.48,'mill',40,56,32,'#637c7e');
+    place(row+1,4,.53,'stack',14,14,80+(row%3)*13,'#523d3b');
+    for(let j=0;j<3;j++)place(row,2,.55,'stock',20,10,7+j*2,['#af714c','#706860','#be9366'][j],(j-1)*18);
+
+   }
+  }
+ }
+}
 function buildRegion(){
  quarters.length=cliffs.length=roads.length=0;ridgeCells.clear();ridgeFaces.length=0;
  const m=operation(),stage=campaign.stage,[cx,cz]=m.town;
@@ -474,6 +519,7 @@ function buildRegion(){
    }
    cliffs.push(wall)
   }
+  buildCopperPass()
 
  }
  for(const [key,heights] of ridgeCells){
@@ -606,6 +652,10 @@ function updateWorld(){
     if(nearTown.some(b=>Math.hypot(X-b.x,Z-b.z)<b.radius+16+20*val(5)))continue;
     if(cliffs.length&&Math.abs(X-valleyAxis(Z)-24*Math.sin(Z/117))<27)continue;
     if(cliffs.length&&Math.abs(X-archX)<205&&Math.abs(Z-archZ)<95)continue;
+    if(campaign.stage===1&&Z>=passStart&&Z<=passStart+passRows*64){
+     const offset=X-passAxis(Z);
+     if(Math.abs(offset)<50||offset>50&&offset<540&&quarryWeight((Z-passStart)/64)>.4)continue
+    }
     const canopy=.7*field(X,Z,355,59)+.3*field(X,Z,110,60);
     const slope=Math.max(Math.abs(ground(X+10,Z)-Y),Math.abs(ground(X,Z+10)-Y))/10;
     const density=Math.min(.88,Math.max(0,(canopy-.32)*2.1))*
@@ -653,7 +703,7 @@ function hitObject(X,Z,Y){
    const u=px-b.x,v=pz-b.z;
    if(Math.abs(u)>b.radius||Math.abs(v)>b.radius)continue;
    const dx=Math.abs(u*Math.cos(b.angle)+v*Math.sin(b.angle)),dz=Math.abs(v*Math.cos(b.angle)-u*Math.sin(b.angle));
-   if(dx<b.w/2&&dz<b.l/2&&py<=b.y+b.h||dx<b.w*.27&&dz<b.l*.3&&py<=b.y+b.h+(b.tower?18:5))return '建物'
+   if(dx<b.w/2&&dz<b.l/2&&py<=b.y+b.h||!b.industry&&dx<b.w*.27&&dz<b.l*.3&&py<=b.y+b.h+(b.tower?18:5))return '建物'
   }
   if(cliffs.length&&hitsArch(px,pz,py))return '岩のアーチ';
   const land=ground(px,pz);if(land&&py-.55<=land)return '地面';
@@ -1034,7 +1084,7 @@ function drawScenery(sn,cs,eye,f,horizon,objects){
  }
  function block(cx,cz,Y,width,length,height,roof){
   const foot=[[-1,-1],[1,-1],[1,1],[-1,1]].map(([u,v])=>[cx+u*width/2,Y,cz+v*length/2]),top=foot.map(([X,y,Z])=>[X,y+height,Z]);
-  for(let j=0;j<4;j++){const n=(j+1)%4;face([foot[j],foot[n],top[n],top[j]],['#78766a','#575e58','#939080','#66695e'][j])}
+  for(let j=0;j<4;j++){const n=(j+1)%4;face([foot[j],foot[n],top[n],top[j]],(building?.industry==='stack'?(width>building.w?'#e9c5a1':'#9a5545'):building?.industry==='stock'?roof:['#78766a','#575e58','#939080','#66695e'][j]))}
   face(top,roof,.1)
  }
  if(cliffs.length)for(let Z=-2048;Z<2048;Z+=64){
@@ -1046,8 +1096,27 @@ function drawScenery(sn,cs,eye,f,horizon,objects){
  for(const wall of cliffs)for(let row=0;row<wall.length-1;row++){
   const a=wall[row],b=wall[row+1];
   if(Math.abs(a[0][2]-z)>3200)continue;
-  for(let i=0;i<7;i++){
-   face([a[i],a[i+1],b[i+1]],rock[i]);face([a[i],b[i+1],b[i]],rock[i])
+  for(let i=0;i<a.length-1;i++){
+   let color=rock[i];
+   if(wall.passSide){
+    const exposed=['#87926b','#808868','#82776e','#9a8a78','#a29787','#938b85','#aba397','#bcafa0','#938c8b','#7e8375'];
+    const copper=['#a98e72','#aa7157','#bd996e','#995e49','#c29c74','#8b5b50','#b79b78','#9a796a'];
+    color=wall.passSide===1&&quarryWeight(row)>.55&&i<copper.length?copper[i]:exposed[i];
+   }
+   if(wall.passSide&&Math.min(a[i][1],b[i][1])>400)color='#c3b9ad';
+   face([a[i],a[i+1],b[i+1]],color);face([a[i],b[i+1],b[i]],color);
+   if(wall.passSide===1&&row>=16&&row<36&&[2,4,6].includes(i)){
+    const lane=(r,t)=>[r[i][0]+(r[i+1][0]-r[i][0])*t,r[i][1]+.16,r[i][2]];
+    face([lane(a,.04),lane(a,.15),lane(b,.15),lane(b,.04)],'#796b5d',2);
+   }
+   if(wall.passSide===1&&i===5&&[20,27,34].includes(row)){
+    // Paint the adit mouth on the cut face. Its back wall remains solid.
+    const mouth=(t,rise)=>{
+     const lower=a[i][0]+(b[i][0]-a[i][0])*t,upper=a[i+1][0]+(b[i+1][0]-a[i+1][0])*t;
+     return [lower+(upper-lower)*rise-.4,a[i][1]+(a[i+1][1]-a[i][1])*rise,a[i][2]+64*t]
+    };
+    face([mouth(.27,0),mouth(.27,.23),mouth(.36,.34),mouth(.64,.34),mouth(.73,.23),mouth(.73,0)],'#453e39',3)
+   }
   }
  }
  if(cliffs.length){
@@ -1062,6 +1131,11 @@ function drawScenery(sn,cs,eye,f,horizon,objects){
   if(Math.hypot(x-b.x,z-b.z)>2700)continue;
   building=b;
   block(b.x,b.z,b.y,b.w,b.l,b.h,b.roof);
+  if(b.industry){
+   if(b.industry==='stack')for(const fraction of [.6,.86])
+    block(b.x,b.z,b.y+b.h*fraction,b.w+.2,b.l+.2,5,'#e9c5a1');
+   continue
+  }
   block(b.x,b.z,b.y+b.h,b.w*.54,b.l*.60,b.tower?18:5,b.tower?'#c49c68':b.roof);
   if(Math.hypot(x-b.x,z-b.z)<600)for(const side of [-1,1])for(let j=-1;j<=1;j++){
    const X=b.x+j*b.w*.28,Z=b.z+side*(b.l/2+.1);
@@ -1130,6 +1204,7 @@ for(let i=-6;i<=6;i++)for(let j=-6;j<=6;j++){let A=Math.floor(x/240)+i,B=Math.fl
  }
 if(mode==='free'){
  const landmarks=[...isles,[...operation().town,regions[campaign.stage]]];
+ if(campaign.stage===1)landmarks.push([passAxis(4992),4992,'白嶺峠'],[passAxis(3648)+270,3648,'赤棚鉱山市']);
  if(operation().carrier)landmarks.push([ship.x,ship.z,'補給船']);
  for(const [X,Z,name,kind] of landmarks){
   if(kind===2)continue;

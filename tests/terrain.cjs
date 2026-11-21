@@ -19,6 +19,36 @@ const assert=require('node:assert/strict');
      const [X,Y,Z]=[0,1,2].map(k=>tri.reduce((sum,v)=>sum+v[k],0)/3);
      if(Math.abs(ground(X,Z)-Y)>.001)throw Error('Ridge triangle height');
     }
+    if(stage===1){
+     const walls=cliffs.filter(w=>w.passSide);
+     if(walls.length!==2)throw Error('Missing mountain walls');
+     for(const wall of walls)for(let row=0;row<passRows;row++){
+      const a=wall[row],b=wall[row+1];
+      for(let i=0;i<a.length-1;i++)for(const tri of [[a[i],a[i+1],b[i+1]],[a[i],b[i+1],b[i]]]){
+       const [X,Y,Z]=[0,1,2].map(k=>tri.reduce((sum,v)=>sum+v[k],0)/3);
+       if(!mainlandAt(X,Z)||Math.abs(ground(X,Z)-Y)>.001)throw Error('Pass face '+row+','+i);
+      }
+     }
+     for(let Z=passStart;Z<=passStart+64*passRows;Z+=32){
+      x=passAxis(Z);z=Z;updateWorld();
+      if(ground(x,z)>90||hitObject(x,z,110))throw Error('Pass corridor obstructed');
+     }
+     // Steer the normal flight loop through the saddle with level pitch.
+     deckMode='';power=.4;airspeed=100;alt=110;z=passStart;x=passAxis(z);
+     yaw=cameraYaw=Math.atan2(passAxis(z+70)-x,70);
+     for(let frame=0;frame<1000&&z<passStart+passRows*64;frame++){
+      const heading=Math.atan2(passAxis(z+70)-x,70);
+      ax=Math.max(-1,Math.min(1,(heading-yaw)*2.8));
+      draw(.05);
+      if(!live)throw Error('Flight through pass: '+crash?.cause);
+     }
+     ax=0;
+     if(z<passStart+passRows*64||!found.has(passAxis(4992)+',4992'))throw Error('Saddle transit or discovery');
+     for(const b of quarters.filter(b=>b.industry)){
+      for(const side of [-1,1])for(const end of [-1,1])
+       if(Math.abs(ground(b.x+side*b.w/2,b.z+end*b.l/2)-b.y)>1)throw Error('Mine foundation '+b.industry+' '+b.z);
+     }
+    }
     for(const island of shoreMeshes)for(let j=0;j<64;j++){
      const k=(j+1)%64;
      for(const tri of [[island.outer[j],island.outer[k],island.inner[k]],[island.outer[j],island.inner[k],island.inner[j]]]){
