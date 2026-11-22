@@ -22,7 +22,7 @@ const views = [
     let dx=-185,dz=-205;alt=108;
     if(key==='near'||key==='strait'){dx=-350;dz=key==='near'?-380:480;alt=125}
     if(key==='ocean'){dx=-280;dz=-435;alt=80}
-    x=base.x+dx;z=base.z+dz;yaw=cameraYaw=Math.atan2(-dx,-dz)+.46;draw(0);
+    x=base.x+dx;z=base.z+dz;alt+=base.deck?0:base.height-10;yaw=cameraYaw=Math.atan2(-dx,-dz)+.46;draw(0);
     const zone=seaZone(x+operation().wx,z+operation().wz);
     if(['near','strait','ocean'].includes(key)&&zone!==['near','strait','ocean'].indexOf(key))throw Error(key+' sea zone');
    }, {key,id});
@@ -53,6 +53,7 @@ const views = [
       x=train.x-train.dx*320+train.dz*65;z=train.z-train.dz*320-train.dx*65;
       yaw=cameraYaw=Math.atan2(train.x-x,train.z-z);
      }
+     alt+=Math.max(0,ground(x,z)-10);
      const frames=[],cpu=[];let previous;
      for(let j=0;j<81;j++){
       const stamp=await new Promise(nativeFrame),dt=previous?(stamp-previous)/1000:1/60;

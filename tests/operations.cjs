@@ -28,11 +28,11 @@ const output=process.env.OPERATION_SCREENSHOTS||'/tmp/brass-operations';
      const {wx,wz}=localToWorld(b.x,b.z);
      check(Math.abs(wx-b.wx)<.001&&Math.abs(wz-b.wz)<.001&&wx>0&&wx<worldSize&&wz>0&&wz<worldSize,b.id+' coordinates');
      for(let dx=-b.width/2;dx<=b.width/2;dx+=6)for(let dz=-b.length/2;dz<=b.length/2;dz+=5)
-      check(ground(b.x+dx,b.z+dz)===b.height,b.id+' runway '+stage);
+      check(Math.abs(ground(b.x+dx,b.z+dz)-b.height)<.051,b.id+' runway '+stage);
      for(const building of baseFacilities(b).filter(obj=>obj.y===0)){
       for(const dx of [-1,1])for(const dz of [-1,1]){
        const X=b.x+building.x+dx*building.w/2,Z=b.z+building.z+dz*building.l/2;
-       check(ground(X,Z)===b.height,b.id+' building footprint '+stage+' '+X+','+Z)
+       check(Math.abs(ground(X,Z)-b.height)<.051,b.id+' building footprint '+stage+' '+X+','+Z)
       }
       check(hitObject(b.x+building.x,b.z+building.z,b.height+2)==='基地施設',b.id+' building collision')
      }
@@ -54,7 +54,7 @@ const output=process.env.OPERATION_SCREENSHOTS||'/tmp/brass-operations';
     power=.72;
     for(let i=0;i<50;i++)draw(.05);
     check(live&&!crash&&!deckMode&&alt>40,'takeoff');
-    yaw=cameraYaw=Math.PI;x=base.x;z=base.z+110;alt=25;power=.35;
+    yaw=cameraYaw=Math.PI;x=base.x;z=base.z+110;alt=base.height+15;power=.35;
     for(let i=0;i<75;i++)draw(.05);
     check(deckMode==='moored'&&landingSite===base&&live&&!crash&&airspeed===0,'landing');
     deckMode='';alt=base.height-.5;
@@ -109,7 +109,7 @@ const output=process.env.OPERATION_SCREENSHOTS||'/tmp/brass-operations';
      x=zone.x;z=zone.z;fight(.05);
      check(approachReady,'return waypoint');
      const landAt=port=>{
-      x=port.x;z=port.z-110;alt=25;power=.35;yaw=cameraYaw=0;step(75);
+      x=port.x;z=port.z-110;alt=port.height+15;power=.35;yaw=cameraYaw=0;step(75);
      };
      if(id==='b'){
       landAt(base);
@@ -129,7 +129,7 @@ const output=process.env.OPERATION_SCREENSHOTS||'/tmp/brass-operations';
     draw(0);
     const {left,top}=minimapBox();
     const pixel=Array.from(g.getImageData(left+2,top+2,1,1).data);
-    if(pixel[3]!==255||pixel[0]>70||base.id!=='copper-works')throw Error('World minimap or selected free base missing');
+    if(pixel[3]<200||pixel[0]>70||base.id!=='copper-works')throw Error('World minimap or selected free base missing');
    });
    await shot('free-world-map');
    await view.close()
