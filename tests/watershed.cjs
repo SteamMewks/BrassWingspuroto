@@ -71,6 +71,18 @@ const fs=require('node:fs');
     return {basin:b.name,x,z,height:h,shoreError:shore}
    })
   });
+  const prior=await page.evaluate(()=>{
+   const {reaches,basins}=watersheds;
+   const ids=new Set(waterfalls.map(s=>s.reach.fallId));
+   if(ids.size!==waterfalls.length||ids.has(undefined))throw Error('Waterfall IDs');
+   for(const [region,min] of [[0,7],[1,4],[2,4]]){
+    const additions=basins.slice(9).filter(b=>b.region===region);
+    if(additions.length<min||additions.some(b=>!(b.areaKm2>0)))throw Error('Secondary catchment distribution');
+   }
+   return JSON.stringify(reaches.slice(0,78).map(({fallId,...original})=>original))
+  });
+  const checksum=require('node:crypto').createHash('sha256').update(prior).digest('hex');
+  if(checksum!=='9f3a2aa18700638b56896ff531e30ed11002a54c49127cdf1e131fbe5b80fedf')throw Error('Original nine catchments changed');
   console.log(JSON.stringify(report,null,2))
  }finally{await browser.close()}
 })().catch(e=>{console.error(e);process.exitCode=1});
