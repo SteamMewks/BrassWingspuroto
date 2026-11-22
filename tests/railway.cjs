@@ -26,10 +26,16 @@ const assert = require('node:assert/strict');
      if(!nearRiver(p.x+operation().wx,p.z+operation().wz,5))continue;
      if(!line.bridges.some(b=>d>=b.start&&d<=b.end)||p.y<14.8)throw Error('Missing bridge deck');
     }
+    if(baseSpurs.length!==12)throw Error('Base freight siding count');
+    for(const spur of baseSpurs)for(const p of spur.curve){
+     if(ground(p.x,p.z)!==10)throw Error('Freight formation '+spur.id);
+    }
+    const hall=railLots.find(b=>b.style==='hall');
+    if(railHit(hall.x,hall.z,hall.y+3)!=='駅施設')throw Error('Passenger hall collision');
     results.push(railSites.map(p=>[p.name,Math.round(p.x+operation().wx),Math.round(p.z+operation().wz)]));
    }
-   if(railSites.filter(s=>s.kind==='central').length!==3)throw Error('Central station count');
-   if(railLines.reduce((n,l)=>n+l.bridges.length,0)!==2)throw Error('River crossing survey');
+   if(railSites.filter(s=>s.kind==='central').length!==5)throw Error('Central station count');
+   if(railLines.reduce((n,l)=>n+l.bridges.length,0)!==3)throw Error('River crossing survey');
    for(const line of railLines)for(const span of line.bridges){
     const middle=railSample(line,(span.start+span.end)/2);
     if(railHit(middle.x,middle.z,middle.y)!=='鉄道橋')throw Error('Bridge collision');
