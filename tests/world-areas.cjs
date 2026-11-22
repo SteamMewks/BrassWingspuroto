@@ -52,9 +52,19 @@ const fs=require('node:fs');
    check(terrainAreas.has(key)&&gpuBefore>0,'Departure tiles missing');
    const pad=gradingSites['western-plain'];
    check(groves.every(t=>Math.abs(t.X+operation().wx-pad.x)>=pad.rx||Math.abs(t.Z+operation().wz-pad.z)>=pad.rz),'Tree on runway pad');
+   check(groves.some(t=>t.planted==='airfield'),'Airfield perimeter missing planted trees');
+   let plantedStations=0;
    for(const site of railSites.filter(s=>s.kind==='central')){
     location(site.x+operation().wx,site.z+operation().wz);
     check(groves.every(t=>Math.hypot(t.X-site.x,t.Z-site.z)>=180),'Tree in central station yard');
+    if(groves.some(t=>t.planted==='station'&&Math.hypot(t.X-site.x,t.Z-site.z)<210))plantedStations++;
+   }
+   check(plantedStations>0,'Central stations missing perimeter trees');
+   const [townX,townZ]=operation().town;
+   location(townX+operation().wx,townZ+operation().wz);
+   check(groves.some(t=>t.planted==='street'),'Town missing planted street trees');
+   for(const t of groves.filter(t=>t.planted)){
+    check(t.H<=11&&!nearRail(t.X,t.Z)&&!nearRiver(t.X+operation().wx,t.Z+operation().wz,8),'Planted tree obstructs a surveyed route');
    }
 
    // Sweep both sides of real grid edges with all detailed caches cold.
@@ -71,6 +81,7 @@ const fs=require('node:fs');
    location(50000,50000);
    const cpuSea=terrainAreaBytes,gpuSea=gpu().bytes;
    check(cpuSea<cpuBefore&&gpuSea<gpuBefore,'Open-ocean transition retained local ground mesh');
+   check(activeRiverCells.size===0&&activeChannelTiles.size===0,'Open-ocean transition retained river tiles');
    titleScreen();check(clean(),'Title retained the last free-flight areas');
    return {combatAreaCount,carrierAreaCount,archivedTiles:Object.keys(terrainArchive).length,terrainLoads,terrainEvictions,cpuBefore,gpuBefore,cpuSea,gpuSea}
   });

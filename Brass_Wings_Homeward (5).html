@@ -452,6 +452,7 @@ function updateTerrainFocus(){
   terrainAreas.delete(key);terrainAreaBytes-=area.bytes;terrainEvictions++
  }
  surfaceRenderer?.pruneAreas(wx,wz);
+ pruneRiverTiles(wx,wz);
  // Collision is also loaded synchronously on a cache miss, including after a teleport.
  const lead=Math.min(1600,320+airspeed*8);
  for(const distance of [0,lead*.5,lead]){
@@ -949,6 +950,16 @@ function riverTile(index,cache,key,limit){
  if(cache.size>limit)cache.delete(cache.keys().next().value);
  return segments
 }
+function pruneRiverTiles(wx,wz){
+ for(const key of activeRiverCells.keys()){
+  const [i,j]=key.split(',').map(Number);
+  if(Math.abs((i+.5)*256-wx)>1900||Math.abs((j+.5)*256-wz)>1900)activeRiverCells.delete(key)
+ }
+ for(const key of activeChannelTiles.keys()){
+  const i=Math.floor(key/256),j=key%256;
+  if(Math.abs((i+.5)*800-wx)>4500||Math.abs((j+.5)*800-wz)>4500)activeChannelTiles.delete(key)
+ }
+}
 function riverAt(wx,wz,margin=0){
  let best=null,closest=Infinity;
  for(const s of riverTile(riverCells,activeRiverCells,Math.floor(wx/256)+','+Math.floor(wz/256),64)){
@@ -1417,7 +1428,7 @@ function buildWorld(){
  }
  buildRegion();
  if(!townLayoutArchive[m.region])for(const road of roads)for(const v of road)v[1]=ground(v[0],v[2])+.12;
- buildRail();
+ buildRail();activeRiverCells.clear();
  for(let i=quarters.length-1;i>=0;i--)if(nearRail(quarters[i].x,quarters[i].z))quarters.splice(i,1);
  mainlandPlan=new Path2D();islandPlan=new Path2D();
  const mapContext=worldMap.getContext('2d'),mapScale=worldMap.width/worldSize;
@@ -1458,8 +1469,40 @@ function updateWorld(){
    const sites=railSites.filter(s=>Math.abs(s.x-cx)<440&&Math.abs(s.z-cz)<440);
    const insideStation=(X,Z,margin)=>sites.some(s=>Math.hypot(s.x-X,s.z-Z)<(s.kind==='central'?180:115)+margin);
    const town=quarters.filter(b=>Math.abs(b.x-cx)<265&&Math.abs(b.z-cz)<265);
-   const streets=roads.filter(r=>r.some(([X,,Z])=>Math.abs(X-cx)<280&&Math.abs(Z-cz)<280))
-    .map(r=>[Math.min(...r.map(p=>p[0]))-15,Math.max(...r.map(p=>p[0]))+15,Math.min(...r.map(p=>p[2]))-15,Math.max(...r.map(p=>p[2]))+15]);
+   const nearbyRoads=roads.filter(r=>r.some(([X,,Z])=>Math.abs(X-cx)<280&&Math.abs(Z-cz)<280));
+   const streets=nearbyRoads.map(r=>[Math.min(...r.map(p=>p[0]))-15,Math.max(...r.map(p=>p[0]))+15,Math.min(...r.map(p=>p[2]))-15,Math.max(...r.map(p=>p[2]))+15]);
+   function plant(X,Z,place){
+    if(Math.floor(X/256)!==i||Math.floor(Z/256)!==j||insideBase(X,Z,28)||insideStation(X,Z,8)||nearRail(X,Z))return;
+    if(town.some(b=>Math.hypot(X-b.x,Z-b.z)<b.radius+6))return;
+    if(streets.some(([west,east,south,north])=>X>west+9&&X<east-9&&Z>south+9&&Z<north-9))return;
+    if(tile.trees.some(tree=>Math.hypot(X-tree.X,Z-tree.Z)<20))return;
+    const Y=ground(X,Z);
+    if(Y<3||nearRiver(X+m.wx,Z+m.wz,8)||Math.abs(ground(X+6,Z+6)-Y)>2.5)return;
+    const seed=noise(Math.round(X+m.wx),Math.round(Z+m.wz),861);
+    tile.trees.push({X,Z,Y,H:7+seed*4,R:2+seed,planted:place})
+   }
+   for(const road of nearbyRoads){
+    const [a,b,c,d]=road,dx=(b[0]+c[0]-a[0]-d[0])/2,dz=(b[2]+c[2]-a[2]-d[2])/2;
+    const length=Math.hypot(dx,dz);
+    if(length<45)continue;
+    const X=(a[0]+d[0])/2,Z=(a[2]+d[2])/2;
+    const seed=noise(Math.round(X+m.wx),Math.round(Z+m.wz),862);
+    if(seed<.35){
+     const side=seed<.175?-1:1;
+     plant(X+dx*.55-side*dz*18/length,Z+dz*.55+side*dx*18/length,'street')
+    }
+   }
+   for(const base of bases){
+    const pad=gradingSites[base.id];
+    for(const sign of [-1,1])plant(base.x+sign*(pad.rx+46),base.z+sign*pad.rz*.55,'airfield')
+   }
+   for(const site of sites){
+    const edge=site.kind==='central'?201:139;
+    for(const side of [-1,1]){
+     const [X,,Z]=railOffset(site,side*edge,side*24);
+     plant(X,Z,'station')
+    }
+   }
    if(!insideBase(cx,cz,-128)&&!insideStation(cx,cz,-181))for(let n=0;n<49;n++){
     const val=k=>noise(i,j,8*n+k),step=256/7;
     const X=i*256+(n%7+.5+(val(0)-.5)*.45)*step,Z=j*256+(Math.floor(n/7)+.5+(val(1)-.5)*.45)*step;
@@ -1480,7 +1523,7 @@ function updateWorld(){
     const fringe=insideBase(X,Z,140)||insideStation(X,Z,130)||town.some(b=>Math.hypot(X-b.x,Z-b.z)<b.radius+80);
     const density=Math.min(.76,Math.max(0,(canopy-.32)*1.85))*(fringe?.18:1)*
      Math.min(1,Y/10,Math.max(0,(220-Y)/90))*Math.max(0,1-slope);
-    if(val(4)<density&&Y>=5)tile.trees.push({X,Z,Y,H:15+val(2)*16+6*canopy,R:4+val(3)*3});
+    if(val(4)<density&&Y>=5&&!tile.trees.some(tree=>tree.planted&&Math.hypot(tree.X-X,tree.Z-Z)<18))tile.trees.push({X,Z,Y,H:15+val(2)*16+6*canopy,R:4+val(3)*3});
     else if(val(6)<.28)tile.pixels.push({X,Z,Y,width:1+val(2)*5,color:Y<6?'#dbc299':slope>.38?'#a29882':canopy<.4?'#a1a06c':'#798c61'})
    }
   }

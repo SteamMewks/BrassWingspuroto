@@ -73,6 +73,7 @@ Chromiumで全78河道の下流IDを河口まで追跡した。支流末端と�
 mkdir -p /tmp/brass-survey
 CHROMIUM_PATH=/usr/bin/chromium node tools/relief/survey.cjs /tmp/brass-survey
 python tools/relief/build.py /tmp/brass-survey
+CHROMIUM_PATH=/usr/bin/chromium node tools/relief/bake-rail.cjs
 cp 'Brass_Wings_Homeward (5).html' BrassWings-preview.html
 CHROMIUM_PATH=/usr/bin/chromium node tests/watershed.cjs
 ```
