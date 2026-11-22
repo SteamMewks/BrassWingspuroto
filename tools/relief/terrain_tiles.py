@@ -29,7 +29,7 @@ def compact_tile(vertices, indices, colors, wide):
     return [len(vertices) * (-1 if wide else 1), len(indices), base64.b64encode(dest.raw[:size]).decode()]
 
 
-def pack_tiles(xy, heights, triangles):
+def pack_tiles(xy, heights, triangles, shore=None):
     # Keep the original quantization and triangle order for collision.
     tiles = {}
     for index, row in enumerate(triangles):
@@ -73,6 +73,8 @@ def pack_tiles(xy, heights, triangles):
             beach = elev < 5 and max(heights[[a, b, c]]) < 180
             shade = math.floor(22 * max(-1, min(1, sx * .95 + sz * .55)) + .5)
             rgb = (184, 165, 125) if beach else (127 + 39 * rock, 140 - 4 * rock, 94 + 34 * rock)
+            if shore is not None and shore[index]:
+                rgb = (112, 108, 102) if math.hypot(sx, sz) > .12 else (212, 191, 145)
             colors.extend(math.floor(v + shade + .5) for v in rgb)
         vertices = np.column_stack((offsets, heights[unique]))
         result[f"{i},{j}"] = compact_tile(
