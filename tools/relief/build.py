@@ -1,4 +1,6 @@
 from pathlib import Path
+import re
+from shores import Shores
 import sys, json, math, heapq, base64
 
 D = Path(sys.argv[1])
@@ -459,6 +461,11 @@ def frame(x, z, rx, rz):
     )
 
 
+source = Path(__file__).resolve().parents[2] / "Brass_Wings_Homeward (5).html"
+sites = json.loads(re.search(r"^const relics=(.*);$", source.read_text(), re.M)[1])
+shore = Shores(landPoly, sites, S["paths"], [r["points"] for r in reaches], bases, S["origins"])
+landPoly = shore.land
+shore.vertices(add, points)
 for ring in rings:
     add(ring + [ring[0]])
 for tri in S["legacy"]:
@@ -785,6 +792,7 @@ for b in pads:
         & (abs(V[:, 1] - b["z"]) < b["rz"] + b["buffer"])
     )
 Y[keep] = legacyY[keep]
+Y = shore.shape(V,Y)
 # Shoreline vertices are sea-level, except for the submerged bed at estuaries.
 islandShore = cKDTree(np.vstack(S["islands"])).query(V)[0] < 0.09
 Y[islandShore] = 0
@@ -831,13 +839,23 @@ def replace_chart(name, value):
 
 
 compact = lambda obj: json.dumps(obj, ensure_ascii=False, separators=(",", ":"))
+for site in sites:
+    nearest = np.argmin(np.sum((V - [site["x"], site["z"]])**2, axis=1))
+    site["base"] = 0 if site["id"] in ("dock", "gauge") else float(np.round(Y[nearest]*20)/20)
+replace_chart("relics", compact(sites))
+# The atlas and mainland queries use the same surveyed cuts as the TIN.
+cut_paths = []
+for poly in sh.get_parts(shore.cuts):
+    if poly.geom_type == 'Polygon' and poly.area > 1:
+        cut_paths.append("M" + " ".join(f"{x*.01254:.5f},{1254-z*.01254:.5f}" for x,z in poly.exterior.coords) + "Z")
+replace_chart("inletOutline", compact("".join(cut_paths)))
 replace_chart("gradingSites", compact({p["id"]: p for p in pads}))
 replace_chart("watersheds", compact(json.loads((D / "hydro.json").read_text())))
 replace_chart("trackProfiles", compact(profiles))
 from terrain_tiles import pack_tiles
 
 replace_chart("terrainArchive", compact(pack_tiles(
-    np.round(V * 20).astype("<i4"), np.round(Y * 20).astype("<i2"), T
+    np.round(V * 20).astype("<i4"), np.round(Y * 20).astype("<i2"), T, shore.colors(V[T].mean(axis=1))
 )))
 # Refresh the rail elevation samples with bake-rail.cjs after rebuilding the TIN.
 replace_chart("railElevationArchive", "[]")
