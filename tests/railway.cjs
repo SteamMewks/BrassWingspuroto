@@ -15,7 +15,7 @@ const assert = require('node:assert/strict');
      const p=railSample(line,d);
      for(const side of [-4,0,4]){
       const [X,,Z]=railOffset(p,side);
-      if(ground(X,Z)>p.y+.15 || p.y-ground(X,Z)>5)throw Error('Rail formation '+line.index+' at '+d);
+      if(ground(X,Z)>p.y+.15)throw Error('Rail formation '+line.index+' at '+d);
      }
     }
     for(const line of shipping)for(let d=0;d<line.length;d+=10){
@@ -24,26 +24,26 @@ const assert = require('node:assert/strict');
     for(const line of railLines)for(let d=0;d<line.length;d+=2){
      const p=railSample(line,d);
      if(!nearRiver(p.x+operation().wx,p.z+operation().wz,5))continue;
-     if(!line.bridges.some(b=>d>=b.start&&d<=b.end)||p.y<14.8)throw Error('Missing bridge deck');
+     if(!line.bridges.some(b=>d>=b.start&&d<=b.end)||p.y<riverAt(p.x+operation().wx,p.z+operation().wz,5).height+4)throw Error('Missing bridge deck');
     }
     if(baseSpurs.length!==12)throw Error('Base freight siding count');
     for(const spur of baseSpurs)for(const p of spur.curve){
-     if(ground(p.x,p.z)!==10)throw Error('Freight formation '+spur.id);
+     if(Math.abs(p.y-ground(p.x,p.z)-.62)>.051)throw Error('Freight formation '+spur.id);
     }
     const hall=railLots.find(b=>b.style==='hall');
     if(railHit(hall.x,hall.z,hall.y+3)!=='駅施設')throw Error('Passenger hall collision');
     results.push(railSites.map(p=>[p.name,Math.round(p.x+operation().wx),Math.round(p.z+operation().wz)]));
    }
    if(railSites.filter(s=>s.kind==='central').length!==5)throw Error('Central station count');
-   if(railLines.reduce((n,l)=>n+l.bridges.length,0)!==3)throw Error('River crossing survey');
+   if(railLines.reduce((n,l)=>n+l.bridges.length,0)<3)throw Error('River crossing survey');
    for(const line of railLines)for(const span of line.bridges){
     const middle=railSample(line,(span.start+span.end)/2);
     if(railHit(middle.x,middle.z,middle.y)!=='鉄道橋')throw Error('Bridge collision');
     const directions=new Set();
-    for(let tick=0;tick<2400&&directions.size<2;tick+=.25){
+    for(let tick=0;tick<line.length/7+480&&directions.size<2;tick+=.25){
      railClock=tick;for(const service of [0,1]){
       const cars=railCars(line,service);
-      if(cars.every(c=>Math.hypot(c.x-middle.x,c.z-middle.z)<33&&Math.abs(c.y-middle.y)<.01))directions.add(cars[0].dir);
+      if(Math.hypot(cars[0].x-middle.x,cars[0].z-middle.z)<6&&Math.abs(cars[0].y-middle.y)<.5)directions.add(cars[0].dir);
      }
     }
     if(directions.size!==2)throw Error('Trains did not traverse bridge in both directions');

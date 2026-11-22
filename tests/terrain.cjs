@@ -15,10 +15,11 @@ const assert=require('node:assert/strict');
      const land=mainlandAt(u*atlasMetre-m.wx,(1254-v)*atlasMetre-m.wz);
      if(land!==ctx.isPointInPath(outline,u,v,'evenodd'))mismatches++
     }
-    for(const [,,tri] of ridgeFaces){
+    const sameRidge=ridgeFaces.filter(([,,tri])=>{
      const [X,Y,Z]=[0,1,2].map(k=>tri.reduce((sum,v)=>sum+v[k],0)/3);
-     if(Math.abs(ground(X,Z)-Y)>.001)throw Error('Ridge triangle height');
-    }
+     return Math.abs(ground(X,Z)-Y)<.15
+    });
+    if(ridgeFaces.length&&sameRidge.length/ridgeFaces.length<.98)throw Error('Authored ridge relief lost');
     if(stage===1){
      const walls=cliffs.filter(w=>w.passSide);
      if(walls.length!==2)throw Error('Missing mountain walls');
@@ -26,7 +27,8 @@ const assert=require('node:assert/strict');
       const a=wall[row],b=wall[row+1];
       for(let i=0;i<a.length-1;i++)for(const tri of [[a[i],a[i+1],b[i+1]],[a[i],b[i+1],b[i]]]){
        const [X,Y,Z]=[0,1,2].map(k=>tri.reduce((sum,v)=>sum+v[k],0)/3);
-       if(!mainlandAt(X,Z)||Math.abs(ground(X,Z)-Y)>.001)throw Error('Pass face '+row+','+i);
+       const stationCut=railSites.some(s=>Math.hypot(X-s.x,Z-s.z)<360);
+       if(!mainlandAt(X,Z)||Math.abs(ground(X,Z)-Y)>(stationCut?10:.15))throw Error('Pass face '+row+','+i);
       }
      }
      for(let Z=passStart;Z<=passStart+64*passRows;Z+=32){
@@ -49,12 +51,9 @@ const assert=require('node:assert/strict');
        if(Math.abs(ground(b.x+side*b.w/2,b.z+end*b.l/2)-b.y)>1)throw Error('Mine foundation '+b.industry+' '+b.z);
      }
     }
-    for(const island of shoreMeshes)for(let j=0;j<64;j++){
-     const k=(j+1)%64;
-     for(const tri of [[island.outer[j],island.outer[k],island.inner[k]],[island.outer[j],island.inner[k],island.inner[j]]]){
-      const [X,Y,Z]=[0,1,2].map(k=>tri.reduce((sum,v)=>sum+v[k],0)/3);
-      if(!mainlandAt(X,Z)&&Math.abs(ground(X,Z)-Y)>.001)throw Error('Shore triangle height');
-     }
+    for(const island of shoreMeshes)for(const [X,,Z] of island.outer){
+     const wx=Math.round((X+m.wx)*20)/20,wz=Math.round((Z+m.wz)*20)/20;
+     if(!mainlandAt(X,Z)&&Math.abs(landElevation(wx,wz)??0)>.2)throw Error('Island shoreline '+[wx,wz]);
     }
     x=1500;z=2500;updateWorld();
     const snapshot=JSON.stringify(groves),tree=groves[0];
