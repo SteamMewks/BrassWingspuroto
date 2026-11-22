@@ -200,6 +200,7 @@ endCandidates = [
 ]
 end = min(endCandidates, key=lambda p: math.dist(wp(p), last))
 legacyRoot = root[end]
+planned = []
 for reg, region in enumerate(continents):
     candidates = [
         p
@@ -216,85 +217,154 @@ for reg, region in enumerate(continents):
         chosen.append(legacyRoot)
     for bi, r in enumerate(chosen):
         basinName = "紫煙谷川" if r == legacyRoot else names[reg][bi]
-        pool = np.array([p for p in order if root[p] == r])
-        used = {r}
-        target = 5 if reg == 0 else 4
-        if r == legacyRoot:
-            p = end
-            while p not in used:
-                used.add(p)
-                p = P[p]
-        for _ in range(target):
-            # Choose separated headwaters by unshared upstream length and source elevation.
-            lengths = {}
-            for p in pool:
-                lengths[p] = (
-                    0 if p in used else lengths[P[p]] + math.dist(wp(p), wp(P[p]))
-                )
-            p = max(pool, key=lambda p: lengths[p] * (0.8 + min(1, H.ravel()[p] / 280)))
-            if lengths[p] < 1700:
-                break
-            while p not in used:
-                used.add(p)
-                p = P[p]
-        children = {p: [] for p in used}
-        for p in used:
-            if p != r:
-                children[P[p]].append(p)
-        terminals = {p for p in used if len(children[p]) != 1} | {r}
-        starts = terminals - {r}
-        contribution = {}
-        for p in reversed(pool):
-            if p in used:
-                contribution[p] = max(1, sum(contribution[k] for k in children[p]))
-        ids = {p: len(reaches) + i for i, p in enumerate(sorted(starts))}
-        # A separate short estuary below the last junction also handles a junction on the coast.
-        outletID = len(reaches) + len(ids)
-        basin = len(basins)
-        for p in sorted(starts):
-            trail = [p]
-            v = P[p]
-            while v not in terminals:
-                trail.append(v)
-                v = P[v]
-            trail.append(v)
-            pts = np.array([wp(n) for n in trail])
-            if len(pts) > 2:
-                ss = gaussian_filter1d(pts, 0.78, axis=0)
-                ss[0] = pts[0]
-                ss[-1] = pts[-1]
-                pts = ss
-            if r == legacyRoot and p == end:
-                pts = np.vstack([legacy, pts])
-            reaches.append(
-                dict(
-                    id=ids[p],
-                    basin=basin,
-                    down=ids.get(v, outletID),
-                    rank=contribution[p],
-                    points=pts.tolist(),
-                    legacy=bool(r == legacyRoot and p == end),
-                )
+        planned.append((reg, r, basinName, 5 if reg == 0 else 4))
+
+# Score distinct natural drainage trees by the gap to existing channels, the
+# length and relief of their headwaters and their contributing area.
+secondary_names = [
+    ["榛丘川", "小麦沢", "西岬川", "緑台川", "泥炭川", "薄荷沢", "葦野川"],
+    ["石楠沢", "黒杉川", "片岩川", "霞沢"],
+    ["赤土川", "南岬沢", "陶土川", "石炭沢"],
+]
+charted = {r for _, r, _, _ in planned}
+occupied = np.isin(root, list(charted)).reshape(N, N)
+facilities = cKDTree(np.array(S["lots"]))
+authored = np.asarray(S["legacy"]).reshape(-1, 3)
+authoredHeight = cKDTree(authored[authored[:, 2] > 10.2, :2])
+from shapely.ops import unary_union
+
+roads_shape = unary_union([LineString(q) for q in S["roads"] if len(q) > 1])
+groups = {}
+for cell in order:
+    groups.setdefault(root[cell], []).append(cell)
+for reg, region in enumerate(continents):
+    options = []
+    for outlet, cells in groups.items():
+        if (
+            outlet in charted
+            or regions.ravel()[outlet] != region
+            or not 45 <= acc[outlet] <= 1500
+        ):
+            continue
+        cells = np.asarray(cells)
+        head = cells[np.argmax(dist[cells])]
+        if dist[head] < 2000 or H.ravel()[head] < 25:
+            continue
+        # An entire selected catchment clears minor roads and station/building footprints.
+        locations = np.column_stack((cells % N, cells // N)) * step
+        if (
+            facilities.query(locations)[0].min() < 220
+            or authoredHeight.query(locations)[0].min() < 500
+        ):
+            continue
+        if (
+            not roads_shape.is_empty
+            and sh.distance(sh.multipoints(locations), roads_shape) < 250
+        ):
+            continue
+        options.append((outlet, cells, head))
+    for name in secondary_names[reg]:
+        gap = distance_transform_edt(~occupied).ravel() * step
+
+        def score(option):
+            outlet, cells, head = option
+            return (
+                min(15000, gap[outlet] * 0.4 + np.mean(gap[cells]) * 0.6)
+                * min(1, dist[head] / 5500)
+                * min(1.25, (acc[outlet] / 150) ** 0.32)
             )
-        pt = wp(r)
-        out = mouth(pt)
-        if math.dist(out, pt) < 1:
-            pt = pt + 0.01
+
+        if not options:
+            break
+        best = max(range(len(options)), key=lambda i: score(options[i]))
+        outlet, cells, head = options.pop(best)
+        planned.append((reg, outlet, name, 2 if acc[outlet] > 150 else 1))
+        occupied.ravel()[cells] = True
+for reg, r, basinName, branches in planned:
+    pool = np.array([p for p in order if root[p] == r])
+    used = {r}
+    target = branches
+    if r == legacyRoot:
+        p = end
+        while p not in used:
+            used.add(p)
+            p = P[p]
+    for _ in range(target):
+        # Choose separated headwaters by unshared upstream length and source elevation.
+        lengths = {}
+        for p in pool:
+            lengths[p] = 0 if p in used else lengths[P[p]] + math.dist(wp(p), wp(P[p]))
+        p = max(pool, key=lambda p: lengths[p] * (0.8 + min(1, H.ravel()[p] / 280)))
+        if lengths[p] < 1700:
+            break
+        while p not in used:
+            used.add(p)
+            p = P[p]
+    children = {p: [] for p in used}
+    for p in used:
+        if p != r:
+            children[P[p]].append(p)
+    terminals = {p for p in used if len(children[p]) != 1} | {r}
+    starts = terminals - {r}
+    contribution = {}
+    for p in reversed(pool):
+        if p in used:
+            contribution[p] = max(1, sum(contribution[k] for k in children[p]))
+    ids = {p: len(reaches) + i for i, p in enumerate(sorted(starts))}
+    # A separate short estuary below the last junction also handles a junction on the coast.
+    outletID = len(reaches) + len(ids)
+    basin = len(basins)
+    for p in sorted(starts):
+        trail = [p]
+        v = P[p]
+        while v not in terminals:
+            trail.append(v)
+            v = P[v]
+        trail.append(v)
+        pts = np.array([wp(n) for n in trail])
+        if len(pts) > 2:
+            ss = gaussian_filter1d(pts, 0.78, axis=0)
+            ss[0] = pts[0]
+            ss[-1] = pts[-1]
+            pts = ss
+        if r == legacyRoot and p == end:
+            pts = np.vstack([legacy, pts])
         reaches.append(
             dict(
-                id=outletID,
+                id=ids[p],
                 basin=basin,
-                down=-1,
-                rank=contribution[r],
-                points=[pt.tolist(), out.tolist()],
-                legacy=False,
+                down=ids.get(v, outletID),
+                rank=contribution[p],
+                points=pts.tolist(),
+                legacy=bool(r == legacyRoot and p == end),
             )
         )
-        basins.append(dict(name=basinName, region=reg, outlet=outletID))
+    pt = wp(r)
+    out = mouth(pt)
+    if math.dist(out, pt) < 1:
+        pt = pt + 0.01
+    reaches.append(
+        dict(
+            id=outletID,
+            basin=basin,
+            down=-1,
+            rank=contribution[r],
+            points=[pt.tolist(), out.tolist()],
+            legacy=False,
+        )
+    )
+    basins.append(
+        dict(
+            name=basinName,
+            region=reg,
+            outlet=outletID,
+            areaKm2=round(acc[r] * step**2 / 1e6, 2),
+        )
+    )
 # Choose one steep reach in each mountainous district, away from legacy cliffs, stations and tracks.
 tracks = np.vstack([np.asarray(p)[:, :2] for p in S["paths"]])
 trackTree = cKDTree(tracks)
-for b in [0, 3, len(basins) - 2]:
+for b in [0, 3, 7]:
     candidates = []
     for reach in reaches:
         if reach["basin"] != b or reach["legacy"]:
@@ -478,10 +548,14 @@ for b in basins:
 for r in reaches:
     r.pop("fall", None)
 # Concentrate an existing drop at a rock lip. Preserve both endpoints and the confluence levels.
-for reg in range(3):
+for reg, secondary in [(i, False) for i in range(3)] + [(1, True)]:
     candidate = []
     for r in reaches:
-        if basins[r["basin"]]["region"] != reg or r["legacy"]:
+        if (
+            basins[r["basin"]]["region"] != reg
+            or r["legacy"]
+            or (r["basin"] >= 9) != secondary
+        ):
             continue
         a = np.array(r["samples"])
         for j in range(1, len(a) - 2):
@@ -504,6 +578,7 @@ for reg in range(3):
             pts.append(np.round(v, 3).tolist())
         r["samples"][j + 1 : j + 1] = pts
         r["fall"] = j + 1
+        r["fallId"] = f"falls-{idx}"
 
 # Taper independent headwaters through their first kilometre. Keep the historic gorge section.
 pools = []
@@ -759,9 +834,12 @@ compact = lambda obj: json.dumps(obj, ensure_ascii=False, separators=(",", ":"))
 replace_chart("gradingSites", compact({p["id"]: p for p in pads}))
 replace_chart("watersheds", compact(json.loads((D / "hydro.json").read_text())))
 replace_chart("trackProfiles", compact(profiles))
-index_type = "Uint32Array" if data["wide"] else "Uint16Array"
-replace_chart(
-    "landXY",
-    f'surveyArray("{data["xy"]}",Int32Array),landY=surveyArray("{data["h"]}",Int16Array),landTriangles=surveyArray("{data["tri"]}",{index_type})',
-)
+from terrain_tiles import pack_tiles
+
+replace_chart("terrainArchive", compact(pack_tiles(
+    np.round(V * 20).astype("<i4"), np.round(Y * 20).astype("<i2"), T
+)))
+# Refresh the rail elevation samples with bake-rail.cjs after rebuilding the TIN.
+replace_chart("railElevationArchive", "[]")
+replace_chart("townLayoutArchive", "[]")
 source.write_text(html)
