@@ -6,7 +6,7 @@ const assert = require('node:assert/strict');
  try {
   const page = await browser.newPage();
   await page.evaluate(() => { window.requestAnimationFrame = () => 0 });
-  await page.setContent(fs.readFileSync(require.resolve('../Brass_Wings_Homeward (5).html'),'utf8'));
+  await page.setContent(fs.readFileSync(require.resolve('../BrassWings-preview.html'),'utf8'));
   const reports = await page.evaluate(() => {
    const results = [];
    for (let stage=0;stage<3;stage++) {

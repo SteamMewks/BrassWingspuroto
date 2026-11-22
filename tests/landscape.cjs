@@ -1,7 +1,7 @@
 const { chromium } = require('playwright');
 const { mkdirSync, readFileSync } = require('node:fs');
 const { resolve } = require('node:path');
-const html = readFileSync(process.argv[2] || resolve(__dirname, '../Brass_Wings_Homeward (5).html'), 'utf8');
+const html = readFileSync(process.argv[2] || resolve(__dirname, '../BrassWings-preview.html'), 'utf8');
 const output = resolve(process.argv[3] || '/tmp/brass-wings-landscape');
 const views = [
  ['shore',0,200,-1620,60,-.25], ['plain',0,1600,1900,90,0],

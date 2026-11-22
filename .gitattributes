@@ -1,0 +1,4 @@
+src/** text eol=lf
+src/data/*.js linguist-generated=true
+/BrassWings-preview.html text eol=lf linguist-generated=true
+"Brass_Wings_Homeward (5).html" text eol=lf linguist-generated=true

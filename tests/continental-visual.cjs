@@ -2,7 +2,7 @@ const { chromium } = require('playwright');
 const fs = require('node:fs');
 const { resolve } = require('node:path');
 
-const html = fs.readFileSync(require.resolve('../Brass_Wings_Homeward (5).html'), 'utf8');
+const html = fs.readFileSync(require.resolve('../BrassWings-preview.html'), 'utf8');
 const output = resolve(process.env.CONTINENTAL_SCREENSHOTS || '/tmp/brass-continental');
 const views = [
  ['large','south-foundry'], ['medium','coal-quay'], ['small','red-cape'],

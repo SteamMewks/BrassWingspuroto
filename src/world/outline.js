@@ -1,0 +1,1 @@
+const worldOutline=surveyOutline+inletOutline;

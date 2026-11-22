@@ -5,7 +5,7 @@ const fs=require('node:fs');
  try{
   const page=await browser.newPage();
   await page.evaluate(()=>{window.requestAnimationFrame=()=>0});
-  await page.setContent(fs.readFileSync(require.resolve('../Brass_Wings_Homeward (5).html'),'utf8'));
+  await page.setContent(fs.readFileSync(require.resolve('../BrassWings-preview.html'),'utf8'));
   console.log(await page.evaluate(()=>{
    const check=(condition,label)=>{if(!condition)throw Error(label)};
    const land=Object.values(airbases),ships=Object.values(carriers);

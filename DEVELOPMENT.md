@@ -2,6 +2,8 @@
 
 開発時は [AGENTS.md](AGENTS.md) と [開発スキル](.agents/skills/brass-wings-development/SKILL.md) を使用する。起動用の start_skill が利用できる場合は、そのセットアップ後に以下の検証環境を確認する。
 
+開発の入口は [ARCHITECTURE.md](ARCHITECTURE.md)。ゲームの修正後は `node scripts/build.js` で両方の配布名を生成してから以下の検証を実行する。
+
 ## 大陸鉄道と中央大海
 
 現在の配置は[32拠点の一覧表・配置図](docs/continental-registry.md)を参照。下記の8基地表と試験A/Bの記録は旧配置での検証履歴。試験Cは中央大海の「遠洋母艦アホウドリ」から発艦し、同艦に帰投する。作戦空域は引き続き5 km四方で、地形の原点と哨戒地点の基準となる空域中心を別々に保持する。
