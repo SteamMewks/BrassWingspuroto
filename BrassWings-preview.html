@@ -853,9 +853,16 @@ function tidalDistances(reach){
  tides.set(reach.id,dist);return dist
 }
 for(const reach of watersheds.reaches)tidalDistances(reach);
+const channelTiles=new Map();
+for(const s of riverSegments){
+ const key=Math.floor(s.a[0]/800)*256+Math.floor(s.a[1]/800);
+ if(!channelTiles.has(key))channelTiles.set(key,[]);channelTiles.get(key).push(s)
+}
 function drawChannels(face,sn,cs,eye,f,horizon){
  const m=operation(),wx=x+m.wx,wz=z+m.wz;
- for(const s of riverSegments){
+ for(let i=Math.floor((wx-3300)/800);i<=Math.floor((wx+3300)/800);i++)for(let j=Math.floor((wz-3300)/800);j<=Math.floor((wz+3300)/800);j++)for(const s of channelTiles.get(i*256+j)||[]){
+  const dx=s.a[0]-wx,dz=s.a[1]-wz,depth=dx*sn+dz*cs;
+  if(depth< -s.len-100||Math.abs(dx*cs-dz*sn)>Math.max(0,depth)*w/h+s.len+160)continue;
   if(Math.abs(s.a[0]-wx)>3300||Math.abs(s.a[1]-wz)>3300)continue;
   const points=s.reach.samples;
   const edge=(i,k,along=0,rise=0)=>{
@@ -864,7 +871,7 @@ function drawChannels(face,sn,cs,eye,f,horizon){
   };
   const i=s.index,falls=i===s.reach.fall;
   const dist=tides.get(s.reach.id),end=points.at(-1),receiver=watersheds.reaches[s.reach.down];
-  const bandCount=falls?1:Math.min(12,Math.max(1,Math.ceil(s.len/(dist[i+1]<750?24:100))));
+  const bandCount=falls||depth>1800?1:Math.min(12,Math.max(1,Math.ceil(s.len/(dist[i+1]<750?24:100))));
   const banks=[edge(i,-1),edge(i,1),edge(i+1,-1),edge(i+1,1)];
   const bank=(side,u)=>banks[side].map((n,j)=>n+(banks[side+2][j]-n)*u);
   for(let n=0;n<bandCount;n++){
@@ -1092,9 +1099,34 @@ function railHit(X,Z,Y){
   const u=X-c.x,v=Z-c.z;if(Math.abs(u*c.dz-v*c.dx)<2&&Math.abs(u*c.dx+v*c.dz)<5&&Y<c.y+4)return '列車'
  }
 }
-function drawRail(face){
+// Static rail lots and formation are grouped in local tiles, invalidated on an origin change.
+const railwayTileSize=384;
+let chartLines=null,railTileCenters=[];
+function drawRail(face,gpu){
+ if(!gpu){railGeometry(face);return}
+ if(chartLines!==railLines){
+  chartLines=railLines;gpu.clearRail();const cells=new Map();
+  const add=p=>{const i=Math.floor(p.x/railwayTileSize),j=Math.floor(p.z/railwayTileSize);cells.set(i+','+j,{i,j,x:(i+.5)*railwayTileSize,z:(j+.5)*railwayTileSize})};
+  for(const l of railLines){l.path.forEach(add);for(const b of l.bridges)add(railSample(l,(b.start+b.end)/2))}
+  for(const collection of [railSites,railLots,railCrossings])collection.forEach(add);
+  for(const s of baseSpurs)add(s.end);
+  for(const id of ['brass-port','red-strait']){const b=airbases[id];add(worldToLocal(b.wx+265,b.wz))}
+  railTileCenters=[...cells.values()]
+ }
+ const sn=Math.sin(cameraYaw),cs=Math.cos(cameraYaw),detail=Math.max(.8,Math.min(1.4,h/420));
+ for(const tile of railTileCenters){
+  const dx=tile.x-x,dz=tile.z-z,d=dx*sn+dz*cs,r=Math.hypot(dx,dz);
+  if(r>2900||d< -540||Math.abs(dx*cs-dz*sn)>Math.max(0,d)*w/h+540)continue;
+  const range=Math.hypot(Math.max(0,r-272),Math.max(0,alt-ground(tile.x,tile.z)))/detail;
+  const tier=range<340?0:range<1050?1:2;
+  gpu.railTile(tile.i+','+tile.j+','+tier,emit=>railGeometry(emit,tile,tier))
+ }
+ railGeometry(face,null,0,true)
+}
+function railGeometry(face,tile=null,tier=0,movingOnly=false){
  const sn=Math.sin(cameraYaw),cs=Math.cos(cameraYaw);
  const near=(p,r,margin=180)=>{
+  if(tile)return Math.floor(p.x/railwayTileSize)===tile.i&&Math.floor(p.z/railwayTileSize)===tile.j&&(tier===0||r>=(tier===1?500:1000));
   const dx=p.x-x,dz=p.z-z,forward=dx*sn+dz*cs;
   return Math.abs(dx)<r&&Math.abs(dz)<r&&forward>=-margin&&Math.abs(dx*cs-dz*sn)<Math.max(0,forward)*w/h+margin
  };
@@ -1117,7 +1149,7 @@ function drawRail(face){
   for(let i=0;i<8;i++){const j=(i+1)%8;face([ends[0][i],ends[0][j],ends[1][j],ends[1][i]],colors[i%colors.length],5)}
   for(const ring of ends)face(ring,colors[0],5)
  }
- for(const spur of baseSpurs){
+ if(!movingOnly)for(const spur of baseSpurs){
   if(!near(spur.end,2000,1100))continue;
   for(let i=1;i<spur.curve.length;i++){
    const a=spur.curve[i-1],b=spur.curve[i];ribbon(a,b,-2,2,-.2,'#82725e');
@@ -1125,24 +1157,24 @@ function drawRail(face){
   }
   box(spur.end,-5,0,5,25,1.3,'#937e67','#bfa88c');box(spur.end,-13,0,10,21,6,'#a26950','#767563',0,2)
  }
- for(const p of railCrossings)if(near(p,450)){
+ if(!movingOnly)for(const p of railCrossings)if(near(p,450)){
   for(const side of [-1,1]){box(p,side*8,-4,1,1,3.5,'#755f48','#c9ad79');box(p,side*8,-1,.4,6,.35,'#a45a45','#d7bf90',2.4)}
  }
- for(const id of ['brass-port','red-strait']){
+ if(!movingOnly)for(const id of ['brass-port','red-strait']){
   const base=airbases[id],p={...worldToLocal(base.wx+265,base.wz),dx:1,dz:0,y:10};
   if(!near(p,1400))continue;
   box(p,0,0,17,35,9,'#8c6b52','#6b7366',0,3);
   box(p,-17,0,8,14,3,'#514b41','#575044');
   for(let k=0;k<11;k++){box(p,0,32+k*16,9,16,.8,'#826c50','#a48a68');box(p,0,32+k*16,6,2,10,'#716855','#99886d',-10)}
  }
- for(const line of shipping){
+ if(!tile)for(const line of shipping){
   const time=(railClock*7+80)%(2*line.length),p=railSample(line,time>line.length?2*line.length-time:time);
   if(near(p,2400)){box(p,0,0,9,32,3,'#4e5351','#9b8466');box(p,0,-7,6,8,4,'#b8a182','#72776f',3);box(p,0,-4,1.6,2,5,'#764a3b','#443c37',7);
    for(const v of [0,6,12])box(p,0,v,5,4,2,'#846047','#aa805a',3)}
  }
  for(const l of railLines){
-  if(!nearLine(l,x,z,2200))continue;
-  for(let i=1;i<l.path.length;i++){
+  if(!nearLine(l,tile?tile.x:x,tile?tile.z:z,tile?800:2600))continue;
+  if(!movingOnly)for(let i=1;i<l.path.length;i++){
    const a=l.path[i-1],b=l.path[i];if(!near(a,1850))continue;
    const p=a.pose??=railSample(l,a.d),q=b.pose??=railSample(l,b.d),close=near(p,350);
    const floorA=a.floor??=ground(p.x,p.z),floorB=b.floor??=ground(q.x,q.z);
@@ -1153,12 +1185,13 @@ function drawRail(face){
     const outer=bridge?side:side*1.5;
     face([railOffset(p,outer,0,bridge?-1.25:floorA-p.y),railOffset(q,outer,0,bridge?-1.25:floorB-q.y),railOffset(q,side,0,-.23),railOffset(p,side,0,-.23)],bridge?'#485954':'#978775',3)
    }
+   if(tier===2){for(const side of [-2.5,2.5])ribbon(p,q,side-.78,side+.78,.08,'#ada18b',4);continue}
    for(const side of [-2.5,2.5]){
     if(close)for(let d=2*Math.ceil(a.d/2);d<b.d;d+=2){const s=railSample(l,d);face([railOffset(s,side-1.25,-.14),railOffset(s,side+1.25,-.14),railOffset(s,side+1.25,.14),railOffset(s,side-1.25,.14)],'#524338',3)}
     for(const u of [-.74,.74])ribbon(p,q,side+u-.11,side+u+.11,.11,'#c8bca3',4)
    }
   }
-  for(const span of l.bridges){
+  if(!movingOnly)for(const span of l.bridges){
    const mid=railSample(l,(span.start+span.end)/2);if(!near(mid,1700))continue;
    for(const d of [span.start,span.end]){const p=railSample(l,d);box(p,0,0,12,4,Math.max(.4,p.y-ground(p.x,p.z)-.6),'#887d6c','#b6a895',ground(p.x,p.z)-p.y)}
    const panels=Math.ceil((span.end-span.start)/8);
@@ -1171,7 +1204,7 @@ function drawRail(face){
     }
    }
   }
-  for(const dir of [-1,1]){
+  if(!movingOnly)for(const dir of [-1,1]){
    const terminal=dir===1?l.path[0]:l.path.at(-1);if(!near(terminal,650))continue;
    for(let j=85;j<140;j+=5){
     const d=dir===1?j:l.length-j,next=d+dir*5,a=railSample(l,d),b=railSample(l,next);
@@ -1181,18 +1214,18 @@ function drawRail(face){
     }
    }
   }
-  for(const service of [0,1])for(const c of railCars(l,service)){
-   if(!near(c,1500))continue;
+  if(!tile)for(const service of [0,1])for(const c of railCars(l,service)){
+   if(!near(c,2500))continue;
    box(c,0,0,2.9,8.6,1,'#433a34','#5a4d40');
    box(c,0,0,c.engine?1.7:2.8,c.engine?7:8,c.engine?1.4:2.6,c.engine?'#354642':service?'#80513d':'#793e35',service?'#595046':'#aa9976',1,.35);
    if(near(c,300))for(const axle of [-3,0,3])for(const side of [-1.43,1.43])roundPart(c,'axle',side,axle,.72,.73,.24,['#423e37','#6d5947']);
-   if(c.engine){roundPart(c,'boiler',0,c.dir*.6,2.25,1.15,5.2,['#45544b','#596257','#37463f','#324139']);box(c,0,-c.dir*2.7,2.9,2.5,2.8,'#475649','#b69c66',1);
+   if(c.engine){if(near(c,1000))roundPart(c,'boiler',0,c.dir*.6,2.25,1.15,5.2,['#45544b','#596257','#37463f','#324139']);box(c,0,-c.dir*2.7,2.9,2.5,2.8,'#475649','#b69c66',1);
     box(c,0,c.dir*2.4,.8,.8,1.6,'#3b3631','#ae9271',3);
     for(let j=0;j<4;j++){const u=(railClock*.5+j/4)%1,R=.6+u*1.7;box(c,u*2,c.dir*(2.4-u*8),R,R,R,'rgba(120,115,109,.35)','rgba(170,163,149,.4)',4.6+u*7)}
    }else if(!service&&near(c,420))for(let j=-3;j<=3;j+=2)box(c,0,j,2.84,1,.85,'#d2b680','#b29574',2)
   }
  }
- for(const s of railSites){
+ if(!movingOnly)for(const s of railSites){
   if(!near(s,1800))continue;const big=s.kind==='central',L=big?98:43;
   for(const side of big?[-6,6]:[-6])box(s,side,0,3.5,L,1,'#98836c','#d1bd9e');
   if(s.kind==='port'){
@@ -1214,7 +1247,7 @@ function drawRail(face){
   }
  }
  for(const b of railLots){
-  if(b.style==='beacon'){
+  if(b.style==='beacon'){if(tile)continue;
    if(near(b,2300)){
     box(b,0,0,7,7,7,'#958a74','#ae9e84');box(b,0,0,5,5,11,'#c4b9a1','#ac9a7c',7);
     box(b,0,0,6,6,1,'#595e51','#777469',18);
@@ -1223,8 +1256,8 @@ function drawRail(face){
    }
    continue
   }
-  if(b.style==='stack'&&near(b,800))for(let j=0;j<4;j++){const u=(railClock*.14+j/4)%1,R=1+u*3;box(b,2*u,u*5,R,R,R,'rgba(102,99,91,.35)','rgba(126,122,112,.35)',b.h+u*12)}
-  if(!near(b,1700))continue;const colors={field:['#90804f','#aa9657'],coal:['#4c4843','#5c5146'],logs:['#805a3c','#ae8555'],tank:['#625748','#88918a'],stack:['#9a5948','#d1aa84'],house:['#a17a64','#746457'],hall:['#a05d48','#687673'],works:['#995e49','#736759'],shed:['#947459','#70746b']};
+  if(!tile&&b.style==='stack'&&near(b,800))for(let j=0;j<4;j++){const u=(railClock*.14+j/4)%1,R=1+u*3;box(b,2*u,u*5,R,R,R,'rgba(102,99,91,.35)','rgba(126,122,112,.35)',b.h+u*12)}
+  if(movingOnly||!near(b,1700))continue;const colors={field:['#90804f','#aa9657'],coal:['#4c4843','#5c5146'],logs:['#805a3c','#ae8555'],tank:['#625748','#88918a'],stack:['#9a5948','#d1aa84'],house:['#a17a64','#746457'],hall:['#a05d48','#687673'],works:['#995e49','#736759'],shed:['#947459','#70746b']};
   const [wall,roof]=colors[b.style],gable=['house','hall','shed','works'].includes(b.style);
   box(b,0,0,b.w,b.l,b.h,wall,roof,0,gable?b.w*.22:0);
   if(gable&&near(b,600))for(let k=-b.l/2+3;k<b.l/2-1;k+=6)box(b,0,k,b.w+.16,2,2.4,'#dab889','#b79a70',b.h-4);
@@ -1814,10 +1847,66 @@ const surfaceRenderer=(()=>{
  }
  gl.bindBuffer(gl.ARRAY_BUFFER,mesh);gl.bufferData(gl.ARRAY_BUFFER,verts,gl.STATIC_DRAW);
  function bind(buffer){gl.bindBuffer(gl.ARRAY_BUFFER,buffer);gl.vertexAttribPointer(pos,3,gl.FLOAT,false,28,0);gl.vertexAttribPointer(ink,4,gl.FLOAT,false,28,12)}
+ // The six original tree paintings share an atlas. Screen-space quads retain
+ // their original projected dimensions and use terrain depth for occlusion.
+ const foliage=gl.createProgram();
+ gl.attachShader(foliage,shader(gl.VERTEX_SHADER,`attribute vec3 vertex;attribute vec3 tex;varying vec3 uv;
+ void main(){float d=vertex.z;gl_Position=vec4(vertex.xy,d*1.0004-4.0008,d);uv=tex;}`));
+ gl.attachShader(foliage,shader(gl.FRAGMENT_SHADER,`precision mediump float;varying vec3 uv;uniform sampler2D image;
+ void main(){vec4 c=texture2D(image,uv.xy);c.a*=uv.z;if(c.a<0.025)discard;gl_FragColor=c;}`));
+ gl.linkProgram(foliage);
+ const foliageReady=gl.getProgramParameter(foliage,gl.LINK_STATUS);
+ const treePos=gl.getAttribLocation(foliage,'vertex'),treeUV=gl.getAttribLocation(foliage,'tex');
+ const atlas=document.createElement('canvas');atlas.width=pines[0].width*pines.length;atlas.height=pines[0].height;
+ const brush=atlas.getContext('2d');pines.forEach((pine,i)=>brush.drawImage(pine,i*pine.width,0));
+ const texture=gl.createTexture(),treeBuffer=gl.createBuffer();gl.bindTexture(gl.TEXTURE_2D,texture);
+ gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.NEAREST);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.NEAREST);
+ gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
+ gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,atlas);
+ let treeVerts=new Float32Array(36*256);
+ const railCache=new Map();let railBytes=0;
  const skyLayer=document.createElement('canvas'),skyInk=skyLayer.getContext('2d');
  for(const layer of [skyLayer,view,canvas]){layer.style.position='fixed';layer.style.inset='0';layer.style.pointerEvents='none'}
  canvas.before(skyLayer,view);
  return {
+  hasTrees(){return foliageReady&&!gl.isContextLost()},
+  trees(sn,cs,eyeY,f,sky){
+   if(!foliageReady)return;
+   let size=0;
+   function vertex(px,py,d,u,v,alpha){treeVerts[size++]=px;treeVerts[size++]=py;treeVerts[size++]=d;treeVerts[size++]=u;treeVerts[size++]=v;treeVerts[size++]=alpha}
+   for(const t of groves){
+    const dx=t.X-x,dz=t.Z-z,d=32+dx*sn+dz*cs,dist2=dx*dx+dz*dz;
+    if(d<2||dist2>=760*760)continue;
+    const center=(dx*cs-dz*sn)*2*f/w,extent=t.R*2*f/w;
+    if(Math.abs(center)>d+extent)continue;
+    const bottom=(1-2*sky/h)*d+(t.Y-eyeY)*2*f/h,top=bottom+t.H*2*f/h;
+    if(top< -d||bottom>d)continue;
+    if(size+36>treeVerts.length){const grown=new Float32Array(treeVerts.length*2);grown.set(treeVerts);treeVerts=grown}
+    const left=center-extent,right=center+extent,i=Math.abs(Math.floor(t.X))%pines.length;
+    const u=i/pines.length,v=(i+1)/pines.length,alpha=Math.min(1,(760-Math.sqrt(dist2))/140);
+    vertex(left,top,d,u,0,alpha);vertex(left,bottom,d,u,1,alpha);vertex(right,bottom,d,v,1,alpha);
+    vertex(left,top,d,u,0,alpha);vertex(right,bottom,d,v,1,alpha);vertex(right,top,d,v,0,alpha)
+   }
+   if(!size)return;
+   gl.useProgram(foliage);gl.bindTexture(gl.TEXTURE_2D,texture);gl.bindBuffer(gl.ARRAY_BUFFER,treeBuffer);
+   gl.bufferData(gl.ARRAY_BUFFER,treeVerts.subarray(0,size),gl.STREAM_DRAW);
+   gl.enableVertexAttribArray(treePos);gl.enableVertexAttribArray(treeUV);
+   gl.vertexAttribPointer(treePos,3,gl.FLOAT,false,24,0);gl.vertexAttribPointer(treeUV,3,gl.FLOAT,false,24,12);
+   gl.enable(gl.BLEND);gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);gl.drawArrays(gl.TRIANGLES,0,size/6);gl.disable(gl.BLEND)
+  },
+  clearRail(){for(const entry of railCache.values())gl.deleteBuffer(entry.buffer);railCache.clear();railBytes=0},
+  railTile(key,build){
+   let entry=railCache.get(key);
+   if(!entry){
+    const data=[];
+    build((pts,style)=>{const rgba=color(style);for(let j=1;j+1<pts.length;j++)for(const k of [0,j,j+1])data.push(...pts[k],...rgba)});
+    const buffer=gl.createBuffer(),vertices=new Float32Array(data);gl.bindBuffer(gl.ARRAY_BUFFER,buffer);gl.bufferData(gl.ARRAY_BUFFER,vertices,gl.STATIC_DRAW);
+    entry={buffer,count:vertices.length/7,bytes:vertices.byteLength};railBytes+=entry.bytes;
+   }else railCache.delete(key);
+   railCache.set(key,entry);
+   while(railCache.size>300||railBytes>32*1024*1024&&railCache.size>1){const oldest=railCache.keys().next().value,old=railCache.get(oldest);railBytes-=old.bytes;gl.deleteBuffer(old.buffer);railCache.delete(oldest)}
+   if(entry.count){bind(entry.buffer);gl.drawArrays(gl.TRIANGLES,0,entry.count)}
+  },
   sky(){
    if(gl.isContextLost()){view.hidden=skyLayer.hidden=true;return frontInk}
    view.hidden=skyLayer.hidden=false;
@@ -1938,7 +2027,7 @@ function drawScenery(sn,cs,eye,f,horizon,objects){
    face([[X-2,Y,Z],[X+2,Y,Z],[X+2,Y+3,Z],[X-2,Y+3,Z]],'#edbc76',1)}
   }
  }
- building=null;drawRail(face);
+ building=null;drawRail(face,accelerated?surfaceRenderer:null);
  for(const b of localBases){
   if(Math.hypot(x-b.x,z-b.z)>=3500)continue;
   const Y=b.height;
@@ -1965,7 +2054,7 @@ function drawScenery(sn,cs,eye,f,horizon,objects){
   }
   for(const [dx,dz,y,width,length,height,color] of shipStructures)block(ship.x+dx,ship.z+dz,y,width,length,height,color)
  }
- if(accelerated)surfaceRenderer.end();
+ if(accelerated){surfaceRenderer.end();surfaceRenderer.trees(sn,cs,eye,f,horizon)}
 }
 function draw(dt){
  if(live)railClock+=dt;
@@ -2061,7 +2150,7 @@ if(mode==='free'){
   const width=tree.R*p[2]*.65;
   poly([[p[0]-width*.2,p[1]],[end[0]-width,end[1]],[end[0],end[1]-width*.16],[end[0]+width,end[1]],[p[0]+width*.2,p[1]]],'rgba(57,56,58,.23)')
  }
- for(const tree of groves){
+ if(!surfaceRenderer?.hasTrees())for(const tree of groves){
   const distance=Math.hypot(tree.X-x,tree.Z-z);if(distance>=760)continue;
   add(tree.X,tree.Z,tree.Y,(a,b,s)=>{
   if(a+tree.R*s<0||a-tree.R*s>w)return;
