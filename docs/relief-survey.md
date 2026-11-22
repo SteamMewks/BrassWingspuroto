@@ -67,7 +67,7 @@ Chromiumで全78河道の下流IDを河口まで追跡した。支流末端と�
 
 ## 開発用の再測量
 
-通常プレイに必要なファイルは単体HTMLのみ。開発時に海岸線や交通網を編集した場合は、作業ディレクトリを作成し、リポジトリ直下で次の順に再測量する。Pythonの開発用依存は NumPy、SciPy、Shapely 2、Triangle。ブラウザ環境は DEVELOPMENT.md に従う。
+通常プレイに必要なファイルは単体HTMLのみ。開発時に海岸線や交通網を編集した場合は、作業ディレクトリを作成し、リポジトリ直下で次の順に再測量する。Pythonの開発用依存は NumPy、SciPy、Shapely 2、Triangleとシステムライブラリliblz4。ブラウザ環境は DEVELOPMENT.md に従う。
 
 ```sh
 mkdir -p /tmp/brass-survey

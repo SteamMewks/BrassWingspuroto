@@ -8,8 +8,25 @@ import numpy as np
 TILE_SIZE = 2048
 
 
-def encode(values, dtype):
-    return base64.b64encode(np.asarray(values, dtype=dtype).tobytes()).decode()
+# Build-time dependency only. The standalone HTML embeds a block decoder.
+import ctypes
+from ctypes.util import find_library
+
+_lz4 = ctypes.CDLL(find_library("lz4") or "liblz4.so.1")
+_lz4.LZ4_compress_HC.argtypes = [ctypes.c_char_p, ctypes.c_void_p, ctypes.c_int, ctypes.c_int, ctypes.c_int]
+
+
+def compact_tile(vertices, indices, colors, wide):
+    # Transpose byte planes so repeated coordinate and palette bytes are adjacent.
+    parts = []
+    for data, stride in ((vertices, 12 if wide else 6), (indices, 2), (colors, 3)):
+        parts.extend(data[lane::stride] for lane in range(stride))
+    raw = b"".join(parts)
+    dest = ctypes.create_string_buffer(_lz4.LZ4_compressBound(len(raw)))
+    size = _lz4.LZ4_compress_HC(raw, dest, len(raw), len(dest), 12)
+    if size <= 0:
+        raise ValueError("Terrain compression failed")
+    return [len(vertices) * (-1 if wide else 1), len(indices), base64.b64encode(dest.raw[:size]).decode()]
 
 
 def pack_tiles(xy, heights, triangles):
@@ -58,7 +75,8 @@ def pack_tiles(xy, heights, triangles):
             rgb = (184, 165, 125) if beach else (127 + 39 * rock, 140 - 4 * rock, 94 + 34 * rock)
             colors.extend(math.floor(v + shade + .5) for v in rgb)
         vertices = np.column_stack((offsets, heights[unique]))
-        result[f"{i},{j}"] = [encode(vertices, "<i4" if wide else "<i2"), encode(local, "<u2"), encode(colors, "u1")]
-        if wide:
-            result[f"{i},{j}"].append(1)
+        result[f"{i},{j}"] = compact_tile(
+            vertices.astype("<i4" if wide else "<i2").tobytes(),
+            local.astype("<u2").tobytes(), bytes(colors), wide
+        )
     return result
