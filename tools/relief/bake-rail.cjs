@@ -1,13 +1,14 @@
 const {chromium}=require('playwright');
 const fs=require('node:fs');
-const source=require.resolve('../../Brass_Wings_Homeward (5).html');
+const {assemble}=require('../../scripts/build');
+const path=require('node:path');
 
 (async()=>{
  const browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH,args:['--no-sandbox']});
  try{
   const page=await browser.newPage();
   await page.evaluate(()=>{requestAnimationFrame=()=>0});
-  const html=fs.readFileSync(source,'utf8');
+  const html=assemble();
   const input=html.replace(/^const (railElevationArchive|townLayoutArchive)=.*;$/gm,'const $1=[];');
   await page.setContent(input);
   const packed=await page.evaluate(()=>{
@@ -28,8 +29,8 @@ const source=require.resolve('../../Brass_Wings_Homeward (5).html');
    row.forEach((value,i)=>buffer.writeFloatLE(value,i*4));
    return buffer.toString('base64');
   });
-  fs.writeFileSync(source,input
-   .replace(/^const railElevationArchive=.*;$/m,'const railElevationArchive='+JSON.stringify(encoded)+';')
-   .replace(/^const townLayoutArchive=.*;$/m,'const townLayoutArchive='+JSON.stringify(packed.layouts)+';'));
+  for(const [name,values] of Object.entries({railElevationArchive:encoded,townLayoutArchive:packed.layouts})){
+   fs.writeFileSync(path.resolve(__dirname,'../../src/data',name+'.js'),'const '+name+'='+JSON.stringify(values)+';\n');
+  }
  }finally{await browser.close()}
 })().catch(error=>{console.error(error);process.exitCode=1});

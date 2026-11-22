@@ -3,7 +3,7 @@ const assert=require('node:assert/strict');
 const {createServer}=require('node:http');
 const {mkdirSync,readFileSync}=require('node:fs');
 const {resolve}=require('node:path');
-const html=readFileSync(resolve(__dirname,'../Brass_Wings_Homeward (5).html'));
+const html=readFileSync(resolve(__dirname,'../BrassWings-preview.html'));
 const output=resolve(process.env.FLIGHT_SCREENSHOTS||'/tmp/brass-wings-screenshots');
 const layouts=[['portrait',360,640],['landscape',640,360],['desktop',1100,700],['compact-landscape',568,320]];
 

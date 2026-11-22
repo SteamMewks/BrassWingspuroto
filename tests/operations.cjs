@@ -3,7 +3,7 @@ const {createServer}=require('node:http');
 const {mkdirSync,readFileSync}=require('node:fs');
 const {resolve}=require('node:path');
 const {chromium}=require('playwright');
-const html=readFileSync(resolve(__dirname,'../Brass_Wings_Homeward (5).html'));
+const html=readFileSync(resolve(__dirname,'../BrassWings-preview.html'));
 const output=process.env.OPERATION_SCREENSHOTS||'/tmp/brass-operations';
 
 (async()=>{

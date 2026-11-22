@@ -461,8 +461,8 @@ def frame(x, z, rx, rz):
     )
 
 
-source = Path(__file__).resolve().parents[2] / "Brass_Wings_Homeward (5).html"
-sites = json.loads(re.search(r"^const relics=(.*);$", source.read_text(), re.M)[1])
+data_dir = Path(__file__).resolve().parents[2] / "src" / "data"
+sites = json.loads(re.search(r"^const relics=(.*);$", (data_dir / "relics.js").read_text(), re.M)[1])
 shore = Shores(landPoly, sites, S["paths"], [r["points"] for r in reaches], bases, S["origins"])
 landPoly = shore.land
 shore.vertices(add, points)
@@ -818,24 +818,9 @@ data = {
 (D / "profiles.json").write_text(json.dumps(profiles))
 np.savez(D / "tin.npz", V=V, Y=Y, T=T)
 
-# Replace only the chart data in the game source. Preview is copied after validation.
-import re
-
-source = Path(__file__).resolve().parents[2] / "Brass_Wings_Homeward (5).html"
-html = source.read_text()
-
-
+# Each chart is one declaration at its original script position.
 def replace_chart(name, value):
-    global html
-    html, count = re.subn(
-        r"^const " + name + r"=.*?;$",
-        lambda m: "const " + name + "=" + value + ";",
-        html,
-        count=1,
-        flags=re.M,
-    )
-    if count != 1:
-        raise ValueError("Missing world chart " + name)
+    (data_dir / (name + ".js")).write_text(f"const {name}={value};\n", encoding="utf-8")
 
 
 compact = lambda obj: json.dumps(obj, ensure_ascii=False, separators=(",", ":"))
@@ -860,4 +845,3 @@ replace_chart("terrainArchive", compact(pack_tiles(
 # Refresh the rail elevation samples with bake-rail.cjs after rebuilding the TIN.
 replace_chart("railElevationArchive", "[]")
 replace_chart("townLayoutArchive", "[]")
-source.write_text(html)

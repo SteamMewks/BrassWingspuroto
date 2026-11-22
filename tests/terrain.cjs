@@ -5,7 +5,7 @@ const assert=require('node:assert/strict');
  const browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH,args:['--no-sandbox']});
  try{
   const page=await browser.newPage();
-  await page.setContent(fs.readFileSync(require.resolve('../Brass_Wings_Homeward (5).html'),'utf8'));
+  await page.setContent(fs.readFileSync(require.resolve('../BrassWings-preview.html'),'utf8'));
   for(let stage=0;stage<3;stage++){
    const result=await page.evaluate(stage=>{
     campaign.stage=stage;startFlight('free');
