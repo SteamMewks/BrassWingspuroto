@@ -10,5 +10,17 @@ await p.evaluate(()=>{titleScreen();$('free-base').value='western-plain';startFl
 await c.send('Profiler.start');const counts=await p.evaluate(async()=>{const gl=[...document.querySelectorAll('canvas')].map(e=>e.getContext('webgl')).find(ctx=>ctx&&ctx!==aircraftLayer?.getContext('webgl'));const ext=gl?.getExtension('EXT_disjoint_timer_query');let query,elapsed;
 for(let k=0;k<90;k++){await new Promise(nativeFrame);if(ext&&k===8){query=ext.createQueryEXT();ext.beginQueryEXT(ext.TIME_ELAPSED_EXT,query)}draw(1/60);if(ext&&k===8)ext.endQueryEXT(ext.TIME_ELAPSED_EXT);if(query&&k>8&&ext.getQueryObjectEXT(query,ext.QUERY_RESULT_AVAILABLE_EXT)&&!gl.getParameter(ext.GPU_DISJOINT_EXT)){elapsed=ext.getQueryObjectEXT(query,ext.QUERY_RESULT_EXT)/1e6;ext.deleteQueryEXT(query);query=null}}
 return {...Object.fromEntries(Object.entries(statistics).map(([k,v])=>[k,Math.round(v/90)])),gpuMs:elapsed??null}});
-const {profile}=await c.send('Profiler.stop');const nodes=profile.nodes.filter(n=>n.hitCount).sort((a,b)=>b.hitCount-a.hitCount).slice(0,25).map(n=>[n.callFrame.functionName,n.hitCount]);console.log(JSON.stringify({counts,nodes},null,2));
+const {profile}=await c.send('Profiler.stop');const nodes=profile.nodes.filter(n=>n.hitCount).sort((a,b)=>b.hitCount-a.hitCount).slice(0,25).map(n=>[n.callFrame.functionName,n.hitCount]);const turn=await p.evaluate(async()=>{
+ const startYaw=yaw,intervals=[],cpu=[];
+ let previous=await new Promise(nativeFrame),maxUpload=0;
+ for(let i=0;i<32;i++){
+  const now=await new Promise(nativeFrame),start=performance.now(),bytes=statistics.bytes||0;
+  yaw=cameraYaw=startYaw+(i+1)*Math.PI/32;draw(0);
+  intervals.push(now-previous);cpu.push(performance.now()-start);
+  maxUpload=Math.max(maxUpload,(statistics.bytes||0)-bytes);previous=now;
+ }
+ intervals.sort((a,b)=>a-b);
+ return {p95Ms:intervals[30],worstMs:intervals.at(-1),maxCpuMs:Math.max(...cpu),maxUpload};
+});
+console.log(JSON.stringify({counts,nodes,turn},null,2));
 }finally{await browser.close()}})().catch(e=>{console.error(e);process.exitCode=1});

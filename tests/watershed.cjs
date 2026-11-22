@@ -34,7 +34,7 @@ const fs=require('node:fs');
     while(node.down>=0){check(!visited.has(node.id),'River cycle');visited.add(node.id);node=reaches[node.down]}
     check(node.id===basins[r.basin].outlet,'Wrong outlet');
    }
-   for(const s of riverSegments){
+   for(const s of surveyRiverSegments()){
     check(s.a[2]>=s.b[2],'Uphill '+s.reach.id);
     for(let i=0;i<=8;i++){
      const t=i/8,h=landElevation(s.a[0]+s.dx*t,s.a[1]+s.dz*t);

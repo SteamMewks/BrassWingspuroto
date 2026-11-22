@@ -834,15 +834,12 @@ compact = lambda obj: json.dumps(obj, ensure_ascii=False, separators=(",", ":"))
 replace_chart("gradingSites", compact({p["id"]: p for p in pads}))
 replace_chart("watersheds", compact(json.loads((D / "hydro.json").read_text())))
 replace_chart("trackProfiles", compact(profiles))
-index_type = "Uint32Array" if data["wide"] else "Uint16Array"
-triangles = f'surveyArray("{data["tri"]}",{index_type})'
-if 65535 < len(V) <= 131072:
-    # This chart needs only one bit above a 16-bit index.
-    low = encode(T, "<u2")
-    high = encode(np.packbits((T.ravel() >> 16).astype("uint8"), bitorder="little"), "u1")
-    triangles = f'surveyTriangles("{low}","{high}")'
-replace_chart(
-    "landXY",
-    f'surveyArray("{data["xy"]}",Int32Array),landY=surveyArray("{data["h"]}",Int16Array),landTriangles={triangles}',
-)
+from terrain_tiles import pack_tiles
+
+replace_chart("terrainArchive", compact(pack_tiles(
+    np.round(V * 20).astype("<i4"), np.round(Y * 20).astype("<i2"), T
+)))
+# Refresh the rail elevation samples with bake-rail.cjs after rebuilding the TIN.
+replace_chart("railElevationArchive", "[]")
+replace_chart("townLayoutArchive", "[]")
 source.write_text(html)
