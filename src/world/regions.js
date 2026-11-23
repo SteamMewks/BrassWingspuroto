@@ -1,6 +1,6 @@
 const regions=['黄銅港市','紫煙の屈曲谷','赤銅要塞群島'];
 const quarters=[],cliffs=[];
-for(const [stage,m] of missions.entries()){
+for(const [stage,m] of landscapes.entries()){
  const {x:bx,z:bz}=worldToLocal(airbases[m.departure].wx,airbases[m.departure].wz,m);
  const normal=Math.hypot(bx,bz),nx=bx/normal,nz=bz/normal;
  m.town=stage===1?[-1450,1450]:[-nx*1780,-nz*1780];

@@ -2,13 +2,13 @@
 function buildWorld(){
  leaveSky();ruinDistrictCache.clear();clearTerrain();terrainFocus='';
  terraces.length=isles.length=groves.length=groundPixels.length=0;tileCache.clear();tileKey='';
- const m=operation();
- localBases=Object.values(airbases).map(b=>({...b,...worldToLocal(b.wx,b.wz,m),...baseAssignment(m,b.id)}));
- localShips=Object.values(carriers).map(b=>({...b,...worldToLocal(b.wx,b.wz,m),...baseAssignment(m,b.id),sin:Math.sin(b.heading),cos:Math.cos(b.heading)}));
+ const m=worldRegion();
+ localBases=Object.values({...airbases,...settlements}).map(b=>({...b,...worldToLocal(b.wx,b.wz,m),side:affiliation(b.id)}));
+ localShips=Object.values(carriers).map(b=>({...b,...worldToLocal(b.wx,b.wz,m),side:affiliation(b.id),sin:Math.sin(b.heading),cos:Math.cos(b.heading)}));
  base=[...localBases,...localShips].find(b=>b.id===m.departure);
- regionRunway=localBases.find(b=>b.id===missions[m.region].departure);
+ regionRunway=localBases.find(b=>b.id===landscapes[m.region].departure);
  ship=localShips.find(b=>b.id===m.returnTo)||localShips[m.region===2?1:0];
- landingPorts=[...localBases,...localShips].filter(b=>b.side!=='enemy');
+ landingPorts=[...localBases,...localShips].filter(b=>b.side!=='pirate');
  cutCoast();
  for(const l of continents){
   const {x:X,z:Z}=worldToLocal(l[0],l[1],m);
@@ -56,7 +56,7 @@ function buildWorld(){
 function updateWorld(){
  if(inSky)return;
  updateTerrainFocus();
- const m=operation(),tx=Math.floor(x/256),tz=Math.floor(z/256);
+ const m=worldRegion(),tx=Math.floor(x/256),tz=Math.floor(z/256);
  if(!groundWarmup&&tileKey===tx+','+tz)return;
  tileKey=tx+','+tz;groves.length=groundPixels.length=0;
  for(let i=tx-2;i<=tx+2;i++)for(let j=tz-2;j<=tz+2;j++){
@@ -67,11 +67,11 @@ function updateWorld(){
    tile={trees:[],pixels:[]};tileCache.set(key,tile);
    const cx=(i+.5)*256,cz=(j+.5)*256;
    const bases=localBases.filter(b=>{
-    const pad=gradingSites[b.id];
+    const pad=gradingSites[b.id]||{rx:100,rz:185};
     return Math.abs(b.x-cx)<pad.rx+280&&Math.abs(b.z-cz)<pad.rz+280
    });
    const insideBase=(X,Z,margin)=>bases.some(b=>{
-    const pad=gradingSites[b.id];
+    const pad=gradingSites[b.id]||{rx:100,rz:185};
     return Math.abs(X-b.x)<pad.rx+margin&&Math.abs(Z-b.z)<pad.rz+margin
    });
    const sites=railSites.filter(s=>Math.abs(s.x-cx)<440&&Math.abs(s.z-cz)<440);
@@ -101,7 +101,7 @@ function updateWorld(){
     }
    }
    for(const base of bases){
-    const pad=gradingSites[base.id];
+    const pad=gradingSites[base.id]||{rx:100,rz:185};
     for(const sign of [-1,1])plant(base.x+sign*(pad.rx+46),base.z+sign*pad.rz*.55,'airfield')
    }
    for(const site of sites){

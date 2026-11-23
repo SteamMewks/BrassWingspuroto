@@ -1,14 +1,11 @@
+function clearEncounter(){encounter=null;enemies=[];bolts=[];hostile=[];locked=null;trigger=false;syncFireButton()}
 function fight(dt){
- if(!replenish(dt))return;
- if(sortiePhase==='return'){
-  if(Math.hypot(x-zone.x,z-zone.z)<150)approachReady=true;
-  return
+ if(encounter&&Math.hypot(encounter.x-x,encounter.z-z)>3200)clearEncounter();
+ if(!encounter){
+  encounter=localBases.concat(localShips).find(b=>affiliation(b.id)==='pirate'&&Math.hypot(b.x-x,b.z-z)<900);
+  if(!encounter)return;
+  deploy();syncFireButton();message=encounter.name+' 空賊防衛隊';messageUntil=t+4
  }
- if(sortiePhase==='scenario')scenarioUpdates[operation().objective](dt)
-}
-const scenarioUpdates={patrol:updatePatrol};
-function updatePatrol(dt){
- if(!enemies.length&&Math.hypot(x-zone.x,z-zone.z)<=sectorRadius)deploy();
  reload=Math.max(0,reload-dt);
  for(const [i,e] of enemies.entries()){
   if(e.hp<=0){e.fall+=dt;e.y-=32*e.fall*dt;continue}
@@ -33,7 +30,7 @@ function updatePatrol(dt){
   const dx=b.dx*dt,dz=b.dz*dt,dy=b.dy*dt;
   const u=Math.max(0,Math.min(1,((x-b.x)*dx+(z-b.z)*dz+(alt-b.y)*dy)/(dx*dx+dy*dy+dz*dz||1)));
   if(Math.hypot(b.x+dx*u-x,b.z+dz*u-z,b.y+dy*u-alt)<5){
-   b.life=0;if(!grace){grace=1.2;missionHits++;energy=Math.max(0,energy-25);message='被弾　EN −25%';messageUntil=t+1;if(!energy){down('敵弾');return}}
+   b.life=0;if(!grace){grace=1.2;adventure.wear=Math.min(40,adventure.wear+2);energy=Math.max(0,energy-25);message='被弾　EN −25%';messageUntil=t+1;if(!energy){down('敵弾');return}}
   }
   b.x+=dx;b.z+=dz;b.y+=dy;b.life-=dt
  }
@@ -49,16 +46,9 @@ function updatePatrol(dt){
   b.x+=dx;b.z+=dz;b.y+=dy;b.life-=dt
  }
  bolts=bolts.filter(b=>b.life>0);
- if(enemies.length&&enemies.every(e=>!e.hp&&e.fall>.65)){
-  enemies=[];bolts=[];hostile=[];locked=null;cleared++;
-  if(cleared>=operation().waves)beginReturn();
-  else{selectSector();message='空域 '+cleared+' 確保　次の哨戒地点へ'}
-  messageUntil=t+4
+ if(enemies.length&&enemies.every(e=>!e.hp)){
+  adventure.liberated.push(encounter.id);adventure.kills+=enemies.length;adventure.money+=60;
+  encounter.side='friendly';landingPorts.push(encounter);message=encounter.name+' 解放　報酬60';messageUntil=t+5;
+  clearEncounter();saveAdventure()
  }
-}
-function beginReturn(){
- sortiePhase='return';
- const port=goalPort();
- zone=port.deck?deckPoint(port,0,-330):{x:port.x,z:port.z-330};
- message='全空域確保　'+(port.name)+'へ帰投'
 }

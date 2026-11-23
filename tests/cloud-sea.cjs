@@ -19,7 +19,7 @@ const path=require('node:path');
   const errors=[];page.on('pageerror',e=>errors.push(e.message));
   await page.goto('https://offline.test/game');
   const record=await page.evaluate(()=>{
-   startFlight('free');deckMode='';live=false;
+   startFlight('brass-port');deckMode='';live=false;
    ({x,z}=worldToLocal(50000,50000));alt=3190;pitch=1;applyClimb(1);pitch=0;
    const ceiling=alt,contacts=[480,950,3100].map(y=>skyContact(50000,y,50000));
    for(const s of wonders){
@@ -38,7 +38,7 @@ const path=require('node:path');
   await page.click('#journalClose');
   const output=process.env.CLOUD_SCREENSHOTS;
   if(output)fs.mkdirSync(output,{recursive:true});
-  await page.evaluate(()=>{startFlight('free');live=false;deckMode=''});
+  await page.evaluate(()=>{startFlight('brass-port');live=false;deckMode=''});
   for(const [name,height] of [['low',100],['middle',330],['cloud',525],['above',940]]){
    const stats=await page.evaluate(height=>{
     ({x,z}=worldToLocal(61900,49000));yaw=cameraYaw=Math.atan2(-1900,1000);alt=height;draw(0);
@@ -46,7 +46,7 @@ const path=require('node:path');
    },height);
    if(output)await page.screenshot({path:path.join(output,name+'.png')});console.log(stats)
   }
-  await page.evaluate(()=>{titleScreen();startFlight('free');deckMode='';live=false});
+  await page.evaluate(()=>{titleScreen();startFlight('brass-port');deckMode='';live=false});
   for(const height of [100,950]){
    console.log('inland',await page.evaluate(height=>{
     ({x,z}=worldToLocal(22000,40000));yaw=cameraYaw=0;alt=height;draw(0);triangleCount=0;draw(0);

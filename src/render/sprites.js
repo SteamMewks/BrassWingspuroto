@@ -28,9 +28,5 @@ const cloudArt=Array.from({length:5},(_,v)=>artwork(120,38,c=>{
 }));
 const shadowOutline=[[0,4],[.8,2.7],[5.7,2],[5.8,.7],[1,.5],[.5,-2.8],[2,-3.4],[2,-4],[0,-3.8],[-2,-4],[-2,-3.4],[-.5,-2.8],[-1,.5],[-5.8,.7],[-5.7,2],[-.8,2.7]];
 const enemyFrames=new Map();let enemies=[],bolts=[],trigger=false,reload=0;
-$('combat').onclick=()=>{
- trial=trialMissions[$('operation-choice').value]||null;
- if(!trial&&campaign.hangar)openHangar();else startFlight('combat')
-};
-$('fire').onpointerdown=e=>{if(live&&mode==='combat'&&!deckMode){$('fire').setPointerCapture(e.pointerId);trigger=true}};
+$('fire').onpointerdown=e=>{if(live&&encounter&&!deckMode){$('fire').setPointerCapture(e.pointerId);trigger=true}};
 $('fire').onpointerup=$('fire').onlostpointercapture=$('fire').onpointercancel=()=>{trigger=false};

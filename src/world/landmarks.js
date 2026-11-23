@@ -100,7 +100,7 @@ function relicFaces(site,detail){
  return site[key]=faces
 }
 function drawRelics(face,visible,gpu){
- const m=operation();
+ const m=worldRegion();
  for(const s of relics){
   const X=s.x-m.wx,Z=s.z-m.wz,d=Math.hypot(X-x,Z-z);
   if(d>19000||!visible(X,Z,s.radius+500))continue;

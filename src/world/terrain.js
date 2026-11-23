@@ -48,6 +48,14 @@ function terrainArea(i,j){
  const {vertices,triangles,colors}=unpackTerrain(packed);
  const wx=(i+.5)*terrainAreaSize,wz=(j+.5)*terrainAreaSize;
  shapeWonderTerrain(wx,wz,vertices,triangles,colors);
+ for(const site of Object.values(settlements)){
+  if(Math.abs(site.wx-wx)>1300||Math.abs(site.wz-wz)>1400)continue;
+  for(let k=0;k<vertices.length;k+=3){
+   const edge=Math.max(Math.abs(wx+vertices[k]/20-site.wx)-110,Math.abs(wz+vertices[k+1]/20-site.wz)-195);
+   const weight=Math.max(0,Math.min(1,1-edge/80));
+   vertices[k+2]=Math.round(vertices[k+2]*(1-weight)+20*site.height*weight)
+  }
+ }
  const area={wx,wz,vertices,triangles,colors,collision:null,bytes:vertices.byteLength+triangles.byteLength+colors.byteLength};
  terrainAreas.set(key,area);terrainAreaBytes+=area.bytes;terrainLoads++;trimTerrain();
  return area
@@ -93,27 +101,12 @@ function landElevation(X,Z){
  return null
 }
 let terrainFocus='';
-function closestOnSortieRoute(wx,wz,center,port){
- const dx=port.wx-center.wx,dz=port.wz-center.wz,length2=dx*dx+dz*dz;
- const u=length2?Math.max(0,Math.min(1,((wx-center.wx)*dx+(wz-center.wz)*dz)/length2)):0;
- return {wx:center.wx+dx*u,wz:center.wz+dz*u}
-}
-function missionTerrainDistance(wx,wz){
- if(mode!=='combat')return 0;
- const m=operation(),c=m.airspace;
- let distance=Math.hypot(Math.max(0,Math.abs(wx-c.wx)-boundary),Math.max(0,Math.abs(wz-c.wz)-boundary));
- for(const id of [m.departure,m.returnTo]){
-  const point=closestOnSortieRoute(wx,wz,c,outposts[id]);
-  distance=Math.min(distance,Math.hypot(wx-point.wx,wz-point.wz))
- }
- return distance
-}
 function outsideTerrain(i,j,wx,wz){
  const r=terrainViewRadius+terrainAreaSize*1.2;
  return Math.hypot((i+.5)*terrainAreaSize-wx,(j+.5)*terrainAreaSize-wz)>r
 }
 function updateTerrainFocus(){
- const m=operation(),wx=x+m.wx,wz=z+m.wz;
+ const m=worldRegion(),wx=x+m.wx,wz=z+m.wz;
  const key=Math.floor(wx/512)+','+Math.floor(wz/512);
  if(terrainFocus===key)return;
  terrainFocus=key;
@@ -136,7 +129,7 @@ function visibleTerrain(wx,wz,sn,cs,draw){
   for(let j=Math.floor((wz-r)/terrainAreaSize);j<=Math.floor((wz+r)/terrainAreaSize);j++){
    const dx=(i+.5)*terrainAreaSize-wx,dz=(j+.5)*terrainAreaSize-wz,d=dx*sn+dz*cs;
    if(dx*dx+dz*dz>r*r||d< -1600||Math.abs(dx*cs-dz*sn)>Math.max(0,d)*w/h+2000)continue;
-   if(terrainArchive[i+','+j]&&missionTerrainDistance(wx+dx,wz+dz)<4200+terrainAreaSize*.71)draw(i,j)
+   if(terrainArchive[i+','+j])draw(i,j)
   }
 }
 function terrainPoint(area,t){
@@ -144,7 +137,7 @@ function terrainPoint(area,t){
  return [area.wx+v[n]/20,v[n+2]/20,area.wz+v[n+1]/20]
 }
 function drawSurface(face,sn,cs){
- const m=operation();
+ const m=worldRegion();
  visibleTerrain(x+m.wx,z+m.wz,sn,cs,(i,j)=>{
   const area=terrainArea(i,j),{colors}=area;
   for(let t=0;t<colors.length;t+=3){
@@ -156,7 +149,7 @@ function drawSurface(face,sn,cs){
 }
 
 function ground(X,Z){
- const m=operation(),elevation=landElevation(X+m.wx,Z+m.wz);
+ const m=worldRegion(),elevation=landElevation(X+m.wx,Z+m.wz);
  return elevation??0
 }
 // Atlas coordinates are metres, measured east and north from the southwest corner.

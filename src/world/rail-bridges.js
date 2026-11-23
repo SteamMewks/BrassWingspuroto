@@ -1,6 +1,6 @@
 
 function buildRailBridges(line){
- const m=operation(),spans=[];let previous=-Infinity;
+ const m=worldRegion(),spans=[];let previous=-Infinity;
  for(let d=0;d<=line.length;d+=3){
   const p=railSample(line,d);
   const crossing=riverAt(p.x+m.wx,p.z+m.wz,6);if(!crossing)continue;

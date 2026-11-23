@@ -90,16 +90,23 @@ function drawScenery(sn,cs,eye,f,horizon,objects){
   }
  }
  building=null;if(detail>.18)drawRail(face,accelerated?surfaceRenderer:null);
+ function flag(X,Y,Z,id,distance){
+  const h=distance>1200?28:20;
+  if(distance<1600)block(X,Z,Y,1.2,1.2,h,'#c9bea7');
+  face([[X,Y+h,Z],[X+13,Y+h-1,Z+2],[X+12,Y+h-8,Z+2],[X,Y+h-7,Z]],colors[affiliation(id)]);
+  if(id==='home')face([[X+4,Y+h-1,Z+1],[X+8,Y+h-4,Z+2],[X+4,Y+h-6,Z+1]],'#fff2be')
+ }
  for(const b of localBases){
   const distance=Math.hypot(x-b.x,z-b.z);
   if(distance>=3500||!sceneryVisible(b.x,b.z,360))continue;
   const Y=b.height;
+  if(!settlements[b.id]||b.id==='home')flag(b.x-45,Y,b.z+30,b.id,distance);
   if(distance>1050)strip(b.x,b.z,Y+.13,b.width,b.length,'#535959');
   else
   for(let offset=10-b.length/2;offset<b.length/2;offset+=20){
    const Z=b.z+offset;
-   strip(b.x,Z,Y+.1,b.width,20,'#535959');strip(b.x,Z,Y+.2,1.5,10,'#e1d4ae',.3);
-   for(const u of [-1,1]){strip(b.x+u*16,Z,Y+.2,.8,20,'#cabfa0',.3);strip(b.x+u*62,Z,Y+.1,10,20,'#99917a')}
+   strip(b.x,Z,Y+.1,b.width,20,b.kind==='village'?'#9bab70':'#535959');strip(b.x,Z,Y+.2,1.5,10,'#e1d4ae',.3);
+   for(const u of [-1,1]){strip(b.x+u*(b.width/2-2),Z,Y+.2,.8,20,'#cabfa0',.3);strip(b.x+u*62,Z,Y+.1,10,20,'#99917a')}
   }
   for(const obj of baseFacilities(b)){
    const X=b.x+obj.x,Z=b.z+obj.z;
@@ -110,6 +117,7 @@ function drawScenery(sn,cs,eye,f,horizon,objects){
  }
  for(const ship of localShips)if(Math.hypot(x-ship.x,z-ship.z)<3500&&sceneryVisible(ship.x,ship.z,130)){
   building={x:ship.x,z:ship.z,angle:-ship.heading,deck:true};
+  flag(ship.x+15,33,ship.z+16,ship.id,Math.hypot(x-ship.x,z-ship.z));
   for(const {offset,width} of deckSections){
    const Z=ship.z+offset;
    block(ship.x,Z,0,width,21,deckHeight,'#625f58');
@@ -127,7 +135,7 @@ function drawScenery(sn,cs,eye,f,horizon,objects){
 function drawCloudBanks(face,visible){
  const density=Math.min(1,Math.max(0,(alt-280)/200));
  if(!density)return;
- const m=operation(),cell=960,wx=x+m.wx,wz=z+m.wz;
+ const m=worldRegion(),cell=960,wx=x+m.wx,wz=z+m.wz;
  for(let i=-7;i<=7;i++)for(let j=-7;j<=7;j++){
   const a=Math.floor(wx/cell)+i,b=Math.floor(wz/cell)+j,n=noise(a,b,617);
   if(n<.19&&!inSky)continue;

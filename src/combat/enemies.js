@@ -1,39 +1,8 @@
-function resetCombat(){
- cleared=0;sortiePhase='departure';approachReady=false;missionHits=0;locked=null;hostile=[];grace=0;nextAttack=0;
- enemies=[];bolts=[];trigger=false;reload=0;sector=0;zone=null;returnHeading=null;
- ammo=90+20*campaign.mag;energy=100-campaign.wear;supplying=false;
-}
-function airspaceCenter(){
- const {wx,wz}=operation().airspace;
- return worldToLocal(wx,wz)
-}
-function airspaceOffset(){
- const center=mode==='combat'?airspaceCenter():worldToLocal(worldSize/2,worldSize/2);
- return [x-center.x,z-center.z,mode==='combat'?boundary:worldSize/2]
-}
-function flightBoundary(){
- const [dx,dz,limit]=airspaceOffset();
- let bx=Math.max(-limit,Math.min(limit,dx))-dx,bz=Math.max(-limit,Math.min(limit,dz))-dz;
- let margin=limit-Math.max(Math.abs(dx),Math.abs(dz)),corridor=false;
- if(mode==='combat'&&margin<600){
-  const m=operation(),{wx,wz}=localToWorld(x,z,m),c=m.airspace;
-  for(const id of [m.departure,m.returnTo]){
-   const port=outposts[id];
-   if(Math.max(Math.abs(port.wx-c.wx),Math.abs(port.wz-c.wz))<=limit)continue;
-   const p=closestOnSortieRoute(wx,wz,c,port),distance=Math.hypot(p.wx-wx,p.wz-wz);
-   const width=600; margin=Math.max(margin,width-distance);
-   if(distance<=width){bx=bz=0;continue}
-   if(distance-width<Math.hypot(bx,bz)){
-    corridor=true;bx=(p.wx-wx)*(1-width/distance);bz=(p.wz-wz)*(1-width/distance)
-   }
-  }
- }
- return {bx,bz,margin,dx,dz,corridor}
-}
+let encounter=null,returnHeading=null;
 function limitAirspace(){
- const {bx,bz,margin,dx,dz,corridor}=flightBoundary();
+ const center=worldToLocal(worldSize/2,worldSize/2),dx=x-center.x,dz=z-center.z,limit=worldSize/2,margin=limit-Math.max(Math.abs(dx),Math.abs(dz)),bx=Math.max(-limit,Math.min(limit,dx))-dx,bz=Math.max(-limit,Math.min(limit,dz))-dz;
  if(returnHeading===null&&margin<=0){
-  returnHeading=corridor?Math.atan2(bx,bz):Math.atan2(-dx,-dz);message='空域端　自動旋回';messageUntil=t+2.5
+  returnHeading=Math.atan2(-dx,-dz);message='空域端　自動旋回';messageUntil=t+2.5
  }
  x+=bx;z+=bz
 }
@@ -92,8 +61,8 @@ function moveEnemy(e,i,dt){
   const chased=d<245&&Math.abs(angleDelta(toward-e.heading))>2.55&&bearing(e).angle<.38;
   e.tail=chased?e.tail+dt:0;if(e.tail>1.15)switchMove(e,'evade')
  }
- const center=airspaceCenter();
- if(Math.max(Math.abs(e.x-center.x),Math.abs(e.z-center.z))>boundary-200)aim=Math.atan2(center.x-e.x,center.z-e.z);
+ const center=encounter;
+ if(Math.max(Math.abs(e.x-center.x),Math.abs(e.z-center.z))>2200)aim=Math.atan2(center.x-e.x,center.z-e.z);
  const rate=Math.max(-1.32,Math.min(1.32,angleDelta(aim-e.heading)*2));
  e.bank+=(rate*.46-e.bank)*(1-Math.exp(-5*dt));e.heading+=rate*dt;
  e.x+=Math.sin(e.heading)*speed*dt;e.z+=Math.cos(e.heading)*speed*dt;e.y+=Math.max(-24,Math.min(24,height-e.y))*dt

@@ -10,11 +10,11 @@ const fs=require('node:fs');
    const {basins,reaches}=watersheds;
    let stable;
    for(let stage=0;stage<3;stage++){
-    campaign.stage=stage;startFlight('free');
-    const m=operation();
+    startFlight(landscapes[stage].departure);
+    const m=worldRegion();
     const depths=reaches.map(r=>{const [x,z]=r.samples[0];return ground(x-m.wx,z-m.wz).toFixed(3)}).join();
     if(stage)check(stable===depths,'Mission-dependent riverbed');stable=depths;
-    for(const b of localBases){
+    for(const b of localBases.filter(b=>!b.kind)){
      const pad=gradingSites[b.id];
      for(let i=-1;i<=1;i+=.25)for(let j=-1;j<=1;j+=.125){
       const x=b.x+i*(pad.rx-1),z=b.z+j*(pad.rz-1);
@@ -52,7 +52,7 @@ const fs=require('node:fs');
     check(shore<.1&&h===0,'Estuary '+b.name);
     check(Array.from({length:16},(_,i)=>landElevation(x+5*Math.cos(i*Math.PI/8),z+5*Math.sin(i*Math.PI/8))).includes(null),'Sea beyond estuary');
     // Find the downstream edge of the rendered strip and compare it to the adjacent sea.
-    const m=operation();
+    const m=worldRegion();
     const out=reaches[b.outlet],prev=out.samples.at(-2);
     const dx=x-prev[0],dz=z-prev[1],len=Math.hypot(dx,dz);
     const boatX=x+dx/len*180,boatZ=z+dz/len*180;

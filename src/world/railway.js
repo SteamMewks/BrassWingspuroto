@@ -1,5 +1,5 @@
 function buildRail(sampleElevation){
- const encoded=railElevationArchive[operation().region];
+ const encoded=railElevationArchive[worldRegion().region];
  const elevations=!sampleElevation&&encoded?surveyArray(encoded,Float32Array):null;
  let elevationIndex=0;
  const elevation=sampleElevation||(elevations?()=>elevations[elevationIndex++]:ground);
@@ -43,7 +43,7 @@ function buildRail(sampleElevation){
    const central=kind==='central',scale=central?1:.57;
    function lot(side,along,w,l,h,style){
     const [x,,z]=railOffset(site,side,along),y=elevation(x,z);
-    if(!mainlandAt(x,z)||nearRiver(x+operation().wx,z+operation().wz,2))return;
+    if(!mainlandAt(x,z)||nearRiver(x+worldRegion().wx,z+worldRegion().wz,2))return;
     railLots.push({x,z,y,w,l,h,style,dx:site.dx,dz:site.dz});
     for(let a=-w/2;a<=w/2+8;a+=8)for(let b=-l/2;b<=l/2+8;b+=8){const [u,,v]=railOffset(site,side+a,along+b);railCells.add(Math.floor(u/32)+','+Math.floor(v/32))}
    }
@@ -72,7 +72,7 @@ function buildRail(sampleElevation){
   return line
  });
  baseSpurs=[];
- for(const b of localBases.filter(b=>!b.island&&b.tier!=='small')){
+ for(const b of localBases.filter(b=>!b.kind&&!b.island&&b.tier!=='small')){
   const end={x:b.x-225,z:b.z+92};let best=800,entry;
   for(const l of railLines){
    if(!nearLine(l,b.x,b.z,980))continue;
@@ -91,7 +91,7 @@ function buildRail(sampleElevation){
     z:v*v*v*start[2]+a*(start[2]+entry.dz*dir*best*.34)+c*(end.z-45)+u*u*u*end.z,y:10.62})
   }
   for(const p of curve)p.y=elevation(p.x,p.z)+.62;
-  if(curve.some(p=>Math.abs(p.x-b.x)<200||nearRiver(p.x+operation().wx,p.z+operation().wz,5)))continue;
+  if(curve.some(p=>Math.abs(p.x-b.x)<200||nearRiver(p.x+worldRegion().wx,p.z+worldRegion().wz,5)))continue;
   for(let i=0;i<curve.length;i++){
    const p=curve[i],a=curve[Math.max(0,i-1)],c=curve[Math.min(i+1,curve.length-1)],d=Math.hypot(c.x-a.x,c.z-a.z);
    p.dx=(c.x-a.x)/d;p.dz=(c.z-a.z)/d;railCells.add(Math.floor(p.x/32)+','+Math.floor(p.z/32))

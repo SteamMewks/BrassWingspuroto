@@ -62,7 +62,7 @@ function shapeWonderTerrain(wx,wz,vertices,triangles,colors){
 
 // Beyond streamed terrain, a small radial mesh carries each skyline.
 function drawDistantWonders(face,visible){
- const m=operation();
+ const m=worldRegion();
  for(const s of terrestrialWonders){
   const X=s.x-m.wx,Z=s.z-m.wz,d=Math.hypot(X-x,Z-z);
   if(!visible(X,Z,Math.max(s.rx,s.rz))||d>34000)continue;

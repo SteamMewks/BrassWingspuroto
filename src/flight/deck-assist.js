@@ -6,11 +6,7 @@ function parkAtStart(){
  const spawn=base.deck?deckPoint(base,0,-95):{x:base.x,z:base.z-95};
  x=spawn.x;z=spawn.z;alt=base.height+(base.deck?2:1.5);yaw=cameraYaw=base.heading||0
 }
-function syncFireButton(){$('fire').hidden=mode!=='combat'||Boolean(deckMode)}
-function goalPort(){
- const id=operation().returnTo;
- return [...localBases,...localShips].find(b=>b.id===id)
-}
+function syncFireButton(){$('fire').hidden=!encounter||Boolean(deckMode)}
 function deckAssist(dt){
  let port=landingSite;
  if(!deckMode){
@@ -39,26 +35,19 @@ function deckAssist(dt){
   if(port.deck){const axes=deckAxes(port,x,z),p=deckPoint(port,axes.side*(1-capture),axes.along+(62-axes.along)*(1-Math.exp(-.72*dt)));x=p.x;z=p.z}
   else{x-=side*capture;z+=(stop.z-z)*(1-Math.exp(-.72*dt))}
   alt+=(touchHeight-alt)*(1-Math.exp(-1.45*dt));airspeed*=Math.exp(-1.5*dt);
-  if(deckTime>3.4){deckMode='moored';airspeed=0;alt=touchHeight;x=stop.x;z=stop.z;if(sortiePhase==='return'&&port===goalPort()){completeSortie();return true}}
+  if(deckTime>3.4){deckMode='moored';airspeed=0;alt=touchHeight;x=stop.x;z=stop.z;arrive(port)}
  }else if(deckMode==='moored'){
-  if(power>=.72){deckMode='launch';deckTime=0}
+  
  }else{
   const prevX=x,prevZ=z,prevAlt=alt;
   airspeed=Math.min(105,airspeed+64*dt);x+=Math.sin(heading)*airspeed*dt;z+=Math.cos(heading)*airspeed*dt;alt+=Math.min(26,deckTime*14)*dt;
   if(impact(prevX,prevZ,prevAlt))return true;
   if(deckTime>=2.2){
    deckMode='';cameraYaw=yaw;
-   if(mode==='combat'&&sortiePhase==='departure')sortiePhase='scenario';
+   
    if(document.activeElement===$('thrust'))$('thrust').blur();
    syncFireButton()
   }
  }
- cameraYaw+=angleDelta(yaw-cameraYaw)*capture;if(mode==='combat')replenish(dt);return true
-}
-function replenish(dt){
- supplying=deckMode==='moored'&&airspeed===0;
- if(supplying){energy=Math.min(100-campaign.wear,energy+55*dt);ammo=Math.min(90+20*campaign.mag,ammo+55*dt)}
- else energy=Math.max(0,energy-dt*100/180);
- if(energy<1e-8){energy=0;down('エネルギー切れ');return false}
- return true
+ cameraYaw+=angleDelta(yaw-cameraYaw)*capture;return true
 }
