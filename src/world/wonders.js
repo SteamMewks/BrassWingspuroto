@@ -1,7 +1,7 @@
 // Atlas metres. Footprints also set the horizontal journal discovery envelopes.
 const wonders=[
- ['skyland','天蓋浮遊大陸',50000,50000,20000,20000,380,1200,'中央大海','緑の天蓋の下面に、切り立った岩の竜骨が連なる。'],
- ['skyfalls','天蓋の千丈滝',70000,50000,1200,1200,45,860,'中央大海','雲を貫いた水の帯が、海上で白い飛沫にほどける。'],
+ ['skyland','天蓋浮遊大陸',50000,50000,10000,10000,610,3200,'中央大海','緑の天蓋の下面に、切り立った岩の竜骨が連なる。'],
+ ['skyfalls','天蓋の千丈滝',60000,50000,900,900,610,1600,'中央大海','雲を貫いた水の帯が、海上で白い飛沫にほどける。'],
  ['crater','星痕環湖',27000,56000,4300,3700,340,2600,'西部','衝突で押し上げられた外縁が青い窪地を囲む。'],
  ['abyss','地底回廊の大穴',33000,75000,2100,1700,5,510,'北西部','崩落壁の段々が暗い縦穴の奥に続く。'],
  ['peak','白冠天峰',71000,90000,4200,3800,560,3600,'北部','雪をまとった岩稜が雲海を割る。'],
@@ -14,8 +14,9 @@ const wonders=[
 const waterfallSpokes=[0,9,26,43,55];
 function withinWonder(s,wx,y,wz){
  if(y<s.minY||y>s.maxY)return false;
+ if(s.id==='skyland')return Math.hypot(wx-50000,wz-50000)<1.04*skyRim(Math.atan2(wz-50000,wx-50000));
  if(s.id==='skyfalls')return waterfallSpokes.some(i=>{
-  const [X,,Z]=skyRingPoint(tau*i/64,2);
+  const [X,,Z]=skyVertex(i,20);
   return Math.hypot(wx-X,wz-Z)<s.rx
  });
  return Math.hypot((wx-s.x)/s.rx,(wz-s.z)/s.rz)<=1.08
@@ -55,68 +56,6 @@ function shapeWonderTerrain(wx,wz,vertices,triangles,colors){
   for(let k=0;k<triangles.length;k+=3){
    const i=3*triangles[k],u=(wx+vertices[i]/20-s.x)/s.rx,v=(wz+vertices[i+1]/20-s.z)/s.rz,r=Math.hypot(u,v);
    if(r<.96&&colors[k])colors.set(wonderColor(s.id,r,u,v,vertices[i+2]/20),k)
-  }
- }
-}
-
-function skyRim(a){
- return 20000*(1+.047*Math.sin(5*a)+.031*Math.sin(9*a)+.022*Math.sin(13*a))
-}
-function skyRingPoint(a,layer){
- const radius=skyRim(a)*[0,.55,1,1,.57,0][layer];
- const y=[895,865+28*Math.sin(3*a),790+18*Math.sin(7*a),716+24*Math.sin(9*a),585+48*Math.sin(5*a),505][layer];
- return [50000+radius*Math.cos(a),y,50000+radius*Math.sin(a)]
-}
-function skyMesh(count){
- const faces=[],colors=['#96a576','#a5a77c','#917862','#77665f','#59515b'];
- for(let i=0;i<count;i++){
-  const a=tau*i/count,b=tau*(i+1)/count;
-  for(let k=0;k<5;k++){
-   const p=skyRingPoint(a,k),q=skyRingPoint(b,k),r=skyRingPoint(b,k+1),s=skyRingPoint(a,k+1);
-   const color=k===2&&i%3===0?'#ae9478':colors[k];
-   if(k!==0)faces.push({points:[p,q,r],color});
-   if(k!==4)faces.push({points:[p,r,s],color})
-  }
- }
- return faces
-}
-let skyNear,skyFar;
-function skyContact(X,Y,Z){
- if(Y<504||Y>896||Math.hypot(X-50000,Z-50000)>22200)return false;
- skyNear??=skyMesh(64);
- const angle=Math.atan2(Z-50000,X-50000);
- const wedge=Math.floor(((angle/tau+1)%1)*64);
- let low=Infinity,high=-Infinity;
- // Each angular sector has eight triangles, including its two rim walls.
- for(let i=wedge*8;i<(wedge+1)*8;i++){
-  const [a,b,c]=skyNear[i].points;
-  const u=b[0]-a[0],v=b[2]-a[2],p=c[0]-a[0],q=c[2]-a[2],det=u*q-v*p;
-  if(Math.abs(det)<.001)continue;
-  const dx=X-a[0],dz=Z-a[2],s=(dx*q-dz*p)/det,r=(u*dz-v*dx)/det;
-  if(s<-.00001||r<-.00001||s+r>1.00001)continue;
-  const height=a[1]+s*(b[1]-a[1])+r*(c[1]-a[1]);
-  low=Math.min(low,height);high=Math.max(high,height)
- }
- return Y>=low-.55&&Y<=high+.55
-}
-function drawSkyland(face,visible){
- const m=operation(),cx=50000-m.wx,cz=50000-m.wz,d=Math.hypot(x-cx,z-cz);
- if(d>70000||!visible(cx,cz,22400))return;
- const mesh=d<28000?(skyNear??=skyMesh(64)):(skyFar??=skyMesh(32));
- for(const {points,color} of mesh)face(points.map(([X,Y,Z])=>[X-m.wx,Y,Z-m.wz]),color);
- for(const i of waterfallSpokes){
-  const a=tau*i/64,[wx,y,wz]=skyRingPoint(a,2),X=wx-m.wx,Z=wz-m.wz;
-  if(!visible(X,Z,600))continue;
-  const out=Math.cos(a),north=Math.sin(a);
-  function point(width,level,reach){return [X-width*north+out*reach,level,Z+width*out+north*reach]}
-  const bottom=80+20*Math.sin(i);
-  for(let j=-2;j<2;j++){
-   const lower=bottom+16*Math.sin(t*2+i+j);
-   face([point(55*j,y,4),point(55*(j+1),y,4),point(90*(j+1),lower,85),point(90*j,lower,85)],j%2?'#bfdbd8':'#d8e7df')
-  }
-  for(let j=0;j<3;j++){
-   const width=135+85*j;
-   face([point(-width,bottom-14*j,65),point(-width*.65,bottom+28,135),point(width*.45,bottom+40,155),point(width,bottom-14*j,190)],'rgba(220,230,220,0.4)')
   }
  }
 }

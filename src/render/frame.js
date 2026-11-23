@@ -7,7 +7,8 @@ function draw(dt){
   frontInk.fillStyle=backdrop;frontInk.fillRect(0,0,w,h);return
  }
  if(live)railClock+=dt;
- updateWorld();
+ selectFlightLayer(dt);
+ if(!inSky)updateWorld();
  const wasWaiting=deckMode==='moored';
  if(live&&deckAssist(dt)){
   if(!wasWaiting)t+=dt
@@ -21,7 +22,7 @@ function draw(dt){
  }
  bank+=(Math.max(-1,Math.min(1,lr))-bank)*(1-Math.exp(-8*dt));pitch+=(Math.max(-1,Math.min(1,ud))-pitch)*(1-Math.exp(-6*dt));yaw+=bank*dt*(returning?2:1.03+.15*power);if(!trick)applyClimb(dt);advance(dt);limitAirspace();discoverRelics();if(!impact(px,pz,py)){if(mode==="combat")fight(dt);updateSpray(dt)}cameraYaw+=(yaw-cameraYaw)*(1-Math.exp(-5.6*dt));t+=dt}
 g=surfaceRenderer?.sky()||frontInk;
-let horizon=h*(.36+pitch*.09),f=h*(.62-.10*Math.max(0,(airspeed-78)/54));let sky=g.createLinearGradient(0,0,0,horizon);sky.addColorStop(0,'#52496b');sky.addColorStop(.65,'#c87976');sky.addColorStop(1,'#f4b479');g.fillStyle=sky;g.fillRect(0,0,w,horizon+1);const sunAngle=.12-cameraYaw;if(Math.cos(sunAngle)>.1){let sunX=w/2+f*Math.tan(sunAngle),radius=h*.033;ellipse(sunX,horizon-radius*(1.7-Math.min(1,t/180)*2.5),radius,radius,'#ffda9b')}const seaBands=waterPalette(x+operation().wx,z+operation().wz);
+let horizon=h*(.36+pitch*.09),f=h*(.62-.10*Math.max(0,(airspeed-78)/54));let sky=g.createLinearGradient(0,0,0,horizon);sky.addColorStop(0,'#52496b');sky.addColorStop(.65,'#c87976');sky.addColorStop(1,'#f4b479');g.fillStyle=sky;g.fillRect(0,0,w,horizon+1);const sunAngle=.12-cameraYaw;if(Math.cos(sunAngle)>.1){let sunX=w/2+f*Math.tan(sunAngle),radius=h*.033;ellipse(sunX,horizon-radius*(1.7-Math.min(1,t/180)*2.5),radius,radius,'#ffda9b')}const seaBands=inSky?['#e3d2c5','#eddfd4','#eadfd7','#e7dad2','#dfd5cf','#e7dad2','#efdfd4','#e7dad2','#e6d7cd','#e3d2c5']:waterPalette(x+operation().wx,z+operation().wz);
 for(let i=0;i<seaBands.length;i++){
  const y0=Math.floor(horizon+(h-horizon)*(i/10)**1.7),y1=Math.ceil(horizon+(h-horizon)*((i+1)/10)**1.7);
  g.fillStyle=seaBands[i];g.fillRect(0,y0,w,y1-y0)
@@ -30,8 +31,8 @@ let objects=[],nearest=Infinity,target;
 function project(X,Z,Y){let dx=X-x,dz=Z-z,d=32+dx*Math.sin(cameraYaw)+dz*Math.cos(cameraYaw);if(d<2||d>3600)return;let s=f/d;return [w/2+(dx*Math.cos(cameraYaw)-dz*Math.sin(cameraYaw))*s,horizon+(alt+(.58*h-horizon)*32/f-Y)*s,s,d]}
 function add(X,Z,Y,fn){let p=project(X,Z,Y);if(p)objects.push([p[3],()=>fn(...p)])}
 if(alt<480)for(let i=-6;i<=6;i++)for(let j=-6;j<=6;j++){let A=Math.floor(x/240)+i,B=Math.floor(z/240)+j,n=Math.sin(A*78.1+B*21.7)*43758,n1=n-Math.floor(n),X=A*240+n1*165,Z=B*240+(1-n1)*125;if(n1>.66)add(X,Z,160+n1*90,(a,b,s)=>{g.imageSmoothingEnabled=false;g.drawImage(cloudArt[Math.floor(n1*21)%5],a-52*s,b-19*s,104*s,33*s)})}
- const detail=groundDetailRange(alt-ground(x,z));
- const [offshoreWave,channelWave]=waterWeights(x+operation().wx,z+operation().wz);
+ const detail=inSky?0:groundDetailRange(alt-ground(x,z));
+ const [offshoreWave,channelWave]=inSky?[0,0]:waterWeights(x+operation().wx,z+operation().wz);
  // World-anchored glints enlarge and separate as they approach the camera.
  if(detail>.45)for(let i=-9;i<=9;i++)for(let j=-9;j<=9;j++){
   const ix=Math.floor(x/24)+i,iz=Math.floor(z/24)+j,n=noise(ix,iz,813);
@@ -42,7 +43,7 @@ if(alt<480)for(let i=-6;i<=6;i++)for(let j=-6;j<=6;j++){let A=Math.floor(x/240)+
   g.fillStyle=glow?'#deaa91':n>.55?'#a998a3':'#777789';
   g.fillRect(Math.round(p[0]),Math.round(p[1]),Math.max(1,length),Math.max(1,p[2]*.12));
  }
-if(mode==='free'){
+if(mode==='free'&&!inSky){
  const landmarks=[...waterfalls.map(s=>[s.a[0]-operation().wx,s.a[1]-operation().wz,watersheds.basins[s.reach.basin].name+'の滝']),...isles,[...operation().town,regions[operation().region]]];
  if(operation().region===1)landmarks.push([passAxis(4992),4992,'白嶺峠'],[passAxis(3648)+270,3648,'赤棚鉱山市']);
  for(const b of localShips)landmarks.push([b.x,b.z,b.name]);
@@ -55,6 +56,7 @@ if(mode==='free'){
 }
  // Clip each horizontal land slice at the camera before projecting it.
  const sn=Math.sin(cameraYaw),cs=Math.cos(cameraYaw),eye=alt+(.58*h-horizon)*32/f;
+ if(!inSky){
  const mainlandPath=new Path2D();
  for(const layer of terraces){
   if(Math.abs(x-layer.cx)>layer.rx*1.25+16000||Math.abs(z-layer.cz)>layer.rz*1.25+16000)continue;
@@ -72,6 +74,7 @@ if(mode==='free'){
   }
  }
  g.fillStyle='#81895c';g.fill(mainlandPath,'evenodd');
+ }
  drawScenery(sn,cs,eye,f,horizon,objects);
  if(detail>.1)for(const pixel of groundPixels){
   if(Math.abs(pixel.X-x)>580*detail||Math.abs(pixel.Z-z)>580*detail)continue;
@@ -80,11 +83,14 @@ if(mode==='free'){
   const wid=Math.min(44,pt[2]*pixel.width);if(wid<1)continue;
   g.fillStyle=pixel.color;g.fillRect(Math.round(pt[0]),Math.round(pt[1]),Math.ceil(wid),Math.max(1,Math.round(wid*.33)))
  }
- const mist=Math.max(0,1-Math.abs(alt-535)/85);
- if(mist){g.fillStyle='rgba(235,222,218,'+(.25*mist)+')';g.fillRect(0,0,w,h)}
+ const mist=Math.max(cloudVeil,Math.max(0,1-Math.abs(alt-575)/92)*.84);
+ if(groundWarmup)groundWarmup--;
+ if(mist){g.fillStyle='rgba(235,222,218,'+mist+')';g.fillRect(0,0,w,h)}
  const onCarrier=overDeck(x,z)&&ground(x,z)<deckHeight;
- const floorY=onCarrier?deckHeight:ground(x,z),clearance=Math.max(0,alt-floorY);
- if(clearance<95&&!crash){
+ const levels=inSky?skyLevels(x+operation().wx,z+operation().wz):null;
+ const aboveIsland=levels&&alt>=levels.top;
+ const floorY=aboveIsland?levels.top:onCarrier?deckHeight:ground(x,z),clearance=Math.max(0,alt-floorY);
+ if(!inSky&&clearance<95&&!crash){
   const offset=clearance*.48,roll=bank*.62+(trick==='roll'?hand*phase:0),loop=trick==='loop'?phase:0;
   const sx=x-Math.sin(.12)*offset,sz=z-Math.cos(.12)*offset;
   const silhouette=shadowOutline.map(([side,nose])=>{
@@ -152,7 +158,7 @@ if(mode==='free'){
   for(const b of hostile)add(b.x,b.z,b.y,(a,y,k)=>ellipse(a,y,Math.max(2,k*.55),Math.max(2,k*.55),"#ff9468"));
   for(const shot of bolts)add(shot.x,shot.z,shot.y,(a,b,k)=>ellipse(a,b,Math.max(1,k*.32),Math.max(1,k*.65),'#fff2a5'));
  }
- objects.sort((a,b)=>b[0]-a[0]);objects.forEach(o=>o[1]());if(aircraftLayer)aircraftLayer.hidden=Boolean(crash);if(crash)wreck(dt);else plane();$('meter').textContent=(alt<3?alt.toFixed(1):Math.round(alt))+' m　'+(alt>=620?'雲上　':alt>=480?'雲層　':'')+Math.round(((yaw*180/Math.PI)%360+360)%360)+'°\n'+(onCarrier?'甲板':'地表')+' '+clearance.toFixed(clearance<10?1:0)+' m';if(mode==='combat'){
+ objects.sort((a,b)=>b[0]-a[0]);objects.forEach(o=>o[1]());if(aircraftLayer)aircraftLayer.hidden=Boolean(crash);if(crash)wreck(dt);else plane();$('meter').textContent=(alt<3?alt.toFixed(1):Math.round(alt))+' m　'+(alt>=620?'雲上　':alt>=480?'雲層　':'')+Math.round(((yaw*180/Math.PI)%360+360)%360)+'°\n'+(aboveIsland?'天空地表':onCarrier?'甲板':'地表')+' '+clearance.toFixed(clearance<10?1:0)+' m';if(mode==='combat'){
  const aim=project(x+Math.sin(yaw)*190,z+Math.cos(yaw)*190,alt+pitch*100*190/390);
  if(aim&&!crash){g.beginPath();g.arc(aim[0],aim[1],8,0,tau);g.lineWidth=1.5;g.strokeStyle='#fff1c7';g.stroke()}
  if(locked&&locked.hp){const mark=project(locked.x,locked.z,locked.y);if(mark){const [a,b,k]=mark,r=Math.max(11,k*9);g.strokeStyle="#aaf5cd";g.lineWidth=2;g.strokeRect(a-r,b-r,r*2,r*2)}}

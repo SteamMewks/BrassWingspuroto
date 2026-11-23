@@ -3,7 +3,7 @@ const terrainLimits={cpuBytes:8*1048576,gpuBytes:16*1048576,railGpuBytes:8*10485
 const terrainAreas=new Map();
 let terrainAreaBytes=0,terrainLoads=0,terrainEvictions=0;
 function trimTerrain(){
- while(terrainAreas.size>1&&terrainAreaBytes>terrainLimits.cpuBytes){
+ while(terrainAreas.size>1&&(terrainAreaBytes>terrainLimits.cpuBytes||(inSky&&terrainAreas.size>4))){
   const key=terrainAreas.keys().next().value;
   terrainAreaBytes-=terrainAreas.get(key).bytes;
   terrainAreas.delete(key);terrainEvictions++

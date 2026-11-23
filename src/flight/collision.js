@@ -8,7 +8,10 @@ function restartFlight(){
  document.querySelector('.card p').innerHTML=flightInstructions
 }
 function hitObject(X,Z,Y){
- const m=operation();if(skyContact(X+m.wx,Y,Z+m.wz))return wonders[0].name;for(const s of relics)if(relicDistance(s,X+m.wx,Y,Z+m.wz)<2)return s.name;
+ const m=operation();if(Y>=650&&Math.abs(X+m.wx-50000)<11200&&Math.abs(Z+m.wz-50000)<11200){
+  if(skyContact(X+m.wx,Y,Z+m.wz))return wonders[0].name;
+  const ruin=ruinContact(X+m.wx,Y,Z+m.wz);if(ruin)return ruin
+ }for(const s of relics)if(relicDistance(s,X+m.wx,Y,Z+m.wz)<2)return s.name;
  for(const spur of baseSpurs){const p=spur.end,dx=X-p.x,dz=Z-p.z; if(Math.abs(dx*p.dz-dz*p.dx+13)<5&&Math.abs(dx*p.dx+dz*p.dz)<10.5&&Y<p.y+8)return '貨物倉庫'}
  const rail=railHit(X,Z,Y);if(rail)return rail;
  for(const offset of [-3.8,0,3.8]){
