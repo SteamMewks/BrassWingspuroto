@@ -21,6 +21,8 @@ function drawScenery(sn,cs,eye,f,horizon,objects){
   if(screen.every(p=>p[0]<0)||screen.every(p=>p[0]>w)||screen.every(p=>p[1]>h))return;
   objects.push([clipped.reduce((sum,p)=>sum+p[2],0)/clipped.length-order,()=>poly(screen,color)])
  }
+ drawSkyland(face,sceneryVisible);
+ drawDistantWonders(face,sceneryVisible);
  drawRelics(face,sceneryVisible,accelerated);
  if(!accelerated)drawSurface(face,sn,cs);drawChannels(face,sn,cs,eye,f,horizon);
  function strip(cx,cz,Y,width,length,color,order=0){
@@ -58,13 +60,14 @@ function drawScenery(sn,cs,eye,f,horizon,objects){
    for(let j=0;j<4;j++){const n=(j+1)%4;face([a[j],b[j],b[n],a[n]],['#a78c73','#bda888','#937966','#655c58'][j])}
   }
  }
- for(const road of roads)if(Math.abs(road[0][0]-x)<2700&&Math.abs(road[0][2]-z)<2700&&sceneryVisible(road[0][0],road[0][2],180))face(road,'#989077');
+ const detail=groundDetailRange(alt-ground(x,z));
+ if(detail>.35)for(const road of roads)if(Math.abs(road[0][0]-x)<2700&&Math.abs(road[0][2]-z)<2700&&sceneryVisible(road[0][0],road[0][2],180))face(road,'#989077');
  for(const b of quarters){
   const distance=Math.hypot(x-b.x,z-b.z);
-  if(distance>2700||!sceneryVisible(b.x,b.z,b.radius+4))continue;
+  if(distance>2700*detail||!sceneryVisible(b.x,b.z,b.radius+4))continue;
   building=b;
   block(b.x,b.z,b.y,b.w,b.l,b.h,b.roof);
-  if(distance>1250)continue;
+  if(distance>1250*detail)continue;
   if(b.industry){
    if(b.industry==='stack'&&distance<720)for(const fraction of [.6,.86])
     block(b.x,b.z,b.y+b.h*fraction,b.w+.2,b.l+.2,5,'#e9c5a1');
@@ -82,7 +85,7 @@ function drawScenery(sn,cs,eye,f,horizon,objects){
    face([[X-2,Y,Z],[X+2,Y,Z],[X+2,Y+3,Z],[X-2,Y+3,Z]],'#edbc76',1)}
   }
  }
- building=null;drawRail(face,accelerated?surfaceRenderer:null);
+ building=null;if(detail>.18)drawRail(face,accelerated?surfaceRenderer:null);
  for(const b of localBases){
   const distance=Math.hypot(x-b.x,z-b.z);
   if(distance>=3500||!sceneryVisible(b.x,b.z,360))continue;
@@ -112,5 +115,37 @@ function drawScenery(sn,cs,eye,f,horizon,objects){
   }
   for(const [dx,dz,y,width,length,height,color] of shipStructures)block(ship.x+dx,ship.z+dz,y,width,length,height,color)
  }
+ drawCloudBanks(face,sceneryVisible);
  if(accelerated){surfaceRenderer.end();surfaceRenderer.trees(sn,cs,eye,f,horizon)}
+}
+
+// Broken banks are anchored to the world grid. The camera can pass between them.
+function drawCloudBanks(face,visible){
+ const density=Math.min(1,Math.max(0,(alt-280)/200));
+ if(!density)return;
+ const m=operation(),cell=960,wx=x+m.wx,wz=z+m.wz;
+ for(let i=-7;i<=7;i++)for(let j=-7;j<=7;j++){
+  const a=Math.floor(wx/cell)+i,b=Math.floor(wz/cell)+j,n=noise(a,b,617);
+  if(n<.19)continue;
+  const X=(a+.5)*cell-m.wx,Z=(b+.5)*cell-m.wz;
+  if(!visible(X,Z,800))continue;
+  const distance=Math.hypot(x-X,z-Z),fade=Math.min(1,Math.max(0,(6500-distance)/1700));
+  if(!fade)continue;
+  const y=480+75*n,r=cell*(.50+n*.33);
+  // Updrafts break the cloud deck above conspicuous terrain.
+  let cover=1;
+  for(const s of terrestrialWonders){
+   const radial=Math.hypot((X+m.wx-s.x)/s.rx,(Z+m.wz-s.z)/s.rz);
+   cover=Math.min(cover,Math.max(0,(radial-.72)*2))
+  }
+  const inside=Math.max(0,1-Math.abs(alt-y)/80)*Math.max(0,1-distance/1450);
+  const opacity=Math.round(16*density*fade*cover*(1-.72*inside))/16;
+  if(!opacity)continue;
+  const sides=distance<2400?16:8;
+  const rim=Array.from({length:sides},(_,k)=>{const angle=tau*k/sides;
+   const lobe=1+.09*Math.cos(5*angle+n*7)+.06*Math.sin(3*angle);
+   return [X+r*lobe*Math.cos(angle),y-18+9*Math.sin(3*angle),Z+r*lobe*.85*Math.sin(angle)]});
+  for(let k=0;k<sides;k++)face([rim[k],rim[(k+1)%sides],[X,y+42,Z]],
+   k<sides/2?'rgba(251,235,222,'+opacity+')':'rgba(229,216,218,'+opacity+')')
+ }
 }

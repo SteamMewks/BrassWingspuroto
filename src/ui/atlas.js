@@ -21,7 +21,7 @@ function atlas(){
   return '<circle cx="'+b.wx*k+'" cy="'+(500-b.wz*k)+'" r="3" fill="'+baseColors[side]+'"><title>'+label+'</title></circle>'
  }).join('');
  const railMap=railSurvey.map(line=>'<polyline points="'+line.points.map(([X,Z])=>[X*k,500-Z*k].join(',')).join(' ')+'" fill="none" stroke="#8a583e" stroke-width="1"/>').join('');
- const pins=relics.filter(s=>discoveries[s.id]).map(s=>'<circle cx="'+s.x*k+'" cy="'+(500-s.z*k)+'" r="3" fill="#ffe999"><title>'+s.name+'</title></circle>').join('');
+ const pins=journalSites.filter(s=>discoveries[s.id]).map(s=>'<circle cx="'+s.x*k+'" cy="'+(500-s.z*k)+'" r="3" fill="#ffe999"><title>'+s.name+'</title></circle>').join('');
  const marks=missions.map((v,i)=>'<rect x="'+(v.wx*k-2)+'" y="'+(498-v.wz*k)+'" width="4" height="4" fill="'+['#f4d49c','#d2bfab','#ea8774'][i]+'"/>').join('');
  $('atlas').innerHTML='<svg viewBox="0 0 500 500" aria-label="世界地図と作戦位置"><rect width="500" height="500" fill="#29474e"/>'+shapes+islands+railMap+marks+bases+pins+'<circle id="atlas-position" cx="'+sx+'" cy="'+sy+'" r="12" fill="none" stroke="#ffd880" stroke-width="4"/><rect x="'+(sx-2.5)+'" y="'+(sy-2.5)+'" width="5" height="5" fill="#fff2b2"/></svg>'+(preview||trial?m.name:'第'+(campaign.stage+1)+'面 '+m.name+'・'+regions[m.region])+
   ' ｜ 世界 100 km 四方・作戦空域 5 km 四方';

@@ -6,7 +6,7 @@ const surfaceRenderer=(()=>{
  gl.attachShader(program,shader(gl.VERTEX_SHADER,`attribute vec3 pos;attribute vec4 ink;varying lowp vec4 tint;
  uniform vec3 eye;uniform vec2 heading,projection;uniform float horizon;
  void main(){vec3 v=pos-eye;float d=32.0+dot(v.xz,heading);
- gl_Position=vec4(dot(v.xz,vec2(heading.y,-heading.x))*projection.x,v.y*projection.y+horizon*d,d*1.00018-4.00036,d);tint=ink;}`));
+ gl_Position=vec4(dot(v.xz,vec2(heading.y,-heading.x))*projection.x,v.y*projection.y+horizon*d,d*1.00005-4.00010,d);tint=ink;}`));
  gl.attachShader(program,shader(gl.FRAGMENT_SHADER,'precision mediump float;varying lowp vec4 tint;void main(){gl_FragColor=tint;}'));
  gl.linkProgram(program);if(!gl.getProgramParameter(program,gl.LINK_STATUS))return null;
  const pos=gl.getAttribLocation(program,'pos'),ink=gl.getAttribLocation(program,'ink');
@@ -30,11 +30,13 @@ const surfaceRenderer=(()=>{
   terrainGpuBytes-=entry.bytes;gpuAreas.delete(key)
  }
  function drawArea(i,j){
-  const key=i+','+j;
+  const m=operation(),distance=Math.hypot((i+.5)*terrainAreaSize-x-m.wx,(j+.5)*terrainAreaSize-z-m.wz);
+  const coarse=altitudeBand(alt)>=2&&distance>Math.max(1700,6200-(alt-420)*10);
+  const key=[i,j,Number(coarse)].join(',');
   let entry=gpuAreas.get(key);
   if(entry)gpuAreas.delete(key);
   else{
-   const area=terrainArea(i,j),{vertices,triangles,colors}=area;
+   const area=terrainArea(i,j),{vertices,triangles,colors}=coarse?aerialTerrain(area):area;
    let count=0;
    for(let t=0;t<colors.length;t+=3)if(colors[t])count+=3;
    if(!count)return;
@@ -61,7 +63,7 @@ const surfaceRenderer=(()=>{
  // their original projected dimensions and use terrain depth for occlusion.
  const foliage=gl.createProgram();
  gl.attachShader(foliage,shader(gl.VERTEX_SHADER,`attribute vec3 vertex;attribute vec3 tex;varying vec3 uv;
- void main(){float d=vertex.z;gl_Position=vec4(vertex.xy,d*1.00018-4.00036,d);uv=tex;}`));
+ void main(){float d=vertex.z;gl_Position=vec4(vertex.xy,d*1.00005-4.00010,d);uv=tex;}`));
  gl.attachShader(foliage,shader(gl.FRAGMENT_SHADER,`precision mediump float;varying vec3 uv;uniform sampler2D image;
  void main(){vec4 c=texture2D(image,uv.xy);c.a*=uv.z;if(c.a<0.025)discard;gl_FragColor=c;}`));
  gl.linkProgram(foliage);
@@ -82,12 +84,13 @@ const surfaceRenderer=(()=>{
  return {
   hasTrees(){return foliageReady&&!gl.isContextLost()},
   trees(sn,cs,eyeY,f,sky){
-   if(!foliageReady)return;
+   const range=620*groundDetailRange(eyeY-ground(x,z));
+   if(!foliageReady||range<1)return;
    let size=0;
    function vertex(px,py,d,u,v,alpha){treeVerts[size++]=px;treeVerts[size++]=py;treeVerts[size++]=d;treeVerts[size++]=u;treeVerts[size++]=v;treeVerts[size++]=alpha}
    for(const t of groves){
     const dx=t.X-x,dz=t.Z-z,d=32+dx*sn+dz*cs,dist2=dx*dx+dz*dz;
-    if(d<2||dist2>=620*620)continue;
+    if(d<2||dist2>=range*range)continue;
     const center=(dx*cs-dz*sn)*2*f/w,extent=t.R*2*f/w;
     if(Math.abs(center)>d+extent)continue;
     const bottom=(1-2*sky/h)*d+(t.Y-eyeY)*2*f/h,top=bottom+t.H*2*f/h;
