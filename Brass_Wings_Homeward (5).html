@@ -189,7 +189,9 @@ function arrive(port){
  if(waypointId===port.id)waypointId=null;
  adventure.last=port.id;if(!adventure.visited.includes(port.id))adventure.visited.push(port.id);
  const job=adventure.job;if(job?.kind==='delivery'&&job.to===port.id)job.ready=true;
- power=0;$('thrust').value=0;clearEncounter();saveAdventure();dockMenu()
+ power=0;$('thrust').value=0;
+ if(port.id==='home'||encounter&&Math.hypot(port.x-encounter.x,port.z-encounter.z)>3200)clearEncounter();
+ saveAdventure();dockMenu()
 }
 function dockMenu(){
  const b=landingSite;showPanel('dock',b.name,labels[affiliation(b.id)]+(b.kind&&b.kind!=='home'?'・'+({city:'大型都市',town:'町',village:'村'})[b.kind]:'')+'　所持金 '+adventure.money+'　積荷 '+adventure.goods+'/8');
@@ -197,7 +199,7 @@ function dockMenu(){
  action('移動先を選ぶ',()=>travelMenu(false),Boolean(encounter));
  action('離陸',()=>{if(deckMode!=='moored'||affiliation(landingSite.id)==='pirate')return;deckMode='launch';deckTime=0;power=.78;$('thrust').value=78;enterFlight()});
  action('航路を設定',()=>navigationMenu(false));
- action('タイトルへ',titleScreen)
+ action('タイトルへ',titleScreen,Boolean(encounter))
 }
 function navigationMenu(airborne){
  showPanel('travel','航路を設定','目的地を選ぶと、飛行中に方位と距離を表示します。');atlas();
@@ -221,7 +223,7 @@ function services(){
   action('依頼掲示板・報告',jobs);
   action('商店　物資を買う · 5',()=>{adventure.money-=5;adventure.goods++;saveAdventure();services()},adventure.money<5||adventure.goods+Number(adventure.job?.kind==='delivery')>=8);
   action('積荷を確認',()=>{document.querySelector('.card p').textContent='商品 '+adventure.goods+'　依頼物資 '+Number(adventure.job?.kind==='delivery')+'　積載上限 8';});
-  if(b.kind!=='village')action('商店　物資を売る · 6',()=>{adventure.money+=6;adventure.goods--;saveAdventure();services()},!adventure.goods)
+  if(b.kind!=='village')action('商店　物資を売る · 4',()=>{adventure.money+=4;adventure.goods--;saveAdventure();services()},!adventure.goods)
  }else{
   action('補給',()=>{ammo=90+20*adventure.mag;energy=100-adventure.wear;saveAdventure();services()});
   action('機関補修 · 10',()=>{adventure.money-=10;adventure.wear=0;energy=100;saveAdventure();services()},!adventure.wear||adventure.money<10);
