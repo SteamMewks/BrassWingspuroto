@@ -56,6 +56,7 @@ function impact(px,pz,py){
  return false
 }
 function down(cause){
+  saveAdventure();
   live=false;syncAudio();clearFlightInput();
   crash={cause,age:0,pieces:Array.from({length:36},(_,j)=>({dx:(rand()-.5)*.38,dy:-rand()*.31-.035,spin:(rand()-.5)*8,c:['#b18b52','#454c40','#f9be68','#745247'][j%4]}))};
 }

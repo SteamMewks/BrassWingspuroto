@@ -1,8 +1,9 @@
-function clearEncounter(){encounter=null;enemies=[];bolts=[];hostile=[];locked=null;trigger=false;syncFireButton()}
+let occupiedPorts=[];
+function clearEncounter(){encounter=null;nextAttack=0;grace=0;reload=0;enemies=[];bolts=[];hostile=[];locked=null;trigger=false;syncFireButton()}
 function fight(dt){
  if(encounter&&Math.hypot(encounter.x-x,encounter.z-z)>3200)clearEncounter();
  if(!encounter){
-  encounter=localBases.concat(localShips).find(b=>affiliation(b.id)==='pirate'&&Math.hypot(b.x-x,b.z-z)<900);
+  encounter=occupiedPorts.find(b=>Math.hypot(b.x-x,b.z-z)<900);
   if(!encounter)return;
   deploy();syncFireButton();message=encounter.name+' 空賊防衛隊';messageUntil=t+4
  }
@@ -40,15 +41,15 @@ function fight(dt){
   for(const e of enemies){if(e.hp<=0)continue;
    const u=Math.max(0,Math.min(1,((e.x-b.x)*dx+(e.z-b.z)*dz+(e.y-b.y)*dy)/(dx*dx+dz*dz+dy*dy||1)));
    if(Math.hypot(e.x-b.x-u*dx,e.z-b.z-u*dz,e.y-b.y-u*dy)<7){
-    e.hp--;if(e.hp)switchMove(e,'evade');e.hit=.17;b.life=0;if(!e.hp)award(250,'赤翼機撃墜');break
+    e.hp--;if(e.hp)switchMove(e,'evade');e.hit=.17;b.life=0;if(!e.hp){adventure.kills++;saveAdventure();award(250,'空賊機撃墜')}break
    }
   }
   b.x+=dx;b.z+=dz;b.y+=dy;b.life-=dt
  }
  bolts=bolts.filter(b=>b.life>0);
  if(enemies.length&&enemies.every(e=>!e.hp)){
-  adventure.liberated.push(encounter.id);adventure.kills+=enemies.length;adventure.money+=60;
-  encounter.side='friendly';landingPorts.push(encounter);message=encounter.name+' 解放　報酬60';messageUntil=t+5;
+  adventure.liberated.push(encounter.id);adventure.money+=60;
+  encounter.side='friendly';landingPorts.push(encounter);occupiedPorts=occupiedPorts.filter(b=>b!==encounter);message=encounter.name+' 解放　報酬60';messageUntil=t+5;
   clearEncounter();saveAdventure()
  }
 }

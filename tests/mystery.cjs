@@ -32,9 +32,9 @@ const current=require.resolve('../BrassWings-preview.html');
   }
   await open();
   const legacy={stage:1,funds:7,wear:13,mag:2,hangar:true};
-  await page.evaluate(v=>localStorage.setItem(saveKey,JSON.stringify(v)),legacy);
+  await page.evaluate(v=>localStorage.setItem('brassWings.worldCampaign.v1',JSON.stringify(v)),legacy);
   await page.reload();
-  assert.deepEqual(await page.evaluate(()=>campaign),legacy);
+  assert.deepEqual(await page.evaluate(()=>[adventure.wear,adventure.mag]),[legacy.wear,legacy.mag]);
   await page.click('#journalOpen');
   assert.equal(await page.locator('#entries button:disabled').count(),10);
   assert.equal(await page.locator('#entryDetail').innerText(),'');
@@ -60,7 +60,7 @@ const current=require.resolve('../BrassWings-preview.html');
   for(const original of baseline?[true,false]:[false]){
    if(original)await page.goto('https://offline.test/original');
    else if(baseline)await page.goto('https://offline.test/game');
-   await page.evaluate(()=>{titleScreen();startFlight('free');deckMode='';live=false});
+   await page.evaluate(()=>{titleScreen();startFlight('brass-port');deckMode='';live=false});
    for(const site of sites){
     await page.evaluate(s=>{
      const distance=s.id==='gear'?4900:s.id==='clock'?1700:s.id==='spiral'?1550:s.id==='twins'?1350:s.id==='chain'?1850:s.id==='dock'?620:s.id==='walker'?520:950;
@@ -89,7 +89,7 @@ const current=require.resolve('../BrassWings-preview.html');
    const result=await page.evaluate(id=>{
     const s=relics.find(v=>v.id===id),part=buildRelic(s,true)[0],p=part.b;
     const Y=s.base+p[1];
-    const collision=hitObject(s.x-operation().wx+p[0],s.z-operation().wz+p[2],Y);
+    const collision=hitObject(s.x-worldRegion().wx+p[0],s.z-worldRegion().wz+p[2],Y);
     ({x,z}=worldToLocal(s.x+p[0],s.z+p[2]-part.r-36));alt=Y+24;
     draw(.001);const first=discoveries[id];message='revisit';discoverRelics();
     return {collision,first,stable:first===discoveries[id],message}
@@ -99,20 +99,20 @@ const current=require.resolve('../BrassWings-preview.html');
    assert.equal(result.message,'revisit');
   }
   await browser.close();browser=await launch();await open();
-  assert.deepEqual(await page.evaluate(()=>campaign),legacy);
+  assert.deepEqual(await page.evaluate(()=>[adventure.wear,adventure.mag]),[legacy.wear,legacy.mag]);
   for(const [name,width,height] of [['portrait',360,640],['landscape',640,360],['desktop',1000,640]]){
    await page.setViewportSize({width,height});await page.click('#journalOpen');
    assert.match(await page.locator('#progress').innerText(),/10 \/ 10/);
    for(const [i,s] of sites.entries()){await page.locator('#entries button').nth(i).click();assert.ok((await page.locator('#entryDetail').innerText()).includes(String(s.x)))}
    await capture('journal-'+name);await page.click('#journalClose');
-   await page.evaluate(()=>{startFlight('free');deckMode='';live=false;const s=relics[0];({x,z}=worldToLocal(s.x,s.z-3900));alt=s.base+520;yaw=cameraYaw=0;draw(0)});
+   await page.evaluate(()=>{startFlight('brass-port');deckMode='';live=false;const s=relics[0];({x,z}=worldToLocal(s.x,s.z-3900));alt=s.base+520;yaw=cameraYaw=0;draw(0)});
    await capture('flight-'+name);await page.evaluate(()=>titleScreen());
   }
   const buffers=await page.evaluate(()=>{
    const baseline=allocatedBuffers.size;
    const counts=[];
    for(let i=0;i<2;i++){
-    startFlight('free');live=false;deckMode='';
+    startFlight('brass-port');live=false;deckMode='';
     for(const s of relics){({x,z}=worldToLocal(s.x,s.z-700));alt=s.base+120;yaw=cameraYaw=0;draw(0)}
     titleScreen();counts.push(allocatedBuffers.size)
    }

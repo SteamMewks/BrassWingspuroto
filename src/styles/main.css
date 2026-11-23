@@ -6,19 +6,12 @@ header button{min-width:44px;min-height:44px}
 footer{padding:0 max(14px,env(safe-area-inset-right)) 0 max(14px,env(safe-area-inset-left))}
 .card article{overscroll-behavior:contain}
 .card button{min-height:44px}
-.flight-picker{grid-column:1/-1;display:flex;justify-content:center;align-items:center;gap:6px}
-.flight-picker select{min-height:36px;max-width:80%;color:#fff1c4;background:#203f47;border:1px solid #ccb783;border-radius:6px;padding:3px 8px}
-#go,#combat{background:#e6c58c;color:#343b38}
 @media(max-height:440px) and (min-width:520px){
  .card article:has(#atlas:not([hidden])){display:grid;grid-template-columns:minmax(0,1fr) minmax(150px,.68fr);gap:4px 14px;width:min(92vw,620px)}
  .card article>small,.card h1,.card p{grid-column:1;margin:0}
  .card article #atlas{grid-column:2;grid-row:1/4;align-self:center}
  .card article #atlas svg{height:92px}
- .card article .actions{grid-column:1/-1}
- .card article #operation-picker{grid-column:1}
- .card article #free-picker{grid-column:2}
- .flight-picker{font-size:12px;white-space:nowrap}
- .flight-picker select{min-width:0;max-width:calc(100% - 52px)}
+ .card article #actions{grid-column:1/-1}
  .card article:has(#atlas:not([hidden])){max-height:96dvh;padding:10px}
  .card article:has(#atlas:not([hidden])) p{line-height:1.45}
  .card article:has(#atlas:not([hidden])) button{margin-block:0}
@@ -31,3 +24,6 @@ footer{padding:0 max(14px,env(safe-area-inset-right)) 0 max(14px,env(safe-area-i
  .card article:has(#atlas:not([hidden])){padding:14px}
 }
 #journal{background:#223c42;color:#ffedc9;border:1px solid #b99a65;border-radius:10px;width:min(95vw,590px);max-height:92dvh;overflow:auto}#journal::backdrop{background:#152328bd}#entries{display:grid;grid-template-columns:repeat(auto-fit,minmax(135px,1fr));gap:5px}#journal canvas{width:min(100%,230px);height:auto;display:block;margin:8px auto}#journal button{touch-action:manipulation}#journal button:disabled{opacity:.55}
+
+#notice:not(:empty){position:fixed;inset:auto 8px 8px;z-index:5;background:#452f28;padding:8px;color:#fff0cb;text-align:center}
+#actions button:disabled{opacity:.5}

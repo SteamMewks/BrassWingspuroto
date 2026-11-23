@@ -18,12 +18,12 @@ const views = [
   await page.setContent(html);
   for (const [key,id] of views) {
    await page.evaluate(({key,id}) => {
-    titleScreen();$('free-base').value=id;startFlight('free');live=false;deckMode='';
+    titleScreen();startFlight(id);live=false;deckMode='';
     let dx=-185,dz=-205;alt=108;
     if(key==='near'||key==='strait'){dx=-350;dz=key==='near'?-380:480;alt=125}
     if(key==='ocean'){dx=-280;dz=-435;alt=80}
     x=base.x+dx;z=base.z+dz;alt+=base.deck?0:base.height-10;yaw=cameraYaw=Math.atan2(-dx,-dz)+.46;draw(0);
-    const zone=seaZone(x+operation().wx,z+operation().wz);
+    const zone=seaZone(x+worldRegion().wx,z+worldRegion().wz);
     if(['near','strait','ocean'].includes(key)&&zone!==['near','strait','ocean'].indexOf(key))throw Error(key+' sea zone');
    }, {key,id});
    await page.screenshot({path:resolve(output,key+'.jpg'),quality:92});
@@ -45,7 +45,7 @@ const views = [
    await mobile.setContent(html);
    for(const id of ['south-foundry','station','pelagic']){
     const result=await mobile.evaluate(async id=>{
-     titleScreen();$('free-base').value=id==='station'?'western-plain':id;startFlight('free');
+     titleScreen();startFlight(id==='station'?'western-plain':id);
      deckMode='';alt=118;power=.45;airspeed=70;x=base.x-310;z=base.z-230;cameraYaw=yaw=.35;
      if(id==='station'){
       railClock=19;

@@ -7,7 +7,7 @@ function limitAirspace(){
  x+=bx;z+=bz
 }
 function deploy(){
- const height=Math.max(64,Math.min(alt,230));
+ const height=Math.max(ground(x,z)+65,alt);
  for(let i=0;i<3;i++){
   const side=(i-1)*32,forward=175-Math.abs(i-1)*26;
   enemies.push({x:x+Math.sin(yaw)*forward+Math.cos(yaw)*side,z:z+Math.cos(yaw)*forward-Math.sin(yaw)*side,y:height+i*3,

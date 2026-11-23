@@ -22,7 +22,7 @@ const path=require('node:path');
    for(let i=0;i<64;i++)for(let j=0;j<=20;j++)heights.push(skyVertex(i,j)[1]);
    const peak=Math.max(...heights);
    const dates=Object.fromEntries(journalSites.map((s,i)=>[s.id,new Date(1600000000000+i*1000).toISOString()]));
-   localStorage.setItem(saveKey,JSON.stringify({...adventure,discoveries:dates}));
+   discoveries={...dates};saveAdventure();
    const visits=[];
    for(let i=0;i<20;i++){
     ({x,z}=worldToLocal(27000,56000));yaw=cameraYaw=Math.atan2(23000,-6000);alt=100;draw(.1);

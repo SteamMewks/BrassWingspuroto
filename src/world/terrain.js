@@ -45,17 +45,10 @@ function terrainArea(i,j){
  if(!packed)return null;
  const existing=terrainAreas.get(key);
  if(existing){terrainAreas.delete(key);terrainAreas.set(key,existing);return existing}
- const {vertices,triangles,colors}=unpackTerrain(packed);
+ let {vertices,triangles,colors}=unpackTerrain(packed);
  const wx=(i+.5)*terrainAreaSize,wz=(j+.5)*terrainAreaSize;
  shapeWonderTerrain(wx,wz,vertices,triangles,colors);
- for(const site of Object.values(settlements)){
-  if(Math.abs(site.wx-wx)>1300||Math.abs(site.wz-wz)>1400)continue;
-  for(let k=0;k<vertices.length;k+=3){
-   const edge=Math.max(Math.abs(wx+vertices[k]/20-site.wx)-110,Math.abs(wz+vertices[k+1]/20-site.wz)-195);
-   const weight=Math.max(0,Math.min(1,1-edge/80));
-   vertices[k+2]=Math.round(vertices[k+2]*(1-weight)+20*site.height*weight)
-  }
- }
+ ({vertices,triangles,colors}=gradeSettlementTerrain(wx,wz,vertices,triangles,colors));
  const area={wx,wz,vertices,triangles,colors,collision:null,bytes:vertices.byteLength+triangles.byteLength+colors.byteLength};
  terrainAreas.set(key,area);terrainAreaBytes+=area.bytes;terrainLoads++;trimTerrain();
  return area
@@ -175,4 +168,29 @@ function aerialTerrain(area){
   faces.push(a,b,c);ink.push(colors[k],colors[k+1],colors[k+2])
  }
  return {vertices:positions,triangles:faces,colors:ink}
+}
+
+function gradeSettlementTerrain(wx,wz,vertices,triangles,colors){
+ const sites=Object.values(settlements).filter(s=>Math.abs(s.wx-wx)<1300&&Math.abs(s.wz-wz)<1400);
+ if(!sites.length)return {vertices,triangles,colors};
+ const points=Array.from(vertices),indices=[],inks=[];
+ function split(a,b,c,color){
+  const X=[a,b,c].map(i=>points[i*3]/20+wx),Z=[a,b,c].map(i=>points[i*3+1]/20+wz);
+  const loX=Math.min(...X),hiX=Math.max(...X),loZ=Math.min(...Z),hiZ=Math.max(...Z);
+  const near=sites.some(s=>loX<s.wx+190&&hiX>s.wx-190&&loZ<s.wz+205&&hiZ>s.wz-205);
+  if(near&&Math.max(hiX-loX,hiZ-loZ)>24){
+   const corners=[a,b,c],lengths=corners.map((_,i)=>Math.hypot(X[i]-X[(i+1)%3],Z[i]-Z[(i+1)%3]));
+   const i=lengths.indexOf(Math.max(...lengths)),u=corners[i],v=corners[(i+1)%3],w=corners[(i+2)%3],mid=points.length/3;
+   for(let k=0;k<3;k++)points.push(Math.round((points[u*3+k]+points[v*3+k])/2));
+   split(u,mid,w,color);split(mid,v,w,color);return
+  }
+  indices.push(a,b,c);inks.push(colors[color],colors[color+1],colors[color+2])
+ }
+ for(let i=0;i<triangles.length;i+=3)split(triangles[i],triangles[i+1],triangles[i+2],i);
+ for(let k=0;k<points.length;k+=3)for(const site of sites){
+  const edge=Math.max(Math.abs(wx+points[k]/20-site.wx)-(site.id==='home'?120:65),Math.abs(wz+points[k+1]/20-site.wz)-site.length/2-25);
+  const weight=Math.max(0,Math.min(1,1-edge/45));
+  points[k+2]=Math.round(points[k+2]*(1-weight)+20*site.height*weight)
+ }
+ return {vertices:new vertices.constructor(points),triangles:new Uint16Array(indices),colors:new Uint8Array(inks)}
 }

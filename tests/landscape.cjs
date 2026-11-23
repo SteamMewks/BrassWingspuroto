@@ -20,7 +20,7 @@ const views = [
   await page.setContent(html);
   for(const [name,...view] of views){
    const sample=await page.evaluate(([stage,X,Z,H,A])=>{
-    campaign.stage=stage;startFlight('free');
+    startFlight(landscapes[stage].departure);
     live=false;deckMode='';x=X;z=Z;alt=H;yaw=cameraYaw=A;
     for(let i=0;i<4;i++)draw(0);
     const start=performance.now();

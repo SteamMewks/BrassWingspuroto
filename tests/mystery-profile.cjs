@@ -31,7 +31,7 @@ async function measure(browser,file){
  await page.setContent(html);
  const init=Math.round(performance.now()-start);
  const results=await page.evaluate(async()=>{
-  titleScreen();startFlight('free');live=false;deckMode='';
+  titleScreen();startFlight('brass-port');live=false;deckMode='';
   const samples=[];
   for(const [wx,wz,altitude] of [[14000,33300,480],[65500,11800,130],[50000,50000,150]]){
    ({x,z}=worldToLocal(wx,wz));alt=altitude;yaw=cameraYaw=0;

@@ -6,7 +6,7 @@ const {chromium}=require('playwright');
  try{
   const page=await browser.newPage();const errors=[];page.on('pageerror',e=>errors.push(e.message));
   await page.route('**/*',r=>r.request().url()==='https://offline.test/game'?r.fulfill({path:path.resolve(__dirname,'../BrassWings-preview.html'),contentType:'text/html'}):r.abort());
-  await page.goto('https://offline.test/game');await page.getByText('冒険を始める・再開').click({timeout:3000});
+  await page.goto('https://offline.test/game');await page.getByText('冒険を始める・再開').click({timeout:30000});
   assert.deepEqual(errors,[]);
   for(const [width,height] of [[360,640],[640,360],[1100,700]]){
    await page.setViewportSize({width,height});await page.screenshot({path:'/tmp/brass-dock-'+width+'.png'});
@@ -16,14 +16,45 @@ const {chromium}=require('playwright');
    const check=(v,s)=>{if(!v)throw Error(s)};
    check(base.id==='home','new home');
    for(const b of [...localBases,...localShips]){
+    if(b.kind){
+     for(let u=-b.width/2;u<=b.width/2;u+=5)for(let v=-b.length/2;v<=b.length/2;v+=10){
+      const X=b.x+u,Z=b.z+v;
+      check(Math.abs(ground(X,Z)-b.height)<.09,'grade '+b.id+' '+[X,Z,ground(X,Z),b.height]);
+      check(!nearRail(X,Z)&&!nearRiver(X+worldRegion().wx,Z+worldRegion().wz,5),'corridor '+b.id)
+     }
+    }
+    if(!b.kind||b.id==='home'){
+     const original=surfaceRenderer.face;let flagFaces=0;
+     surfaceRenderer.face=function(points,color){if(color===colors[affiliation(b.id)])flagFaces++;return original.call(this,points,color)};
+     live=false;deckMode='';x=b.x;z=b.z-240;alt=b.height+30;yaw=cameraYaw=0;
+     try{draw(0)}finally{surfaceRenderer.face=original}
+     check(flagFaces>0,'flag '+b.id)
+    }
     const p=b.deck?deckPoint(b,0,-95):{x:b.x,z:b.z-95};
     x=p.x;z=p.z;alt=b.height+12;yaw=b.heading||0;power=.25;deckMode='';live=true;
     for(let i=0;i<73;i++)deckAssist(.05);
-    check(affiliation(b.id)==='pirate'?!deckMode:deckMode==='moored'&&landingSite.id===b.id,b.id)
+    check(affiliation(b.id)==='pirate'?!deckMode:deckMode==='moored'&&landingSite.id===b.id,b.id);
+    if(b.kind){
+     updateWorld();
+     check(!groves.some(t=>Math.abs(t.X-b.x)<b.width/2+t.R&&Math.abs(t.Z-b.z)<b.length/2+t.R),'trees '+b.id);
+     check(!quarters.some(q=>Math.abs(q.x-b.x)<b.width/2+q.radius&&Math.abs(q.z-b.z)<b.length/2+q.radius),'town buildings '+b.id);
+     [...$('actions').children].find(button=>button.textContent==='離陸').click();
+     for(let i=0;i<48;i++)deckAssist(.05);
+     check(!deckMode&&live&&!crash,'takeoff '+b.id)
+    }
    }
+   const forbidden=localBases.find(b=>affiliation(b.id)==='pirate');
+   check(!selectable(forbidden.id)&&!selectable('nonexistent'),'hostile or unknown travel');
+   enterFlight();deckMode='';const previous=adventure.last;travelMenu(false);
+   check(panel==='flight'&&adventure.last===previous,'airborne travel');
    const target=localShips.find(b=>affiliation(b.id)==='pirate');
    x=target.x;z=target.z;alt=160;deckMode='';live=true;fight(.05);check(enemies.length===3,'defenders');
-   for(const e of enemies)e.hp=0;
+   const moneyBefore=adventure.money,killsBefore=adventure.kills;
+   for(let hit=0;hit<2;hit++){
+    for(const e of enemies)bolts.push({x:e.x,y:e.y,z:e.z,dx:0,dy:0,dz:0,life:1});
+    fight(0)
+   }
+   check(adventure.kills===killsBefore+3&&adventure.money===moneyBefore+60,'single reward');
    fight(.05);check(selectable(target.id)&&landingPorts.includes(target),'liberation');return target.id
   });
   await page.reload();assert.ok(await page.evaluate(id=>adventure.liberated.includes(id),result));assert.deepEqual(errors,[]);

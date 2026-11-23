@@ -7,8 +7,9 @@ function buildWorld(){
  localShips=Object.values(carriers).map(b=>({...b,...worldToLocal(b.wx,b.wz,m),side:affiliation(b.id),sin:Math.sin(b.heading),cos:Math.cos(b.heading)}));
  base=[...localBases,...localShips].find(b=>b.id===m.departure);
  regionRunway=localBases.find(b=>b.id===landscapes[m.region].departure);
- ship=localShips.find(b=>b.id===m.returnTo)||localShips[m.region===2?1:0];
+ ship=localShips[m.region===2?1:0];
  landingPorts=[...localBases,...localShips].filter(b=>b.side!=='pirate');
+ occupiedPorts=[...localBases,...localShips].filter(b=>b.side==='pirate');
  cutCoast();
  for(const l of continents){
   const {x:X,z:Z}=worldToLocal(l[0],l[1],m);
@@ -146,4 +147,15 @@ function updateWorld(){
 function branchRadius(tree,dy){
  if(dy<0||dy>tree.H)return 0;
  return dy<tree.H*.25?1.2:tree.R*Math.max(.12,1-(dy/tree.H-.25)/.75)
+}
+
+// Rebuild regional scenery only on entering another authored region.
+// Flight and navigation continue in world metres across the origin change.
+function enterNearbyRegion(){
+ if(deckMode||encounter||inSky)return;
+ const position=localToWorld(x,z);
+ const next=landscapes.find(r=>r.region!==regionContext.region&&Math.hypot(position.wx-r.wx,position.wz-r.wz)<6800);
+ if(!next)return;
+ regionContext={...next};buildWorld();
+ ({x,z}=worldToLocal(position.wx,position.wz));found.clear()
 }
