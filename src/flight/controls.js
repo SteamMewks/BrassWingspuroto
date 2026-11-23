@@ -34,7 +34,7 @@ document.addEventListener('visibilitychange',()=>{if(document.hidden)pause()});
 onkeydown=e=>{
  if(!live)return;
  if(e.key==='Escape'){e.preventDefault();pause();return}
- if(e.code==='Space'&&mode==='combat'&&!deckMode&&(e.target===fire||!e.target.closest?.('button,input'))){
+ if(e.code==='Space'&&encounter&&!deckMode&&(e.target===fire||!e.target.closest?.('button,input'))){
   e.preventDefault();keys.add('Space');return
  }
  if(document.activeElement===thrust)return;

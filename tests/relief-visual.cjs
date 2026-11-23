@@ -1,6 +1,6 @@
 const {chromium}=require('playwright'),fs=require('fs'),dir=process.env.RELIEF_SCREENSHOTS||'/tmp/brass-relief';
 (async()=>{fs.mkdirSync(dir,{recursive:true});const b=await chromium.launch({executablePath:process.env.CHROMIUM_PATH,args:['--no-sandbox']});const p=await b.newPage({viewport:{width:960,height:540}});await p.evaluate(()=>requestAnimationFrame=()=>0);await p.setContent(fs.readFileSync(require.resolve('../BrassWings-preview.html'),'utf8'));for(const key of ['mountain','hills','gorge','river','fall','mouth','base','coast']){
-const pose=await p.evaluate(key=>{campaign.stage=key==='gorge'?1:0;startFlight('free');live=false;deckMode='';const m=operation();let [X,Z,A,H]=[0,0,.2,110];
+const pose=await p.evaluate(key=>{startFlight(key==='gorge'?'smoke-highlands':'brass-port');live=false;deckMode='';const m=worldRegion();let [X,Z,A,H]=[0,0,.2,110];
  if(['fall','mouth','river','coast'].includes(key)){
   const target=key==='fall'?waterfalls[0]:key==='mouth'||key==='coast'?[...surveyRiverSegments()].filter(s=>s.reach.down===-1&&s.reach.basin===8).at(-1):[...surveyRiverSegments()].find(s=>s.reach.rank>=3&&s.index===0);
   const {dx,dz,len}=target,a=key==='mouth'||key==='coast'?target.b:target.a;const nx=dx/len,nz=dz/len,d=key==='fall'?100:key==='coast'?850:240;

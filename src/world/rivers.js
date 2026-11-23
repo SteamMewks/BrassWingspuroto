@@ -63,7 +63,7 @@ function tidalDistances(reach){
 }
 for(const reach of watersheds.reaches)tidalDistances(reach);
 function drawChannels(face,sn,cs,eye,f,horizon){
- const m=operation(),wx=x+m.wx,wz=z+m.wz;
+ const m=worldRegion(),wx=x+m.wx,wz=z+m.wz;
  for(let i=Math.floor((wx-3300)/800);i<=Math.floor((wx+3300)/800);i++)for(let j=Math.floor((wz-3300)/800);j<=Math.floor((wz+3300)/800);j++)for(const s of riverTile(channelTiles,activeChannelTiles,i*256+j,112)){
   const dx=s.a[0]-wx,dz=s.a[1]-wz,depth=dx*sn+dz*cs;
   if(depth< -s.len-100||Math.abs(dx*cs-dz*sn)>Math.max(0,depth)*w/h+s.len+160)continue;

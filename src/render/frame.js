@@ -7,6 +7,7 @@ function draw(dt){
   frontInk.fillStyle=backdrop;frontInk.fillRect(0,0,w,h);return
  }
  if(live)railClock+=dt;
+ if(live)enterNearbyRegion();
  selectFlightLayer(dt);
  if(!inSky)updateWorld();
  const wasWaiting=deckMode==='moored';
@@ -18,11 +19,11 @@ function draw(dt){
  if(returning){
   const error=Math.atan2(Math.sin(returnHeading-yaw),Math.cos(returnHeading-yaw));
   lr=Math.max(-1,Math.min(1,error*2.6));
-  if(Math.abs(error)<.12&&flightBoundary().margin>30)returnHeading=null
+  if(Math.abs(error)<.12)returnHeading=null
  }
- bank+=(Math.max(-1,Math.min(1,lr))-bank)*(1-Math.exp(-8*dt));pitch+=(Math.max(-1,Math.min(1,ud))-pitch)*(1-Math.exp(-6*dt));yaw+=bank*dt*(returning?2:1.03+.15*power);if(!trick)applyClimb(dt);advance(dt);limitAirspace();discoverRelics();if(!impact(px,pz,py)){if(mode==="combat")fight(dt);updateSpray(dt)}cameraYaw+=(yaw-cameraYaw)*(1-Math.exp(-5.6*dt));t+=dt}
+ bank+=(Math.max(-1,Math.min(1,lr))-bank)*(1-Math.exp(-8*dt));pitch+=(Math.max(-1,Math.min(1,ud))-pitch)*(1-Math.exp(-6*dt));yaw+=bank*dt*(returning?2:1.03+.15*power);if(!trick)applyClimb(dt);advance(dt);limitAirspace();discoverRelics();if(!impact(px,pz,py)){fight(dt);updateSpray(dt)}cameraYaw+=(yaw-cameraYaw)*(1-Math.exp(-5.6*dt));t+=dt}
 g=surfaceRenderer?.sky()||frontInk;
-let horizon=h*(.36+pitch*.09),f=h*(.62-.10*Math.max(0,(airspeed-78)/54));let sky=g.createLinearGradient(0,0,0,horizon);sky.addColorStop(0,'#52496b');sky.addColorStop(.65,'#c87976');sky.addColorStop(1,'#f4b479');g.fillStyle=sky;g.fillRect(0,0,w,horizon+1);const sunAngle=.12-cameraYaw;if(Math.cos(sunAngle)>.1){let sunX=w/2+f*Math.tan(sunAngle),radius=h*.033;ellipse(sunX,horizon-radius*(1.7-Math.min(1,t/180)*2.5),radius,radius,'#ffda9b')}const seaBands=inSky?['#e3d2c5','#eddfd4','#eadfd7','#e7dad2','#dfd5cf','#e7dad2','#efdfd4','#e7dad2','#e6d7cd','#e3d2c5']:waterPalette(x+operation().wx,z+operation().wz);
+let horizon=h*(.36+pitch*.09),f=h*(.62-.10*Math.max(0,(airspeed-78)/54));let sky=g.createLinearGradient(0,0,0,horizon);sky.addColorStop(0,'#52496b');sky.addColorStop(.65,'#c87976');sky.addColorStop(1,'#f4b479');g.fillStyle=sky;g.fillRect(0,0,w,horizon+1);const sunAngle=.12-cameraYaw;if(Math.cos(sunAngle)>.1){let sunX=w/2+f*Math.tan(sunAngle),radius=h*.033;ellipse(sunX,horizon-radius*(1.7-Math.min(1,t/180)*2.5),radius,radius,'#ffda9b')}const seaBands=inSky?['#e3d2c5','#eddfd4','#eadfd7','#e7dad2','#dfd5cf','#e7dad2','#efdfd4','#e7dad2','#e6d7cd','#e3d2c5']:waterPalette(x+worldRegion().wx,z+worldRegion().wz);
 for(let i=0;i<seaBands.length;i++){
  const y0=Math.floor(horizon+(h-horizon)*(i/10)**1.7),y1=Math.ceil(horizon+(h-horizon)*((i+1)/10)**1.7);
  g.fillStyle=seaBands[i];g.fillRect(0,y0,w,y1-y0)
@@ -32,20 +33,20 @@ function project(X,Z,Y){let dx=X-x,dz=Z-z,d=32+dx*Math.sin(cameraYaw)+dz*Math.co
 function add(X,Z,Y,fn){let p=project(X,Z,Y);if(p)objects.push([p[3],()=>fn(...p)])}
 if(alt<480)for(let i=-6;i<=6;i++)for(let j=-6;j<=6;j++){let A=Math.floor(x/240)+i,B=Math.floor(z/240)+j,n=Math.sin(A*78.1+B*21.7)*43758,n1=n-Math.floor(n),X=A*240+n1*165,Z=B*240+(1-n1)*125;if(n1>.66)add(X,Z,160+n1*90,(a,b,s)=>{g.imageSmoothingEnabled=false;g.drawImage(cloudArt[Math.floor(n1*21)%5],a-52*s,b-19*s,104*s,33*s)})}
  const detail=inSky?0:groundDetailRange(alt-ground(x,z));
- const [offshoreWave,channelWave]=inSky?[0,0]:waterWeights(x+operation().wx,z+operation().wz);
+ const [offshoreWave,channelWave]=inSky?[0,0]:waterWeights(x+worldRegion().wx,z+worldRegion().wz);
  // World-anchored glints enlarge and separate as they approach the camera.
  if(detail>.45)for(let i=-9;i<=9;i++)for(let j=-9;j<=9;j++){
   const ix=Math.floor(x/24)+i,iz=Math.floor(z/24)+j,n=noise(ix,iz,813);
   const X=(ix+n)*24,Z=(iz+noise(ix,iz,814))*24,p=project(X,Z,0);
   if(!p||p[0]<-50||p[0]>w+50||p[1]>h+5)continue;
-  const swell=.5+.5*Math.sin((X+operation().wx)*.016+(Z+operation().wz)*(.032+channelWave*.025)-railClock*.75);
+  const swell=.5+.5*Math.sin((X+worldRegion().wx)*.016+(Z+worldRegion().wz)*(.032+channelWave*.025)-railClock*.75);
   const length=Math.min(64,(1.4+n*4+offshoreWave*8*swell+channelWave*2)*p[2]),glow=Math.cos(cameraYaw-.12)>.5&&Math.abs(p[0]-w/2-f*Math.tan(sunAngle))<w*.16;
   g.fillStyle=glow?'#deaa91':n>.55?'#a998a3':'#777789';
   g.fillRect(Math.round(p[0]),Math.round(p[1]),Math.max(1,length),Math.max(1,p[2]*.12));
  }
-if(mode==='free'&&!inSky){
- const landmarks=[...waterfalls.map(s=>[s.a[0]-operation().wx,s.a[1]-operation().wz,watersheds.basins[s.reach.basin].name+'の滝']),...isles,[...operation().town,regions[operation().region]]];
- if(operation().region===1)landmarks.push([passAxis(4992),4992,'白嶺峠'],[passAxis(3648)+270,3648,'赤棚鉱山市']);
+if(!inSky){
+ const landmarks=[...waterfalls.map(s=>[s.a[0]-worldRegion().wx,s.a[1]-worldRegion().wz,watersheds.basins[s.reach.basin].name+'の滝']),...isles,[...worldRegion().town,regions[worldRegion().region]]];
+ if(worldRegion().region===1)landmarks.push([passAxis(4992),4992,'白嶺峠'],[passAxis(3648)+270,3648,'赤棚鉱山市']);
  for(const b of localShips)landmarks.push([b.x,b.z,b.name]);
  for(const [X,Z,name,kind] of landmarks){
   if(kind===2)continue;
@@ -87,7 +88,7 @@ if(mode==='free'&&!inSky){
  if(groundWarmup)groundWarmup--;
  if(mist){g.fillStyle='rgba(235,222,218,'+mist+')';g.fillRect(0,0,w,h)}
  const onCarrier=overDeck(x,z)&&ground(x,z)<deckHeight;
- const levels=inSky?skyLevels(x+operation().wx,z+operation().wz):null;
+ const levels=inSky?skyLevels(x+worldRegion().wx,z+worldRegion().wz):null;
  const aboveIsland=levels&&alt>=levels.top;
  const floorY=aboveIsland?levels.top:onCarrier?deckHeight:ground(x,z),clearance=Math.max(0,alt-floorY);
  if(!inSky&&clearance<95&&!crash){
@@ -147,7 +148,7 @@ if(mode==='free'&&!inSky){
   if(!head||!tail||head[3]>120||head[3]<9)continue;
   objects.push([head[3],()=>{g.beginPath();g.moveTo(head[0],head[1]);g.lineTo(tail[0],tail[1]);g.lineWidth=1;g.strokeStyle='rgba(245,248,213,'+(.15+.22*airspeed/132)+')';g.stroke()}])
  }
- if(mode==='combat'){
+ if(encounter){
   for(const e of enemies){if(e.fall>1.8)continue;add(e.x,e.z,e.y,(a,b,k)=>{
    const index=(Math.round((e.heading-cameraYaw)*24/tau)%24+24)%24;
    if(!enemyFrames.has(index))enemyFrames.set(index,plane(index*tau/24));
@@ -158,21 +159,19 @@ if(mode==='free'&&!inSky){
   for(const b of hostile)add(b.x,b.z,b.y,(a,y,k)=>ellipse(a,y,Math.max(2,k*.55),Math.max(2,k*.55),"#ff9468"));
   for(const shot of bolts)add(shot.x,shot.z,shot.y,(a,b,k)=>ellipse(a,b,Math.max(1,k*.32),Math.max(1,k*.65),'#fff2a5'));
  }
- objects.sort((a,b)=>b[0]-a[0]);objects.forEach(o=>o[1]());if(aircraftLayer)aircraftLayer.hidden=Boolean(crash);if(crash)wreck(dt);else plane();$('meter').textContent=(alt<3?alt.toFixed(1):Math.round(alt))+' m　'+(alt>=620?'雲上　':alt>=480?'雲層　':'')+Math.round(((yaw*180/Math.PI)%360+360)%360)+'°\n'+(aboveIsland?'天空地表':onCarrier?'甲板':'地表')+' '+clearance.toFixed(clearance<10?1:0)+' m';if(mode==='combat'){
+ objects.sort((a,b)=>b[0]-a[0]);objects.forEach(o=>o[1]());if(aircraftLayer)aircraftLayer.hidden=Boolean(crash);if(crash)wreck(dt);else plane();$('meter').textContent=(alt<3?alt.toFixed(1):Math.round(alt))+' m　'+(alt>=620?'雲上　':alt>=480?'雲層　':'')+Math.round(((yaw*180/Math.PI)%360+360)%360)+'°\n'+(aboveIsland?'天空地表':onCarrier?'甲板':'地表')+' '+clearance.toFixed(clearance<10?1:0)+' m';if(encounter){
  const aim=project(x+Math.sin(yaw)*190,z+Math.cos(yaw)*190,alt+pitch*100*190/390);
  if(aim&&!crash){g.beginPath();g.arc(aim[0],aim[1],8,0,tau);g.lineWidth=1.5;g.strokeStyle='#fff1c7';g.stroke()}
  if(locked&&locked.hp){const mark=project(locked.x,locked.z,locked.y);if(mark){const [a,b,k]=mark,r=Math.max(11,k*9);g.strokeStyle="#aaf5cd";g.lineWidth=2;g.strokeRect(a-r,b-r,r*2,r*2)}}
  const enemy=locked?.hp?locked:enemies.filter(e=>e.hp>0).sort((a,b)=>Math.hypot(a.x-x,a.z-z)-Math.hypot(b.x-x,b.z-z))[0];
- patrolMap();const returningSupply=ammo<19||energy<26;const targetPlane=returningSupply?goalPort():enemy||zone,dir=Math.atan2(targetPlane.x-x,targetPlane.z-z)-yaw;
- $('place').textContent=(supplying?'補給中　':returningSupply?'補給地点へ（着陸後に補給）　':'空域 '+sector+'　')+(enemies.length?'撃墜 '+enemies.filter(e=>!e.hp).length+'/3':'指定空域へ')+'　'+['↑','↗','→','↘','↓','↙','←','↖'][(Math.round(dir/(tau/8))%8+8)%8]+' '+Math.round(Math.hypot(targetPlane.x-x,targetPlane.z-z))+' m'
-
- if(sortiePhase==='return'){
-  const goal=approachReady?goalPort():zone,bearing=Math.atan2(goal.x-x,goal.z-z)-yaw;
-  const arrow=['↑','↗','→','↘','↓','↙','←','↖'][(Math.round(bearing/(tau/8))%8+8)%8];
-  $('place').textContent=(approachReady?((goalPort().deck?'艦尾':'滑走路')+'へ　施設上空22 m以下・推力42%以下'):('帰投　'+(goalPort().deck?'空母':goalPort().name)+'進入地点へ'))+'　'+arrow+' '+Math.round(Math.hypot(x-goal.x,z-goal.z))+' m'
- }else if(!enemies.length&&!returningSupply)$('place').textContent+='　任務 '+cleared+'/'+operation().waves;
+ $('place').textContent=encounter.name+' 空賊 '+enemies.filter(e=>e.hp).length+'機';
  }else{worldMinimap();let dir=target?Math.atan2(target[0]-x,target[1]-z)-yaw:0;$('place').textContent=target?['↑','↗','→','↘','↓','↙','←','↖'][(Math.round(dir/(tau/8))%8+8)%8]+' '+target[2]+'　'+(nearest/1000).toFixed(1)+' km　'+'発見 '+found.size:'自由飛行'}
- if(deckMode&&live)$('place').textContent=deckMode==='capture'?(!landingSite.deck?'着陸補助　滑走路へ':'着艦補助　甲板へ'):deckMode==='moored'?(trial?landingSite.name+'　':supplying?'補給中　':'待機中　')+'推力72%以上で発進':(!landingSite.deck?'離陸中':'発艦中');
+ if((adventure.job||waypointId)&&!deckMode&&!encounter){
+  const site=outposts[waypointId]||jobDestination(),p=worldToLocal(site.wx,site.wz),angle=Math.atan2(p.x-x,p.z-z)-yaw;
+  const arrow=['↑','↗','→','↘','↓','↙','←','↖'][((Math.round(angle/(tau/8))%8)+8)%8];
+  $('place').textContent=arrow+' '+site.name+'　'+(Math.hypot(p.x-x,p.z-z)/1000).toFixed(1)+' km'
+ }
+ if(deckMode&&live)$('place').textContent=landingSite.name;
  $('feedback').textContent=t<messageUntil?message:'';
- const scoreboard=(mode==='combat'?'弾 '+Math.floor(ammo)+'　EN '+Math.ceil(energy)+'%　':'')+score+' pt';
+ const scoreboard=(encounter?'弾 '+Math.floor(ammo)+'　EN '+Math.ceil(energy)+'%　':'')+score+' pt';
  if($('score').textContent!==scoreboard)$('score').textContent=scoreboard}

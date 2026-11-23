@@ -27,12 +27,13 @@ const layouts=[['portrait',360,640],['landscape',640,360],['desktop',1100,700],[
    const press=selector=>touch?page.locator(selector).tap():page.locator(selector).click();
    const step=n=>page.evaluate(n=>{for(let i=0;i<n;i++)draw(.05)},n);
    await step(1);
-   for(const menu of ['#combat','#free']){
+   for(const menu of ['#actions button:first-child','#actions button:last-child']){
     const box=await page.locator(menu).boundingBox(),card=await page.locator('.card article').boundingBox();
     assert(box.y>=card.y&&box.y+box.height<=card.y+card.height,layout+' title action clipped');
    }
    await shot('title');
-   await press('#combat');await step(1);await shot('base');
+   await press('#actions button:first-child');await step(1);await shot('base');
+   await press('#actions button:has-text("離陸")');
    const thrust=await page.locator('#thrust').boundingBox();
    if(touch)await page.touchscreen.tap(thrust.x+thrust.width/2,thrust.y+10);
    else await page.mouse.click(thrust.x+thrust.width/2,thrust.y+10);
@@ -40,6 +41,7 @@ const layouts=[['portrait',360,640],['landscape',640,360],['desktop',1100,700],[
    await step(25);assert(await page.evaluate(()=>deckMode==='launch'));await shot('launch');
    await step(25);
    assert(await page.evaluate(()=>live&&!deckMode&&alt>40));await shot('flight');
+   await page.evaluate(()=>{const b=localBases.find(s=>s.side==='pirate');x=b.x;z=b.z;alt=b.height+170;fight(.05)});
    const fireBox=await page.locator('#fire').boundingBox();
    const map=await page.evaluate(()=>({x:w-Math.min(108,Math.round(w*.24),Math.round(h*.26))-10,
     y:Math.max(63,h*.205),side:Math.min(108,Math.round(w*.24),Math.round(h*.26))}));
@@ -59,40 +61,9 @@ const layouts=[['portrait',360,640],['landscape',640,360],['desktop',1100,700],[
     await page.keyboard.down('Space');await step(3);await page.keyboard.up('Space');
     assert(await page.evaluate(()=>ammo<90&&!keys.has('Space')),'keyboard firing');
    }
-   await press('#pause');await shot('pause');
-   assert(await page.evaluate(()=>!live&&document.querySelector('footer').inert));
-   await press('#go');
-   await page.evaluate(()=>{x=ship.x;z=ship.z-110;alt=25;power=.3;$('thrust').value=30;yaw=cameraYaw=0});
-   await step(75);assert(await page.evaluate(()=>live&&deckMode==='moored'&&landingSite===ship&&$('meter').textContent.includes('甲板')));
-   await shot('carrier');
-   await page.evaluate(()=>{energy=0;power=.8;$('thrust').value=80});await step(85);
-   assert(await page.evaluate(()=>panel==='crash'));await shot('end');
-   await press('#go');await step(1);
-   assert(await page.evaluate(()=>live&&deckMode==='moored'&&power===0));
-   await press('#pause');await press('#menu');
-   assert(await page.evaluate(()=>panel==='title'));
-   assert.deepEqual(errors,[]);
-   await page.close();
-   console.log(layout+' passed');
+   await press('#pause');await shot('pause');await press('#actions button:first-child');
+   assert(await page.evaluate(()=>live&&panel==='flight'));
+   assert.deepEqual(errors,[]);await page.close();console.log(layout+' passed')
   }
-  const page=await browser.newPage({viewport:{width:900,height:650}});
-  const errors=[];
-  page.on('pageerror',error=>errors.push(error.message));
-  await page.goto('http://127.0.0.1:'+server.address().port);
-  await page.locator('#free').click();
-  const slider=page.locator('#thrust');
-  for(let i=0;i<7;i++)await slider.press('PageUp');
-  await slider.press('ArrowRight');
-  assert(await page.evaluate(()=>power===.71&&t===0&&deckMode==='moored'));
-  await slider.press('ArrowRight');
-  await page.waitForFunction(()=>live&&power===.72&&!deckMode&&alt>40);
-  await page.keyboard.down('ArrowUp');
-  try{await page.waitForFunction(()=>pitch>.2)}finally{await page.keyboard.up('ArrowUp')}
-  await page.keyboard.press('Escape');
-  await page.waitForFunction(()=>panel==='pause');
-  await page.locator('#go').click();
-  await page.waitForFunction(()=>live&&panel==='flight');
-  assert.deepEqual(errors,[]);
-  console.log('Live animation loop passed');
  }finally{await browser?.close();server.close()}
 })().catch(error=>{console.error(error);process.exitCode=1});

@@ -10,7 +10,7 @@ const assert = require('node:assert/strict');
   const reports = await page.evaluate(() => {
    const results = [];
    for (let stage=0;stage<3;stage++) {
-    campaign.stage=stage;startFlight('free');
+    startFlight(landscapes[stage].departure);
     for (const line of railLines) for(let d=0;d<line.length;d+=8) {
      const p=railSample(line,d);
      for(const side of [-4,0,4]){
@@ -23,8 +23,8 @@ const assert = require('node:assert/strict');
     }
     for(const line of railLines)for(let d=0;d<line.length;d+=2){
      const p=railSample(line,d);
-     if(!nearRiver(p.x+operation().wx,p.z+operation().wz,5))continue;
-     if(!line.bridges.some(b=>d>=b.start&&d<=b.end)||p.y<riverAt(p.x+operation().wx,p.z+operation().wz,5).height+4)throw Error('Missing bridge deck');
+     if(!nearRiver(p.x+worldRegion().wx,p.z+worldRegion().wz,5))continue;
+     if(!line.bridges.some(b=>d>=b.start&&d<=b.end)||p.y<riverAt(p.x+worldRegion().wx,p.z+worldRegion().wz,5).height+4)throw Error('Missing bridge deck');
     }
     if(baseSpurs.length!==12)throw Error('Base freight siding count');
     for(const spur of baseSpurs)for(const p of spur.curve){
@@ -32,7 +32,7 @@ const assert = require('node:assert/strict');
     }
     const hall=railLots.find(b=>b.style==='hall');
     if(railHit(hall.x,hall.z,hall.y+3)!=='駅施設')throw Error('Passenger hall collision');
-    results.push(railSites.map(p=>[p.name,Math.round(p.x+operation().wx),Math.round(p.z+operation().wz)]));
+    results.push(railSites.map(p=>[p.name,Math.round(p.x+worldRegion().wx),Math.round(p.z+worldRegion().wz)]));
    }
    if(railSites.filter(s=>s.kind==='central').length!==5)throw Error('Central station count');
    if(railLines.reduce((n,l)=>n+l.bridges.length,0)<3)throw Error('River crossing survey');

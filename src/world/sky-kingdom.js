@@ -5,7 +5,7 @@ function leaveSky(){
  inSky=false;cloudVeil=0;groundWarmup=0;surfaceRenderer?.clearSky()
 }
 function selectFlightLayer(dt){
- const m=operation(),distance=Math.hypot(x+m.wx-skyCenter,z+m.wz-skyCenter);
+ const m=worldRegion(),distance=Math.hypot(x+m.wx-skyCenter,z+m.wz-skyCenter);
  const next=inSky?alt>=550&&distance<28500:alt>=610&&distance<27000;
  cloudVeil=Math.max(0,cloudVeil-dt*1.8);
  if(next===inSky)return;
@@ -76,7 +76,7 @@ function skySector(i,step,emit){
  emit([rim,next,skyVertex(i+1,20,true),skyVertex(i,20,true)],i%3?'#a08973':'#b39a80')
 }
 function drawKingdom(face,visible,gpu){
- const m=operation(),wx=x+m.wx,wz=z+m.wz,dist=Math.hypot(wx-skyCenter,wz-skyCenter);
+ const m=worldRegion(),wx=x+m.wx,wz=z+m.wz,dist=Math.hypot(wx-skyCenter,wz-skyCenter);
  if(gpu)surfaceRenderer.pruneSkyDetail(dist);
  const local=(points,color)=>face(points.map(([X,Y,Z])=>[X-m.wx,Y,Z-m.wz]),color);
  for(let i=0;i<64;i+=4){

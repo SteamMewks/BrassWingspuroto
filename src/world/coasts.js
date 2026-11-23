@@ -1,7 +1,7 @@
 const shoreRows=new Map(),shoreTiles=new Map();
 function cutCoast(){
  shoreRows.clear();shoreTiles.clear();
- const m=operation();
+ const m=worldRegion();
  for(const coastRing of worldCoasts){
   const ring=coastRing.map(([X,Z])=>[X-m.wx,Z-m.wz]);
   let prev=ring[ring.length-1];

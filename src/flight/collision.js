@@ -8,7 +8,7 @@ function restartFlight(){
  document.querySelector('.card p').innerHTML=flightInstructions
 }
 function hitObject(X,Z,Y){
- const m=operation();if(Y>=650&&Math.abs(X+m.wx-50000)<11200&&Math.abs(Z+m.wz-50000)<11200){
+ const m=worldRegion();if(Y>=650&&Math.abs(X+m.wx-50000)<11200&&Math.abs(Z+m.wz-50000)<11200){
   if(skyContact(X+m.wx,Y,Z+m.wz))return wonders[0].name;
   const ruin=ruinContact(X+m.wx,Y,Z+m.wz);if(ruin)return ruin
  }for(const s of relics)if(relicDistance(s,X+m.wx,Y,Z+m.wz)<2)return s.name;
@@ -16,7 +16,7 @@ function hitObject(X,Z,Y){
  const rail=railHit(X,Z,Y);if(rail)return rail;
  for(const offset of [-3.8,0,3.8]){
   const px=X+offset*Math.cos(yaw),pz=Z-offset*Math.sin(yaw),py=Y-offset*Math.sin(bank*.62);
-  if(mode==='combat')for(const e of enemies){
+  if(encounter)for(const e of enemies){
    if(e.hp>0&&Math.abs(py-e.y)<2.4&&Math.hypot(px-e.x,pz-e.z)<5.4)return '敵機'
   }
   for(const b of quarters){
@@ -27,7 +27,7 @@ function hitObject(X,Z,Y){
   }
   if(cliffs.length&&hitsArch(px,pz,py))return '岩のアーチ';
   const land=ground(px,pz);if(land&&py-.55<=land)return '地面';
-  const water=riverAt(px+operation().wx,pz+operation().wz);if(water&&py-.55<=water.height)return '川面';
+  const water=riverAt(px+worldRegion().wx,pz+worldRegion().wz);if(water&&py-.55<=water.height)return '川面';
   if(overDeck(px,pz)&&py-.55<=deckHeight)return '船体';
   const carrier=deckAt(px,pz);if(carrier)for(const [dx,dz,y,width,length,height] of shipStructures){
    const axes=deckAxes(carrier,px,pz);
@@ -56,6 +56,7 @@ function impact(px,pz,py){
  return false
 }
 function down(cause){
+  saveAdventure();
   live=false;syncAudio();clearFlightInput();
   crash={cause,age:0,pieces:Array.from({length:36},(_,j)=>({dx:(rand()-.5)*.38,dy:-rand()*.31-.035,spin:(rand()-.5)*8,c:['#b18b52','#454c40','#f9be68','#745247'][j%4]}))};
 }
@@ -66,7 +67,7 @@ function wreck(dt){
   g.fillStyle=bit.c;g.fillRect(-3,-1,7,3);g.restore()
  }
  if(a>=1&&$('cover').hidden){
-  showPanel('crash','GAME OVER',(crash.cause==='エネルギー切れ'?crash.cause:crash.cause+'に接触')+'　'+score+' pt　'+(mode==='combat'?'到達空域 '+sector:'発見 '+found.size))
+  showPanel('crash','GAME OVER',(crash.cause==='エネルギー切れ'?crash.cause:crash.cause+'に接触')+'　'+score+' pt　'+('発見 '+found.size))
 
  }
 }

@@ -34,4 +34,4 @@ const carriers=Object.freeze(Object.fromEntries([
  {"id":"south-cross","name":"南十字","wx":79000,"wz":14200,"heading":2.879793,"region":2,"deck":true,"height":13},
  {"id":"reef-watch","name":"礁嶺","wx":12200,"wz":20100,"heading":1.22173,"region":0,"deck":true,"height":13}
 ].map(b=>[b.id,Object.freeze(b)])));
-const outposts=Object.freeze({...airbases,...carriers});
+const outposts=Object.freeze({...airbases,...carriers,...settlements});

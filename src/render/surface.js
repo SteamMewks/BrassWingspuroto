@@ -30,7 +30,7 @@ const surfaceRenderer=(()=>{
   terrainGpuBytes-=entry.bytes;gpuAreas.delete(key)
  }
  function drawArea(i,j){
-  const m=operation(),distance=Math.hypot((i+.5)*terrainAreaSize-x-m.wx,(j+.5)*terrainAreaSize-z-m.wz);
+  const m=worldRegion(),distance=Math.hypot((i+.5)*terrainAreaSize-x-m.wx,(j+.5)*terrainAreaSize-z-m.wz);
   const coarse=altitudeBand(alt)>=2&&distance>Math.max(1700,6200-(alt-420)*10);
   const key=[i,j,Number(coarse)].join(',');
   let entry=gpuAreas.get(key);
@@ -110,7 +110,7 @@ const surfaceRenderer=(()=>{
     const buffer=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,buffer);gl.bufferData(gl.ARRAY_BUFFER,data,gl.STATIC_DRAW);
     entry={buffer,step,bytes:data.byteLength,count:vertices.length/7};skyBuffers.set(i,entry);skyBytes+=entry.bytes
    }
-   const m=operation();gl.uniform3f(eye,x+m.wx,skyEyeHeight,z+m.wz);bind(entry.buffer);gl.drawArrays(gl.TRIANGLES,0,entry.count);
+   const m=worldRegion();gl.uniform3f(eye,x+m.wx,skyEyeHeight,z+m.wz);bind(entry.buffer);gl.drawArrays(gl.TRIANGLES,0,entry.count);
    gl.uniform3f(eye,x,skyEyeHeight,z)
   },
   hasTrees(){return foliageReady&&!gl.isContextLost()},
@@ -191,7 +191,7 @@ const surfaceRenderer=(()=>{
    if(view.width!==width||view.height!==height){view.width=width;view.height=height}
    gl.viewport(0,0,width,height);gl.clearColor(0,0,0,0);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
    gl.enable(gl.DEPTH_TEST);gl.depthFunc(gl.LEQUAL);gl.useProgram(program);gl.enableVertexAttribArray(pos);gl.enableVertexAttribArray(ink);
-   const m=operation(),X=x+m.wx,Z=z+m.wz;
+   const m=worldRegion(),X=x+m.wx,Z=z+m.wz;
    gl.uniform3f(eye,X,Y,Z);gl.uniform2f(heading,sn,cs);gl.uniform2f(projection,2*f/w,2*f/h);gl.uniform1f(horizon,1-2*sky/h);
    skyEyeHeight=Y;terrainUploadsThisFrame=0;
    if(!inSky)visibleTerrain(X,Z,sn,cs,drawArea);

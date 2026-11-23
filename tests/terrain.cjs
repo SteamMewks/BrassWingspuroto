@@ -8,8 +8,8 @@ const assert=require('node:assert/strict');
   await page.setContent(fs.readFileSync(require.resolve('../BrassWings-preview.html'),'utf8'));
   for(let stage=0;stage<3;stage++){
    const result=await page.evaluate(stage=>{
-    campaign.stage=stage;startFlight('free');
-    const m=operation(),ctx=document.createElement('canvas').getContext('2d'),outline=new Path2D(worldOutline);
+    startFlight(landscapes[stage].departure);enterFlight();
+    const m=worldRegion(),ctx=document.createElement('canvas').getContext('2d'),outline=new Path2D(worldOutline);
     let mismatches=0;
     for(let u=.31;u<1254;u+=11)for(let v=.78;v<1254;v+=13){
      const land=mainlandAt(u*atlasMetre-m.wx,(1254-v)*atlasMetre-m.wz);

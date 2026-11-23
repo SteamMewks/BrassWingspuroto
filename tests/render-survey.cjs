@@ -53,8 +53,8 @@ const output=process.argv[2];fs.mkdirSync(output,{recursive:true});
    for(const site of sites){
     const id=typeof site==='string'?site:site.id;
     const row=await page.evaluate(async ({id,site})=>{
-     titleScreen();$('free-base').value=id==='ocean'?'pelagic':'western-plain';startFlight('free');deckMode='';airspeed=70;power=.45;
-     const m=operation();let cx=base.x,cz=base.z,facing=.35;
+     titleScreen();startFlight(id==='ocean'?'pelagic':'western-plain');deckMode='';airspeed=70;power=.45;
+     const m=worldRegion();let cx=base.x,cz=base.z,facing=.35;
      if(id==='freight'){const p=railCars(railLines[0],0)[0];cx=p.x;cz=p.z;facing=Math.atan2(p.dx,p.dz)}
      if(id==='central'||id==='industry'){const p=id==='central'?railSites.find(p=>p.kind==='central'):railLots.find(p=>p.style==='works');cx=p.x;cz=p.z}
      if(id==='ridge'){cx=regionOrigins[1].wx-m.wx;cz=regionOrigins[1].wz-m.wz+3648}

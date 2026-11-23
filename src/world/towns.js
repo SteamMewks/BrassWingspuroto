@@ -45,7 +45,7 @@ function buildCopperPass(){
 }
 function buildRegion(){
  quarters.length=cliffs.length=roads.length=0;ridgeCells.clear();ridgeFaces.length=0;
- const m=operation(),stage=m.region,[cx,cz]=m.town;
+ const m=worldRegion(),stage=m.region,[cx,cz]=m.town;
  if(stage!==1){
   const inland=stage===0?1:-1;
   function vertex(i,j){

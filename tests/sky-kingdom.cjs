@@ -15,14 +15,14 @@ const path=require('node:path');
    const gl=WebGLRenderingContext.prototype,draw=gl.drawArrays;
    gl.drawArrays=function(mode,start,count){calls++;if(mode===this.TRIANGLES)tris+=count/3;return draw.call(this,mode,start,count)}
   });
-  async function open(){await page.goto('https://offline.test/game');await page.evaluate(()=>{startFlight('free');deckMode='';live=false})}
+  async function open(){await page.goto('https://offline.test/game');await page.evaluate(()=>{startFlight('brass-port');deckMode='';live=false})}
   await open();
   const tests=await page.evaluate(()=>{
    const heights=[];
    for(let i=0;i<64;i++)for(let j=0;j<=20;j++)heights.push(skyVertex(i,j)[1]);
    const peak=Math.max(...heights);
    const dates=Object.fromEntries(journalSites.map((s,i)=>[s.id,new Date(1600000000000+i*1000).toISOString()]));
-   localStorage.setItem(saveKey,JSON.stringify({...campaign,discoveries:dates}));
+   discoveries={...dates};saveAdventure();
    const visits=[];
    for(let i=0;i<20;i++){
     ({x,z}=worldToLocal(27000,56000));yaw=cameraYaw=Math.atan2(23000,-6000);alt=100;draw(.1);
@@ -56,7 +56,7 @@ const path=require('node:path');
    for(let i=0;i<64;i++)for(let j=0;j<=20;j++){const p=skyVertex(i,j);if(!summit||p[1]>summit[1])summit=p}
    ({x,z}=worldToLocal(summit[0]-240,summit[2]));alt=summit[1]+110;yaw=Math.PI/2;power=1;airspeed=132;
    for(let i=0;i<90;i++){const px=x,pz=z,py=alt;advance(.05);if(impact(px,pz,py))throw Error('Summit route blocked')}
-   if(x+operation().wx<summit[0]+240)throw Error('Summit route too short');
+   if(x+worldRegion().wx<summit[0]+240)throw Error('Summit route too short');
    const contacts=[];
    for(const f of [.03,.35,.86,.999,1.01]){
     const X=50000+10000*f,Z=50000,l=skyLevels(X,Z);

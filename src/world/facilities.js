@@ -13,7 +13,19 @@ const basePlans={
 };
 for(const plan of Object.values(basePlans))for(const b of plan)b.y??=0;
 const islandFacilities=[...basePlans.small,...coastalStation.slice(station.length)];
-function baseFacilities(b){return b.island?islandFacilities:basePlans[b.tier]}
+function baseFacilities(b){return b.id==='home'?homeFacilities:b.kind?civilFacilities[b.kind]:b.island?islandFacilities:basePlans[b.tier]}
 // All architecture uses world coordinates, including the near-plane clipping used on deck.
 // Draw the chart and the scenery in one depth buffer. The 2D face path remains available
 // on devices without WebGL. GPU tiles are released as the flight moves away.
+const homeFacilities=[
+ {x:-82,z:-40,y:0,w:60,l:55,h:19,roof:'#508f80'},
+ {x:68,z:10,y:0,w:42,l:34,h:10,roof:'#b37d54'},
+ {x:70,z:60,y:0,w:17,l:20,h:20,roof:'#cfad68'},
+ {x:-80,z:54,y:0,w:38,l:34,h:12,roof:'#697f92'},
+ {x:55,z:-75,y:0,w:19,l:20,h:24,roof:'#659e91'}
+];
+
+const fieldOffice={x:36,z:35,y:0,w:15,l:18,h:7,roof:'#ac845f'};
+const freightShed={x:-38,z:-30,y:0,w:16,l:30,h:8,roof:'#819383'};
+const terminal={x:38,z:-55,y:0,w:19,l:42,h:12,roof:'#9d786c'};
+const civilFacilities={village:[fieldOffice],town:[fieldOffice,freightShed],city:[fieldOffice,freightShed,terminal]};

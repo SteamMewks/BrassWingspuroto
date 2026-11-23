@@ -24,7 +24,7 @@ const fs=require('node:fs');
   console.log(await page.evaluate(()=>{
    if(!surfaceRenderer?.hasTrees())throw Error('WebGL foliage unavailable');
    const baseline=surveyBuffers.bytes;
-   startFlight('free');live=false;deckMode='';
+   startFlight('brass-port');live=false;deckMode='';
    const visit=s=>{x=s.x-100;z=s.z-250;alt=ground(x,z)+120;draw(0)};
    visit(railSites[0]);
    const first=surveyBuffers.uploads;for(let i=0;i<5;i++)draw(0);
