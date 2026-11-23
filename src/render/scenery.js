@@ -1,6 +1,6 @@
 
 function drawScenery(sn,cs,eye,f,horizon,objects){
- updateTerrainFocus();
+ if(!inSky)updateTerrainFocus();
  const accelerated=surfaceRenderer?.begin(sn,cs,eye,f,horizon);
  function sceneryVisible(X,Z,radius){
   const dx=X-x,dz=Z-z,d=32+dx*sn+dz*cs;
@@ -21,7 +21,11 @@ function drawScenery(sn,cs,eye,f,horizon,objects){
   if(screen.every(p=>p[0]<0)||screen.every(p=>p[0]>w)||screen.every(p=>p[1]>h))return;
   objects.push([clipped.reduce((sum,p)=>sum+p[2],0)/clipped.length-order,()=>poly(screen,color)])
  }
- drawSkyland(face,sceneryVisible);
+ if(inSky){
+  drawKingdom(face,sceneryVisible,accelerated);drawCloudBanks(face,sceneryVisible);
+  if(accelerated)surfaceRenderer.end();
+  return
+ }
  drawDistantWonders(face,sceneryVisible);
  drawRelics(face,sceneryVisible,accelerated);
  if(!accelerated)drawSurface(face,sn,cs);drawChannels(face,sn,cs,eye,f,horizon);
@@ -126,7 +130,7 @@ function drawCloudBanks(face,visible){
  const m=operation(),cell=960,wx=x+m.wx,wz=z+m.wz;
  for(let i=-7;i<=7;i++)for(let j=-7;j<=7;j++){
   const a=Math.floor(wx/cell)+i,b=Math.floor(wz/cell)+j,n=noise(a,b,617);
-  if(n<.19)continue;
+  if(n<.19&&!inSky)continue;
   const X=(a+.5)*cell-m.wx,Z=(b+.5)*cell-m.wz;
   if(!visible(X,Z,800))continue;
   const distance=Math.hypot(x-X,z-Z),fade=Math.min(1,Math.max(0,(6500-distance)/1700));

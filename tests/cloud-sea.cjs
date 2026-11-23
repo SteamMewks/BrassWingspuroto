@@ -20,8 +20,8 @@ const path=require('node:path');
   await page.goto('https://offline.test/game');
   const record=await page.evaluate(()=>{
    startFlight('free');deckMode='';live=false;
-   ({x,z}=worldToLocal(50000,50000));alt=950;pitch=1;applyClimb(1);pitch=0;
-   const ceiling=alt,contacts=[480,620,950].map(y=>skyContact(50000,y,50000));
+   ({x,z}=worldToLocal(50000,50000));alt=3190;pitch=1;applyClimb(1);pitch=0;
+   const ceiling=alt,contacts=[480,950,3100].map(y=>skyContact(50000,y,50000));
    for(const s of wonders){
     ({x,z}=worldToLocal(s.x,s.z));
     alt=Math.min(s.maxY,Math.max(s.minY+5,ground(x,z)+25));
@@ -31,7 +31,7 @@ const path=require('node:path');
    return {ceiling,contacts,stable:JSON.stringify(dates)===JSON.stringify(discoveries),
     found:wonders.filter(s=>discoveries[s.id]).length,peak:landElevation(71000,90000)}
   });
-  assert.equal(record.ceiling,960);assert.deepEqual(record.contacts,[false,true,false]);assert.equal(record.found,10);assert.ok(record.stable&&record.peak>1000);
+  assert.equal(record.ceiling,3200);assert.deepEqual(record.contacts,[false,true,false]);assert.equal(record.found,10);assert.ok(record.stable&&record.peak>1000);
   await page.reload();await page.click('#journalOpen');await page.selectOption('#journalCategory',{index:1});
   assert.equal(await page.locator('#entries button:enabled').count(),10);
   await page.locator('#entries button').first().click();assert.match(await page.locator('#entryDetail').innerText(),/50000/);
@@ -41,7 +41,7 @@ const path=require('node:path');
   await page.evaluate(()=>{startFlight('free');live=false;deckMode=''});
   for(const [name,height] of [['low',100],['middle',330],['cloud',525],['above',940]]){
    const stats=await page.evaluate(height=>{
-    ({x,z}=worldToLocal(71900,49000));yaw=cameraYaw=Math.atan2(-1900,1000);alt=height;draw(0);
+    ({x,z}=worldToLocal(61900,49000));yaw=cameraYaw=Math.atan2(-1900,1000);alt=height;draw(0);
     triangleCount=0;draw(0);return {height,triangles:triangleCount,band:altitudeBand(height)}
    },height);
    if(output)await page.screenshot({path:path.join(output,name+'.png')});console.log(stats)

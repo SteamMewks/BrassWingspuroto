@@ -34,6 +34,7 @@ const surfaceRenderer=(()=>{
   const coarse=altitudeBand(alt)>=2&&distance>Math.max(1700,6200-(alt-420)*10);
   const key=[i,j,Number(coarse)].join(',');
   let entry=gpuAreas.get(key);
+  if(!entry&&groundWarmup&&terrainUploadsThisFrame++>=3)return;
   if(entry)gpuAreas.delete(key);
   else{
    const area=terrainArea(i,j),{vertices,triangles,colors}=coarse?aerialTerrain(area):area;
@@ -76,12 +77,42 @@ const surfaceRenderer=(()=>{
  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
  gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,atlas);
  let treeVerts=new Float32Array(36*256);
- const relicBuffers=new Map();
+ const relicBuffers=new Map(),skyBuffers=new Map();
+ let skyEyeHeight=0,skyBytes=0,terrainUploadsThisFrame=0;
+ function releaseSky(i){
+  const entry=skyBuffers.get(i);gl.deleteBuffer(entry.buffer);skyBytes-=entry.bytes;skyBuffers.delete(i)
+ }
  const railCache=new Map();let railBytes=0;
  const skyLayer=document.createElement('canvas'),skyInk=skyLayer.getContext('2d');
  for(const layer of [skyLayer,view,canvas]){layer.style.position='fixed';layer.style.inset='0';layer.style.pointerEvents='none'}
  canvas.before(skyLayer,view);
  return {
+  pruneSkyDetail(distance){
+   if(distance<16500)return;
+   for(const [key,entry] of skyBuffers)if(typeof key==='number'&&entry.step===1)releaseSky(key)
+  },
+  skyTerrainStep(i,d){
+   const old=skyBuffers.get(i)?.step;
+   if(old===1&&d<10000||old===2&&d>9000&&d<16000||old===4&&d>15000)return old;
+   return d<9500?1:d<15500?2:4
+  },
+  dropSkyPart(key){if(skyBuffers.has(key))releaseSky(key)},
+  clearSky(){for(const i of skyBuffers.keys())releaseSky(i)},
+  skyStats(){return {bytes:skyBytes,sectors:skyBuffers.size}},
+  skySector(i,step,build){
+   let entry=skyBuffers.get(i);
+   if(entry&&entry.step!==step){releaseSky(i);entry=null}
+   if(!entry){
+    const vertices=[];
+    build((points,style)=>{const ink=color(style);for(let n=1;n+1<points.length;n++)for(const k of [0,n,n+1])vertices.push(...points[k],...ink)});
+    const data=new Float32Array(vertices);
+    while(skyBytes+data.byteLength>skyBudget&&skyBuffers.size)releaseSky(skyBuffers.keys().next().value);
+    const buffer=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,buffer);gl.bufferData(gl.ARRAY_BUFFER,data,gl.STATIC_DRAW);
+    entry={buffer,step,bytes:data.byteLength,count:vertices.length/7};skyBuffers.set(i,entry);skyBytes+=entry.bytes
+   }
+   const m=operation();gl.uniform3f(eye,x+m.wx,skyEyeHeight,z+m.wz);bind(entry.buffer);gl.drawArrays(gl.TRIANGLES,0,entry.count);
+   gl.uniform3f(eye,x,skyEyeHeight,z)
+  },
   hasTrees(){return foliageReady&&!gl.isContextLost()},
   trees(sn,cs,eyeY,f,sky){
    const range=620*groundDetailRange(eyeY-ground(x,z));
@@ -162,7 +193,8 @@ const surfaceRenderer=(()=>{
    gl.enable(gl.DEPTH_TEST);gl.depthFunc(gl.LEQUAL);gl.useProgram(program);gl.enableVertexAttribArray(pos);gl.enableVertexAttribArray(ink);
    const m=operation(),X=x+m.wx,Z=z+m.wz;
    gl.uniform3f(eye,X,Y,Z);gl.uniform2f(heading,sn,cs);gl.uniform2f(projection,2*f/w,2*f/h);gl.uniform1f(horizon,1-2*sky/h);
-   visibleTerrain(X,Z,sn,cs,drawArea);
+   skyEyeHeight=Y;terrainUploadsThisFrame=0;
+   if(!inSky)visibleTerrain(X,Z,sn,cs,drawArea);
    size=0;gl.uniform3f(eye,x,Y,z);return true
   },
   face(pts,style){

@@ -1,6 +1,6 @@
 
 function buildWorld(){
- clearTerrain();terrainFocus='';
+ leaveSky();ruinDistrictCache.clear();clearTerrain();terrainFocus='';
  terraces.length=isles.length=groves.length=groundPixels.length=0;tileCache.clear();tileKey='';
  const m=operation();
  localBases=Object.values(airbases).map(b=>({...b,...worldToLocal(b.wx,b.wz,m),...baseAssignment(m,b.id)}));
@@ -54,13 +54,15 @@ function buildWorld(){
  for(const survey of railSurvey){mapContext.beginPath();survey.points.forEach(([X,Z],i)=>mapContext[i?'lineTo':'moveTo'](X*mapScale,(worldSize-Z)*mapScale));mapContext.lineWidth=.65;mapContext.strokeStyle='#a97649';mapContext.stroke()}
 }
 function updateWorld(){
+ if(inSky)return;
  updateTerrainFocus();
  const m=operation(),tx=Math.floor(x/256),tz=Math.floor(z/256);
- if(tileKey===tx+','+tz)return;
+ if(!groundWarmup&&tileKey===tx+','+tz)return;
  tileKey=tx+','+tz;groves.length=groundPixels.length=0;
  for(let i=tx-2;i<=tx+2;i++)for(let j=tz-2;j<=tz+2;j++){
   const key=i+','+j;
   let tile=tileCache.get(key);
+  if(!tile&&groundWarmup&&alt>200&&Math.max(Math.abs(tx-i),Math.abs(tz-j))>Math.floor((12-groundWarmup)/3))continue;
   if(!tile){
    tile={trees:[],pixels:[]};tileCache.set(key,tile);
    const cx=(i+.5)*256,cz=(j+.5)*256;

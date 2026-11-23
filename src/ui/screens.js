@@ -20,7 +20,7 @@ function showPanel(state,title,description){
 
 }
 function titleScreen(){
- clearTerrain();terrainFocus=tileKey='';tileCache.clear();groves.length=groundPixels.length=0;
+ leaveSky();ruinDistrictCache.clear();clearTerrain();terrainFocus=tileKey='';tileCache.clear();groves.length=groundPixels.length=0;
  live=false;crash=null;trial=freeOperation=null;$('operation-choice').value='';$('free-base').value='';showPanel('title','Brass Wings','');
  document.querySelector('.card p').innerHTML=flightInstructions;atlas()
 }

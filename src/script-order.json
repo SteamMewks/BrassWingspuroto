@@ -10,6 +10,8 @@
   "world/noise.js",
   "data/terrainArchive.js",
   "world/wonders.js",
+  "world/sky-kingdom.js",
+  "world/sky-ruins.js",
   "data/wonderSkylines.js",
   "world/terrain.js",
   "world/scale.js",

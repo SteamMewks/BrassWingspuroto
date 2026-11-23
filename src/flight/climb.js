@@ -7,7 +7,7 @@ function applyClimb(dt){
 const flightInstructions=document.querySelector('.card p').innerHTML;
 $('menu').onclick=titleScreen;$('free').onclick=()=>startFlight('free');
 $('go').onclick=()=>{if(panel==='hangar'){campaign.hangar=false;saveCampaign();startFlight('combat');return}if(panel==='pause'){enterFlight()}else if(panel!=='title')startFlight(mode)};
-const flightCeiling=960;
+const flightCeiling=3200;
 function altitudeBand(height){
  return height<220?0:height<420?1:height<620?2:3
 }
