@@ -1,4 +1,5 @@
 function advance(dt){
+ const previousAltitude=alt;
  const targetSpeed=78+54*power;
  airspeed+=(targetSpeed-airspeed)*(1-Math.exp(-dt*3.6));
  const speed=airspeed;
@@ -29,5 +30,6 @@ function advance(dt){
  }
  x+=Math.sin(yaw)*forward+Math.cos(yaw)*side;
  z+=Math.cos(yaw)*forward-Math.sin(yaw)*side;
+ if(trick&&alt>previousAltitude)alt=Math.min(alt,Math.max(previousAltitude,ground(x,z)+flightCeiling));
  alt=Math.max(.65,alt);
 }

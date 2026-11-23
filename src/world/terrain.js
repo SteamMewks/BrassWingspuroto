@@ -47,6 +47,7 @@ function terrainArea(i,j){
  if(existing){terrainAreas.delete(key);terrainAreas.set(key,existing);return existing}
  const {vertices,triangles,colors}=unpackTerrain(packed);
  const wx=(i+.5)*terrainAreaSize,wz=(j+.5)*terrainAreaSize;
+ shapeWonderTerrain(wx,wz,vertices,triangles,colors);
  const area={wx,wz,vertices,triangles,colors,collision:null,bytes:vertices.byteLength+triangles.byteLength+colors.byteLength};
  terrainAreas.set(key,area);terrainAreaBytes+=area.bytes;terrainLoads++;trimTerrain();
  return area
@@ -159,3 +160,26 @@ function ground(X,Z){
  return elevation??0
 }
 // Atlas coordinates are metres, measured east and north from the southwest corner.
+
+// Cluster interior survey vertices for the aerial view. Keep tile borders and
+// water edges fixed so neighbouring detailed tiles meet the same coastline.
+function aerialTerrain(area){
+ const {vertices,triangles,colors}=area;
+ const groups=new Map(),indices=new Uint32Array(vertices.length/3),points=[];
+ for(let n=0;n<indices.length;n++){
+  const k=3*n,u=vertices[k],v=vertices[k+1],y=vertices[k+2];
+  const fixed=Math.max(Math.abs(u),Math.abs(v))>=20478||y<120;
+  const key=fixed?'v'+n:Math.floor(u/3200)+','+Math.floor(v/3200);
+  let point=groups.get(key);
+  if(!point){point={k:points.length,count:0,u:0,v:0,y:0};points.push(point);groups.set(key,point)}
+  indices[n]=point.k;point.count++;point.u+=u;point.v+=v;point.y+=y
+ }
+ const positions=[],faces=[],ink=[];
+ for(const p of points)positions.push(p.u/p.count,p.v/p.count,p.y/p.count);
+ for(let k=0;k<triangles.length;k+=3){
+  const a=indices[triangles[k]],b=indices[triangles[k+1]],c=indices[triangles[k+2]];
+  if(!colors[k]||a===b||b===c||a===c)continue;
+  faces.push(a,b,c);ink.push(colors[k],colors[k+1],colors[k+2])
+ }
+ return {vertices:positions,triangles:faces,colors:ink}
+}

@@ -9,6 +9,8 @@
   "render/aircraft.js",
   "world/noise.js",
   "data/terrainArchive.js",
+  "world/wonders.js",
+  "data/wonderSkylines.js",
   "world/terrain.js",
   "world/scale.js",
   "data/surveyOutline.js",

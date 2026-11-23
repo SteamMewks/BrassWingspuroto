@@ -4,6 +4,11 @@ function minimapBox(){
 }
 function discoverRelics(){
  const {wx,wz}=localToWorld(x,z);
+ for(const s of wonders){
+  if(discoveries[s.id]||!withinWonder(s,wx,alt,wz))continue;
+  discoveries[s.id]=new Date().toISOString();saveCampaign();
+  message=s.name+' 発見　探訪記録に登録されました';messageUntil=t+4
+ }
  for(const s of relics)if(!discoveries[s.id]&&relicDistance(s,wx,alt,wz)<s.reach){
   discoveries[s.id]=new Date().toISOString();saveCampaign();
   message='未知の構造物を発見 — '+s.name+'　探訪記録に登録されました';messageUntil=t+4
@@ -15,7 +20,7 @@ function worldMinimap(){
  g.fillStyle='rgba(24,40,44,.82)';g.fillRect(left,top,side,side);
  g.drawImage(worldMap,left+4,top+4,side-8,side-8);
  g.strokeStyle='#d3b783';g.lineWidth=1;g.strokeRect(left+4,top+4,side-8,side-8);
- g.fillStyle='#ffe999';for(const s of relics)if(discoveries[s.id])g.fillRect(X(s.x)-2,Z(s.z)-2,4,4);
+ g.fillStyle='#ffe999';for(const s of journalSites)if(discoveries[s.id])g.fillRect(X(s.x)-2,Z(s.z)-2,4,4);
  g.fillStyle='#e3bd79';
  for(const b of Object.values(airbases))g.fillRect(X(b.wx)-1,Z(b.wz)-1,2,2);
  g.fillStyle='#a5dfe3';for(const b of Object.values(carriers))g.fillRect(X(b.wx)-1,Z(b.wz)-1,3,2);
