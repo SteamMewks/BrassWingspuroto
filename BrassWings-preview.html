@@ -219,6 +219,7 @@ function services(){
  const town=b.kind&&b.kind!=='home';
  showPanel('service',b.name,(industries[b.industry]||'航空施設')+'　所持金 '+adventure.money+'　商品 '+adventure.goods+'　依頼品 '+Number(adventure.job?.kind==='delivery'));
  if(town){
+  action('旅の記録',travelLog);
   action('住民と話す',()=>{document.querySelector('.card p').textContent=b.name+'の住民「'+(industries[b.industry]||'地元')+'の品が必要なら掲示板へ。天象演算儀は東の高地にあるそうだ。」'});
   action('依頼掲示板・報告',jobs);
   action('商店　物資を買う · 5',()=>{adventure.money-=5;adventure.goods++;saveAdventure();services()},adventure.money<5||adventure.goods+Number(adventure.job?.kind==='delivery')>=8);
@@ -231,10 +232,15 @@ function services(){
   if(b.id==='home'){
    action('倉庫に預ける',()=>{adventure.goods--;adventure.stored++;saveAdventure();services()},!adventure.goods);
    action('倉庫から取り出す · 在庫 '+adventure.stored,()=>{adventure.goods++;adventure.stored--;saveAdventure();services()},!adventure.stored||adventure.goods+Number(adventure.job?.kind==='delivery')>=8);
-   action('依頼を確認',jobs)
+   action('依頼を確認',jobs);action('旅の記録',travelLog)
   }
  }
  action('飛行場へ戻る',dockMenu)
+}
+function travelLog(){
+ const towns=adventure.visited.filter(id=>settlements[id]&&id!=='home').map(id=>outposts[id].name);
+ showPanel('log','旅の記録','訪問した町村　'+(towns.join('・')||'まだありません')+'。解放 '+adventure.liberated.length+' 拠点、空賊撃退 '+adventure.kills+' 機。'+(adventure.skyClue?' 観測の手掛かり　中央大海の上空610 mへ。':''));
+ action('戻る',services)
 }
 function jobDestination(){
  const job=adventure.job;

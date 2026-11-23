@@ -47,17 +47,30 @@ const {chromium}=require('playwright');
    check(!selectable(forbidden.id)&&!selectable('nonexistent'),'hostile or unknown travel');
    enterFlight();deckMode='';const previous=adventure.last;travelMenu(false);
    check(panel==='flight'&&adventure.last===previous,'airborne travel');
-   const target=localShips.find(b=>affiliation(b.id)==='pirate');
-   x=target.x;z=target.z;alt=160;deckMode='';live=true;fight(.05);check(enemies.length===3,'defenders');
-   const moneyBefore=adventure.money,killsBefore=adventure.kills;
-   for(let hit=0;hit<2;hit++){
-    for(const e of enemies)bolts.push({x:e.x,y:e.y,z:e.z,dx:0,dy:0,dz:0,life:1});
-    fight(0)
+   const successes=[];
+   for(const id of [forbidden.id,localShips.find(b=>affiliation(b.id)==='pirate').id]){
+    const target=[...localBases,...localShips].find(b=>b.id===id);
+    x=target.x;z=target.z;alt=target.height+160;deckMode='';live=true;fight(.05);check(enemies.length===3,'defenders');
+    x+=3400;fight(0);check(!encounter&&affiliation(target.id)==='pirate','retreat');
+    x=target.x;fight(0);
+    const moneyBefore=adventure.money,killsBefore=adventure.kills;
+    for(let hit=0;hit<2;hit++){
+     for(const e of enemies)bolts.push({x:e.x,y:e.y,z:e.z,dx:0,dy:0,dz:0,life:1});
+     fight(0)
+    }
+    fight(.05);
+    check(adventure.kills===killsBefore+3&&adventure.money===moneyBefore+60,'single reward');
+    check(selectable(target.id)&&landingPorts.includes(target)&&target.side==='friendly','liberation');
+    startFlight(target.id);services();check(panel==='service','liberated service');successes.push(target.id)
    }
-   check(adventure.kills===killsBefore+3&&adventure.money===moneyBefore+60,'single reward');
-   fight(.05);check(selectable(target.id)&&landingPorts.includes(target),'liberation');return target.id
+   return successes
   });
-  await page.reload();assert.ok(await page.evaluate(id=>adventure.liberated.includes(id),result));assert.deepEqual(errors,[]);
-  console.log('Landing, flags ownership eligibility, carrier liberation, persistence and three layouts checked')
+  await page.reload();assert.ok(await page.evaluate(ids=>ids.every(id=>adventure.liberated.includes(id)),result));
+  await page.evaluate(()=>{const raw=JSON.parse(localStorage.getItem(saveKey));raw.last='reefs-missing';raw.liberated.push('home');localStorage.setItem(saveKey,JSON.stringify(raw))});
+  await page.reload();await page.getByText('冒険を始める・再開').click();
+  assert.ok(await page.evaluate(()=>landingSite.id==='home'&&affiliation('home')==='player'&&!adventure.liberated.includes('home')));
+  assert.deepEqual(errors,[]);
+  console.log('Runways, flag meshes, blocked landing, retreat, liberation, persistence and home fallback passed')
+
  }finally{await browser.close()}
 })().catch(e=>{console.error(e);process.exitCode=1})
