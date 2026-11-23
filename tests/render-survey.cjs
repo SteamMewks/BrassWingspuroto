@@ -36,7 +36,7 @@ const output=process.argv[2];fs.mkdirSync(output,{recursive:true});
    });
    const html=fs.readFileSync(process.env.BRASS_HTML||require.resolve('../BrassWings-preview.html'),'utf8');
    const initialized=Date.now();
-   await page.setContent(html);
+   await page.setContent(html);await page.evaluate(require('./helpers/adventure.cjs'),{liberated:'all',visited:'all',tutorial:'done'});
    const startupMs=Date.now()-initialized;
    const {titleGpu,renderer}=await page.evaluate(()=>{
     const gl=[...document.querySelectorAll('canvas')].map(canvas=>canvas.getContext('webgl')).find(Boolean);

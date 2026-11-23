@@ -28,7 +28,7 @@ async function measure(browser,file){
   }
  });
  const html=fs.readFileSync(file,'utf8'),start=performance.now();
- await page.setContent(html);
+ await page.setContent(html);await page.evaluate(require('./helpers/adventure.cjs'),{liberated:'all',visited:'all',tutorial:'done'});
  const init=Math.round(performance.now()-start);
  const results=await page.evaluate(async()=>{
   titleScreen();startFlight('brass-port');live=false;deckMode='';

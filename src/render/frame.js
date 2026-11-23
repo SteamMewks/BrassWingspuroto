@@ -1,13 +1,6 @@
-function draw(dt){
- if(panel==='title'){
-  surfaceRenderer?.hide();
-  if(aircraftLayer)aircraftLayer.hidden=true;
-  const backdrop=frontInk.createLinearGradient(0,0,0,h);
-  backdrop.addColorStop(0,'#52496b');backdrop.addColorStop(.44,'#c87976');backdrop.addColorStop(1,'#29474e');
-  frontInk.fillStyle=backdrop;frontInk.fillRect(0,0,w,h);return
- }
+function updateFlight(dt){
  if(live)railClock+=dt;
- if(live)enterNearbyRegion();
+ if(live){enterNearbyRegion();tutorialFlightHints()}
  selectFlightLayer(dt);
  if(!inSky)updateWorld();
  const wasWaiting=deckMode==='moored';
@@ -22,6 +15,16 @@ function draw(dt){
   if(Math.abs(error)<.12)returnHeading=null
  }
  bank+=(Math.max(-1,Math.min(1,lr))-bank)*(1-Math.exp(-8*dt));pitch+=(Math.max(-1,Math.min(1,ud))-pitch)*(1-Math.exp(-6*dt));yaw+=bank*dt*(returning?2:1.03+.15*power);if(!trick)applyClimb(dt);advance(dt);limitAirspace();discoverRelics();if(!impact(px,pz,py)){fight(dt);updateSpray(dt)}cameraYaw+=(yaw-cameraYaw)*(1-Math.exp(-5.6*dt));t+=dt}
+}
+function draw(dt){
+ if(panel==='title'){
+  surfaceRenderer?.hide();
+  if(aircraftLayer)aircraftLayer.hidden=true;
+  const backdrop=frontInk.createLinearGradient(0,0,0,h);
+  backdrop.addColorStop(0,'#52496b');backdrop.addColorStop(.44,'#c87976');backdrop.addColorStop(1,'#29474e');
+  frontInk.fillStyle=backdrop;frontInk.fillRect(0,0,w,h);return
+ }
+ updateFlight(dt);
 g=surfaceRenderer?.sky()||frontInk;
 let horizon=h*(.36+pitch*.09),f=h*(.62-.10*Math.max(0,(airspeed-78)/54));let sky=g.createLinearGradient(0,0,0,horizon);sky.addColorStop(0,'#52496b');sky.addColorStop(.65,'#c87976');sky.addColorStop(1,'#f4b479');g.fillStyle=sky;g.fillRect(0,0,w,horizon+1);const sunAngle=.12-cameraYaw;if(Math.cos(sunAngle)>.1){let sunX=w/2+f*Math.tan(sunAngle),radius=h*.033;ellipse(sunX,horizon-radius*(1.7-Math.min(1,t/180)*2.5),radius,radius,'#ffda9b')}const seaBands=inSky?['#e3d2c5','#eddfd4','#eadfd7','#e7dad2','#dfd5cf','#e7dad2','#efdfd4','#e7dad2','#e6d7cd','#e3d2c5']:waterPalette(x+worldRegion().wx,z+worldRegion().wz);
 for(let i=0;i<seaBands.length;i++){
@@ -164,7 +167,7 @@ if(!inSky){
  if(aim&&!crash){g.beginPath();g.arc(aim[0],aim[1],8,0,tau);g.lineWidth=1.5;g.strokeStyle='#fff1c7';g.stroke()}
  if(locked&&locked.hp){const mark=project(locked.x,locked.z,locked.y);if(mark){const [a,b,k]=mark,r=Math.max(11,k*9);g.strokeStyle="#aaf5cd";g.lineWidth=2;g.strokeRect(a-r,b-r,r*2,r*2)}}
  const enemy=locked?.hp?locked:enemies.filter(e=>e.hp>0).sort((a,b)=>Math.hypot(a.x-x,a.z-z)-Math.hypot(b.x-x,b.z-z))[0];
- $('place').textContent=encounter.name+' 空賊 '+enemies.filter(e=>e.hp).length+'機';
+ battleMinimap();$('place').textContent=encounter.name+' 空賊 '+enemies.filter(e=>e.hp).length+'機';
  }else{worldMinimap();let dir=target?Math.atan2(target[0]-x,target[1]-z)-yaw:0;$('place').textContent=target?['↑','↗','→','↘','↓','↙','←','↖'][(Math.round(dir/(tau/8))%8+8)%8]+' '+target[2]+'　'+(nearest/1000).toFixed(1)+' km　'+'発見 '+found.size:'自由飛行'}
  if((adventure.job||waypointId)&&!deckMode&&!encounter){
   const site=outposts[waypointId]||jobDestination(),p=worldToLocal(site.wx,site.wz),angle=Math.atan2(p.x-x,p.z-z)-yaw;

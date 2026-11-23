@@ -171,35 +171,41 @@ function showPanel(state,title,description){
  $('actions').replaceChildren();$('atlas').hidden=!['title','pause','travel'].includes(state);
  $('journalOpen').hidden=false;syncAudio();
  if(state==='pause')atlas();
- if(state==='crash')action('安全な拠点で再開',()=>startFlight(adventure.last));
+ if(state==='crash')action(adventure.tutorial==='done'?'安全な拠点で再開':'本拠地から再挑戦',()=>startFlight(adventure.tutorial==='done'?adventure.last:'home'));
  if(state==='pause'){action('飛行を再開',enterFlight);action('航路を設定',()=>navigationMenu(true))}
 }
 function titleScreen(){
  leaveSky();ruinDistrictCache.clear();clearTerrain();tileCache.clear();groves.length=groundPixels.length=0;clearEncounter();crash=null;needsRedraw=true;
  showPanel('title','Brass Wings','群島飛行記　町村で仕事を引き受け、雲海の向こうへ。');atlas();
- action('冒険を始める・再開',()=>startFlight(adventure.last));
- action('出発地点を選ぶ',()=>travelMenu(true))
+ action('新規ゲーム',()=>hasStoredRecord?confirmRecord(false):newAdventure());
+ action('続きから',()=>{if(hasRecord)startFlight(adventure.last)},!hasRecord);
+ action('記録を初期化',()=>confirmRecord(true))
+}
+function confirmRecord(erase){
+ showPanel('confirm',erase?'記録を初期化':'新規ゲーム','冒険進行、所持金、所持品、倉庫、解放・訪問地点、依頼、機体改造、発見記録、チュートリアル進行を消去します。この操作は取り消せません。');
+ action('キャンセル',titleScreen);action(erase?'記録を消去する':'上書きして始める',erase?eraseAdventure:newAdventure)
 }
 function startFlight(id){
  if(!selectable(id))id='home';
  const site=outposts[id];regionContext={...landscapes[site.region],departure:id};
- returnHeading=null;restartFlight();clearEncounter();energy=100-adventure.wear;ammo=90+adventure.mag*20;buildWorld();parkAtStart();updateWorld();enterFlight();draw(0);arrive(base)
+ encounterDelay=0;reentryBlocked.clear();returnHeading=null;restartFlight();clearEncounter();energy=100-adventure.wear;ammo=90+adventure.mag*20;buildWorld();parkAtStart();updateWorld();enterFlight();draw(0);arrive(base)
 }
 function arrive(port){
+ if(affiliation(port.id)==='pirate')return;
  if(waypointId===port.id)waypointId=null;
  adventure.last=port.id;if(!adventure.visited.includes(port.id))adventure.visited.push(port.id);
  const job=adventure.job;if(job?.kind==='delivery'&&job.to===port.id)job.ready=true;
  power=0;$('thrust').value=0;
- if(port.id==='home'||encounter&&Math.hypot(port.x-encounter.x,port.z-encounter.z)>3200)clearEncounter();
- saveAdventure();dockMenu()
+ if(port.id==='home'||encounter&&outsideBattle(port.wx,port.wz))clearEncounter();
+ saveAdventure();dockMenu();tutorialArrival(port)
 }
 function dockMenu(){
  const b=landingSite;showPanel('dock',b.name,labels[affiliation(b.id)]+(b.kind&&b.kind!=='home'?'・'+({city:'大型都市',town:'町',village:'村'})[b.kind]:'')+'　所持金 '+adventure.money+'　積荷 '+adventure.goods+'/8');
  action(b.kind&&b.kind!=='home'?'町に入る':'施設を利用',services);
- action('移動先を選ぶ',()=>travelMenu(false),Boolean(encounter));
- action('離陸',()=>{if(deckMode!=='moored'||affiliation(landingSite.id)==='pirate')return;deckMode='launch';deckTime=0;power=.78;$('thrust').value=78;enterFlight()});
+ action('移動先を選ぶ',()=>travelMenu(),Boolean(encounter));
+ action('離陸',()=>{if(deckMode!=='moored'||affiliation(landingSite.id)==='pirate')return;deckMode='launch';deckTime=0;power=.78;$('thrust').value=78;enterFlight();tutorialLaunch()});
  action('航路を設定',()=>navigationMenu(false));
- action('タイトルへ',titleScreen,Boolean(encounter))
+ action('操作説明',()=>flightHelp(dockMenu));action('タイトルへ',titleScreen,Boolean(encounter))
 }
 function navigationMenu(airborne){
  showPanel('travel','航路を設定','目的地を選ぶと、飛行中に方位と距離を表示します。');atlas();
@@ -207,11 +213,15 @@ function navigationMenu(airborne){
  action('戻る',back);
  for(const site of Object.values(outposts))action(site.name+'・'+labels[affiliation(site.id)],()=>{waypointId=site.id;back()})
 }
-function travelMenu(start){
- if(start?panel!=='title':live||encounter||deckMode!=='moored'||affiliation(landingSite.id)==='pirate')return;
- showPanel('travel','航路図','青は友好、黄は中立、赤は空賊。中立は自力で初訪問すると移動先に登録。');atlas();
- for(const b of Object.values(outposts))action(b.name+'・'+labels[affiliation(b.id)],()=>startFlight(b.id),!selectable(b.id));
- action('戻る',start?titleScreen:dockMenu)
+function travelMenu(){
+ if(panel!=='dock'||live||encounter||deckMode!=='moored'||affiliation(landingSite.id)==='pirate')return;
+ showPanel('travel','航路図','青は解放済み、赤は空賊占領。着陸した解放地点へ移動できます。');atlas();
+ for(const b of Object.values(outposts))action(b.name+'・'+labels[affiliation(b.id)],()=>fastTravel(b.id),!selectable(b.id));
+ action('戻る',dockMenu)
+}
+function fastTravel(id){
+ if(panel!=='travel'||live||encounter||deckMode!=='moored'||!landingSite||affiliation(landingSite.id)==='pirate'||!selectable(id))return false;
+ startFlight(id);return true
 }
 const industries={works:'工業',timber:'林業',mine:'鉱業',farm:'農業',central:'商業'};
 function services(){
@@ -981,21 +991,21 @@ function localToWorld(X,Z,origin=worldRegion()){return {wx:origin.wx+X,wz:origin
 const runwayHeight=10,runwayWidth=36,runwayLength=300;
 const gradingSites={"western-plain":{"id":"western-plain","x":22000,"z":40000,"rx":240,"rz":190,"buffer":225,"h":58.5,"island":false},"port-plain":{"id":"port-plain","x":30587.240829346098,"z":32245.7735247209,"rx":222,"rz":181,"buffer":165,"h":10.0,"island":false},"east-fields":{"id":"east-fields","x":31787.240829346098,"z":33445.7735247209,"rx":127,"rz":176,"buffer":115,"h":10.0,"island":false},"west-foundry":{"id":"west-foundry","x":19520,"z":72000,"rx":240,"rz":190,"buffer":225,"h":39.5,"island":false},"north-grain":{"id":"north-grain","x":34000,"z":86480,"rx":222,"rz":181,"buffer":165,"h":49.0,"island":false},"pine-yard":{"id":"pine-yard","x":13600,"z":58000,"rx":222,"rz":181,"buffer":165,"h":64.5,"island":false},"amber-bay":{"id":"amber-bay","x":34480,"z":70480,"rx":222,"rz":181,"buffer":165,"h":38.0,"island":false},"moor-watch":{"id":"moor-watch","x":11520,"z":44960,"rx":127,"rz":176,"buffer":115,"h":45.5,"island":false},"west-cape":{"id":"west-cape","x":7760,"z":64000,"rx":127,"rz":176,"buffer":115,"h":43.0,"island":false},"silver-ridge":{"id":"silver-ridge","x":24880,"z":82960,"rx":127,"rz":176,"buffer":115,"h":96.0,"island":false},"reed-bank":{"id":"reed-bank","x":15120,"z":29520,"rx":127,"rz":176,"buffer":115,"h":11.0,"island":false},"north-firth":{"id":"north-firth","x":44000,"z":79200,"rx":127,"rz":176,"buffer":115,"h":92.0,"island":false},"smoke-highlands":{"id":"smoke-highlands","x":78702.47208931421,"z":73979.10685805423,"rx":240,"rz":190,"buffer":225,"h":10.0,"island":false},"valley-east":{"id":"valley-east","x":86240,"z":84800,"rx":222,"rz":181,"buffer":165,"h":19.0,"island":false},"copper-works":{"id":"copper-works","x":78852.47208931421,"z":78879.10685805423,"rx":222,"rz":181,"buffer":165,"h":10.0,"island":false},"high-firth":{"id":"high-firth","x":66480,"z":83120,"rx":127,"rz":176,"buffer":115,"h":32.0,"island":false},"slate-bay":{"id":"slate-bay","x":89360,"z":62560,"rx":127,"rz":176,"buffer":115,"h":39.5,"island":false},"south-foundry":{"id":"south-foundry","x":66560,"z":29680,"rx":240,"rz":190,"buffer":225,"h":69.0,"island":false},"coal-quay":{"id":"coal-quay","x":77520,"z":36480,"rx":222,"rz":181,"buffer":165,"h":60.5,"island":false},"south-grain":{"id":"south-grain","x":52720,"z":20320,"rx":222,"rz":181,"buffer":165,"h":48.5,"island":false},"red-cape":{"id":"red-cape","x":91680,"z":42000,"rx":127,"rz":176,"buffer":115,"h":78.5,"island":false},"clay-works":{"id":"clay-works","x":64000,"z":15360,"rx":127,"rz":176,"buffer":115,"h":53.5,"island":false},"brass-port":{"id":"brass-port","x":29987.240829346098,"z":30845.7735247209,"rx":127,"rz":176,"buffer":115,"h":10,"island":true},"red-strait":{"id":"red-strait","x":82775.11961722489,"z":49505.10366826157,"rx":127,"rz":176,"buffer":115,"h":10,"island":true}};
 const settlements = Object.fromEntries([
- {"id": "brass-city", "name": "黄銅港市", "region": 0, "wx": 30487.24, "wz": 34591.77, "height": 10, "kind": "city", "industry": "works", "width": 36, "length": 300, "tier": "medium"},
- {"id": "west-city", "name": "西都鋳造廠", "region": 0, "wx": 18480.24, "wz": 72300.77, "height": 20.23, "kind": "city", "industry": "central", "width": 36, "length": 300, "tier": "medium"},
- {"id": "casting-town", "name": "鋳物師町", "region": 0, "wx": 21766.24, "wz": 69803.77, "height": 8.14, "kind": "town", "industry": "works", "width": 28, "length": 250, "tier": "small"},
- {"id": "home", "name": "真鍮の翼工房", "region": 0, "wx": 31437.24, "wz": 34051.77, "height": 10, "kind": "home", "industry": "works", "width": 36, "length": 300, "tier": "large"},
- {"id": "smoke-city", "name": "紫煙の屈曲谷", "region": 1, "wx": 75902.47, "wz": 77429.11, "height": 10, "kind": "city", "industry": "works", "width": 36, "length": 300, "tier": "medium"},
- {"id": "windmill", "name": "風車村", "region": 1, "wx": 30278.47, "wz": 84854.11, "height": 137.11, "kind": "village", "industry": "farm", "width": 22, "length": 210, "tier": "small"},
- {"id": "mill-village", "name": "北原粉挽村", "region": 1, "wx": 36026.47, "wz": 85211.11, "height": 8, "kind": "village", "industry": "farm", "width": 22, "length": 210, "tier": "small"},
- {"id": "copper-city", "name": "赤棚鉱山市", "region": 1, "wx": 78684.47, "wz": 79577.11, "height": 10, "kind": "city", "industry": "mine", "width": 36, "length": 300, "tier": "medium"},
- {"id": "red-city", "name": "赤銅要塞群島", "region": 2, "wx": 82775.12, "wz": 47325.1, "height": 10, "kind": "city", "industry": "works", "width": 36, "length": 300, "tier": "medium"},
- {"id": "fortress-town", "name": "要塞鋳物町", "region": 2, "wx": 79801.12, "wz": 47182.1, "height": 10, "kind": "town", "industry": "works", "width": 28, "length": 250, "tier": "small"},
- {"id": "charcoal", "name": "炭焼村", "region": 2, "wx": 74788.12, "wz": 35907.1, "height": 17.62, "kind": "village", "industry": "timber", "width": 22, "length": 210, "tier": "small"},
- {"id": "smelter", "name": "南都精錬町", "region": 2, "wx": 66398.12, "wz": 32796.1, "height": 28.56, "kind": "city", "industry": "works", "width": 36, "length": 300, "tier": "medium"},
- {"id": "south-city", "name": "南銅都", "region": 2, "wx": 65513.12, "wz": 32155.1, "height": 8, "kind": "city", "industry": "central", "width": 36, "length": 300, "tier": "medium"},
+ {"id": "brass-city", "name": "黄銅港市", "region": 0, "wx": 27656, "wz": 36649, "height": 10.73, "kind": "city", "industry": "works", "width": 36, "length": 300, "tier": "medium"},
+ {"id": "west-city", "name": "西都鋳造廠", "region": 0, "wx": 20410, "wz": 68514, "height": 8, "kind": "city", "industry": "central", "width": 36, "length": 300, "tier": "medium"},
+ {"id": "casting-town", "name": "鋳物師町", "region": 0, "wx": 21766, "wz": 65554, "height": 3, "kind": "town", "industry": "works", "width": 28, "length": 250, "tier": "small"},
+ {"id": "smoke-city", "name": "紫煙の屈曲谷", "region": 1, "wx": 75238, "wz": 81627, "height": 10.39, "kind": "city", "industry": "works", "width": 36, "length": 300, "tier": "medium"},
+ {"id": "windmill", "name": "風車村", "region": 1, "wx": 28368, "wz": 87483, "height": 8, "kind": "village", "industry": "farm", "width": 22, "length": 210, "tier": "small"},
+ {"id": "mill-village", "name": "北原粉挽村", "region": 1, "wx": 40224, "wz": 84546, "height": 8, "kind": "village", "industry": "farm", "width": 22, "length": 210, "tier": "small"},
+ {"id": "copper-city", "name": "赤棚鉱山市", "region": 1, "wx": 75246, "wz": 77079, "height": 10.05, "kind": "city", "industry": "mine", "width": 36, "length": 300, "tier": "medium"},
+ {"id": "red-city", "name": "赤銅要塞群島", "region": 2, "wx": 81848, "wz": 44472, "height": 10, "kind": "city", "industry": "works", "width": 36, "length": 300, "tier": "medium"},
+ {"id": "fortress-town", "name": "要塞鋳物町", "region": 2, "wx": 77899, "wz": 47800, "height": 10.07, "kind": "town", "industry": "works", "width": 28, "length": 250, "tier": "small"},
+ {"id": "charcoal", "name": "炭焼村", "region": 2, "wx": 72584, "wz": 32873, "height": 8, "kind": "village", "industry": "timber", "width": 22, "length": 210, "tier": "small"},
+ {"id": "smelter", "name": "南都精錬町", "region": 2, "wx": 65377, "wz": 34801, "height": 16.24, "kind": "city", "industry": "works", "width": 36, "length": 300, "tier": "medium"},
+ {"id": "south-city", "name": "南銅都", "region": 2, "wx": 66397, "wz": 33039, "height": 29.61, "kind": "city", "industry": "central", "width": 36, "length": 300, "tier": "medium"},
  {"id": "kiln", "name": "登窯集落", "region": 2, "wx": 65122.12, "wz": 20947.1, "height": 195.99, "kind": "village", "industry": "works", "width": 22, "length": 210, "tier": "small"},
- {"id": "net-village", "name": "東岸網元村", "region": 2, "wx": 85790.12, "wz": 47446.1, "height": 10, "kind": "village", "industry": "works", "width": 22, "length": 210, "tier": "small"}
+ {"id": "net-village", "name": "東岸網元村", "region": 2, "wx": 88012, "wz": 47094, "height": 10.1, "kind": "village", "industry": "works", "width": 22, "length": 210, "tier": "small"},
+ {"id": "home", "name": "真鍮の翼工房", "region": 0, "wx": 28446, "wz": 41637, "height": 81.59, "kind": "home", "industry": "works", "width": 36, "length": 300, "tier": "large"}
 ].map(site => [site.id, site]));
 const airbases=Object.freeze(Object.fromEntries([
  {"id":"western-plain","name":"西域平原飛行場","region":0,"wx":22000,"wz":40000,"tier":"large","island":false},
@@ -1024,8 +1034,8 @@ const airbases=Object.freeze(Object.fromEntries([
  {"id":"red-strait","name":"赤銅海峡航空基地","region":2,"wx":82775.11961722489,"wz":49505.10366826157,"tier":"small","island":true}
 ].map(b=>[b.id,Object.freeze({...b,height:gradingSites[b.id].h,width:runwayWidth,length:runwayLength,islandOrigin:b.island?regionOrigins[b.region]:null})])));
 const carriers=Object.freeze(Object.fromEntries([
- {"id":"harbour-tender","name":"黄銅港補給母艦","wx":30677.240829346098,"wz":30275.7735247209,"heading":0,"region":0,"deck":true,"height":13},
- {"id":"strait-guard","name":"赤銅海峡警備母艦","wx":83565.11961722489,"wz":49675.10366826157,"heading":0,"region":2,"deck":true,"height":13},
+ {"id":"harbour-tender","name":"黄銅港補給母艦","wx":34604,"wz":28649,"heading":0,"region":0,"deck":true,"height":13},
+ {"id":"strait-guard","name":"赤銅海峡警備母艦","wx":86065,"wz":53417,"heading":0,"region":2,"deck":true,"height":13},
  {"id":"pelagic","name":"遠洋母艦アホウドリ","wx":50000,"wz":50000,"heading":0.663225,"region":0,"deck":true,"height":13},
  {"id":"west-wind","name":"西風","wx":39000,"wz":56500,"heading":-0.488692,"region":0,"deck":true,"height":13},
  {"id":"sea-lark","name":"海雲雀","wx":63400,"wz":45800,"heading":2.094395,"region":2,"deck":true,"height":13},
@@ -1056,16 +1066,9 @@ function waterPalette(wx,wz){
  return paletteCache.get(key)
 }
 const landscapes=regionOrigins.map((origin,region)=>({...origin,region,departure:['brass-port','smoke-highlands','red-strait'][region]}));
-const pirates=new Set(['west-foundry','moor-watch','silver-ridge','copper-works','slate-bay','coal-quay','clay-works','sea-lark','reef-watch']);
-const neutral=new Set(['pine-yard','amber-bay','high-firth','south-cross','west-wind']);
-const colors={player:'#78e3ac',friendly:'#70bcff',neutral:'#ffd376',pirate:'#ff7369',civil:'#eadac1'};
-const labels={player:'本拠地',friendly:'友好',neutral:'中立',pirate:'空賊占領',civil:'町村'};
-function affiliation(id){
- if(id==='home')return 'player';
- if(settlements[id])return 'civil';
- if(pirates.has(id)&&!adventure.liberated.includes(id))return 'pirate';
- return neutral.has(id)?'neutral':'friendly'
-}
+const colors={player:'#78e3ac',friendly:'#70bcff',pirate:'#ff7369'};
+const labels={player:'本拠地',friendly:'解放済み',pirate:'空賊占領'};
+function affiliation(id){return id==='home'?'player':adventure.liberated.includes(id)?'friendly':'pirate'}
 for(const b of Object.values(airbases))if(b.island)continents.push([b.wx,b.wz,b.name,2,390,275,1.8,0,b.islandOrigin]);
 let regionContext=landscapes[0];
 function worldRegion(){return regionContext}
@@ -1256,26 +1259,55 @@ function buildRegion(){
 }
 const relics=[{"id":"gear","name":"地に刺さる巨歯輪","x":14000,"z":36500,"radius":2020,"reach":480,"rx":2050,"rz":180,"region":"西部大陸南西部","note":"黒鉄の歯先が草原から二千メートルせり上がる。軸には緑青を帯びた真鍮が残る。","base":74.7},{"id":"clock","name":"停止した大時計塔","x":23000,"z":60000,"radius":180,"reach":350,"rx":170,"rz":170,"region":"西部大陸","note":"四面の針は違う時刻を指したまま、崩れた石の基壇を見下ろしている。","base":561.2},{"id":"chain","name":"巨鎖の谷","x":29300,"z":80100,"radius":710,"reach":290,"rx":690,"rz":120,"region":"西部大陸","note":"谷の両岸で巻胴が錆びつき、空中に取り残された鉄環が霧を渡る。","base":378.35},{"id":"orrery","name":"天象演算儀","x":74000,"z":84500,"radius":260,"reach":330,"rx":130,"rz":130,"region":"紫煙高地","note":"傾いた黄道環の奥に、星の運行を刻んだ演算軸が眠る。","base":163.0},{"id":"vents","name":"蒸気排気塔群","x":87800,"z":69800,"radius":300,"reach":290,"rx":245,"rz":150,"region":"紫煙地域","note":"三基の排気筒を渡る圧力管には、いまも白い蒸気が通う。","base":40.15},{"id":"walker","name":"半埋没の機械巨人","x":67000,"z":77000,"radius":310,"reach":260,"rx":210,"rz":215,"region":"紫煙地域","note":"六本の関節脚を広げた鉄の巨体。採掘機だったのかを知る者はいない。","base":110.1},{"id":"twins","name":"双動ピストンの塔","x":60000,"z":21500,"radius":220,"reach":310,"rx":200,"rz":180,"region":"南部大陸","note":"機関室の上に二本の磨かれたピストンが残り、補強梁がその間を結ぶ。","base":102.05},{"id":"spiral","name":"螺旋機関塔","x":76000,"z":29200,"radius":165,"reach":300,"rx":150,"rz":150,"region":"南部大陸","note":"駆動軸を三周する鉄骨の階廊は、上空から同心円に見える。","base":169.1},{"id":"gauge","name":"断崖の大圧力計","x":15550,"z":25220,"radius":180,"reach":295,"rx":155,"rz":70,"region":"西部海岸","note":"海蝕崖の配管から露出した真鍮計。巨大な指針が最後の圧力を伝える。","base":0},{"id":"dock","name":"沈黙の造船渠","x":65500,"z":12600,"radius":340,"reach":320,"rx":165,"rz":295,"region":"南部入り江","note":"水没した渠底に船の肋骨が並び、二基のクレーンが空の吊り鉤を向け合う。","base":0}];
 const journalSites=[...relics,...wonders],saveKey='brassWings.adventure.v1';
-function loadRecord(key){try{return JSON.parse(localStorage.getItem(key))||{}}catch{return {}}}
-const legacy=loadRecord('brassWings.worldCampaign.v1'),record=loadRecord(saveKey);
 const count=(n,max=1000000)=>Number.isSafeInteger(n)?Math.max(0,Math.min(n,max)):0;
 const validIds=(ids,catalog)=>Array.isArray(ids)?[...new Set(ids.filter(id=>catalog(id)))]:[];
-let discoveries={};
-for(const s of journalSites){const date=record.discoveries?.[s.id]||legacy.discoveries?.[s.id];if(typeof date==='string'&&Number.isFinite(Date.parse(date)))discoveries[s.id]=date}
 function restoreJob(job){
- if(!job||!Object.hasOwn(settlements,job.origin)||job.origin==='home')return null;
- if(job.kind==='delivery'&&Object.hasOwn(settlements,job.to)&&job.to!==job.origin)return {kind:job.kind,origin:job.origin,to:job.to,ready:job.ready===true};
+ if(!job||typeof job.origin!=='string'||!Object.hasOwn(settlements,job.origin)||job.origin==='home')return null;
+ if(job.kind==='delivery'&&typeof job.to==='string'&&Object.hasOwn(settlements,job.to)&&job.to!==job.origin)return {kind:job.kind,origin:job.origin,to:job.to,ready:job.ready===true};
  if(job.kind==='survey')return {kind:job.kind,origin:job.origin,ready:job.ready===true};
  return null
 }
-const adventure={last:record.last||'home',visited:validIds(record.visited,id=>Object.hasOwn(outposts,id)),liberated:validIds(record.liberated,id=>pirates.has(id)),money:count(record.money??30),wear:count(record.wear??legacy.wear,40),mag:count(record.mag??legacy.mag,3),goods:count(record.goods,8),stored:count(record.stored),kills:count(record.kills),skyClue:record.skyClue===true,job:restoreJob(record.job)};
-function saveAdventure(){try{localStorage.setItem(saveKey,JSON.stringify({...adventure,discoveries}));return true}catch{$('notice').textContent='保存できません。ブラウザの保存設定をご確認ください。';return false}}
-function selectable(id){return Object.hasOwn(outposts,id)&&affiliation(id)!=='pirate'&&(id==='home'||!settlements[id]&&affiliation(id)!=='neutral'||adventure.visited.includes(id))}
+const tutorialSteps=['new','home','flight','battle','liberated','landing','visit','done'];
+function initialAdventure(){
+ return {last:'home',visited:['home'],liberated:[],money:30,wear:0,mag:0,goods:0,stored:0,kills:0,skyClue:false,job:null,tutorial:'new'}
+}
+let adventure=initialAdventure(),discoveries={},hasRecord=false,hasStoredRecord=false;
+function storageNotice(text){$('notice').textContent=text}
+function restoreAdventure(){
+ let raw;
+ try{raw=localStorage.getItem(saveKey)}catch{storageNotice('記録を読み込めません。');return}
+ hasStoredRecord=raw!==null;if(!raw)return;
+ let v;try{v=JSON.parse(raw)}catch{storageNotice('冒険記録を読み取れません。新規ゲームで開始できます。');return}
+ if(!v||!Number.isSafeInteger(v.money)||!Array.isArray(v.visited)||!Array.isArray(v.liberated))return;
+ adventure={...initialAdventure(),visited:validIds(['home',...v.visited],id=>typeof id==='string'&&Object.hasOwn(outposts,id)),liberated:validIds(v.liberated,id=>typeof id==='string'&&id!=='home'&&Object.hasOwn(outposts,id)),
+ money:count(v.money),wear:count(v.wear,40),mag:count(v.mag,3),goods:count(v.goods,8),stored:count(v.stored),kills:count(v.kills),skyClue:v.skyClue===true,job:restoreJob(v.job),tutorial:tutorialSteps.includes(v.tutorial)?v.tutorial:'done'};
+ adventure.last=selectable(v.last)?v.last:'home';
+ for(const s of journalSites){const date=v.discoveries?.[s.id];if(typeof date==='string'&&Number.isFinite(Date.parse(date)))discoveries[s.id]=date}
+ hasRecord=true
+}
+function persist(state,dates){
+ try{localStorage.setItem(saveKey,JSON.stringify({...state,discoveries:dates}));hasRecord=hasStoredRecord=true;storageNotice('');return true}
+ catch{storageNotice('冒険を保存できません。保存設定と空き容量を確認してください。');return false}
+}
+function saveAdventure(){return persist(adventure,discoveries)}
+function newAdventure(){
+ const fresh=initialAdventure();if(!persist(fresh,{}))return;
+ adventure=fresh;discoveries={};waypointId=null;startFlight('home')
+}
+function eraseAdventure(){
+ try{
+  localStorage.removeItem('brassWings.worldCampaign.v1');
+  localStorage.removeItem(saveKey)
+ }catch{storageNotice('記録の削除に失敗しました。冒険記録を確認してください。');return}
+ adventure=initialAdventure();discoveries={};hasRecord=hasStoredRecord=false;waypointId=null;storageNotice('');titleScreen()
+}
+function selectable(id){return typeof id==='string'&&Object.hasOwn(outposts,id)&&(id==='home'||affiliation(id)==='friendly'&&adventure.visited.includes(id))}
+restoreAdventure();
 function atlas(){
  const k=500/worldSize;
  const pins=Object.values(outposts).map(b=>{
   const side=affiliation(b.id),X=b.wx*k,Y=500-b.wz*k;
-  return '<g fill="'+colors[side]+'"><title>'+b.name+'・'+labels[side]+'</title>'+(b.id==='home'?'<path d="M'+X+' '+(Y-6)+'l5 6 -5 5 -5 -5Z"/>':'<circle cx="'+X+'" cy="'+Y+'" r="3"/>')+'</g>'
+  return '<g fill="'+colors[side]+'"><title>'+b.name+'・'+labels[side]+'</title>'+(b.id==='home'?'<path d="M'+X+' '+(Y-6)+'l5 6 -5 5 -5 -5Z"/>':b.deck?'<path d="M'+X+' '+(Y-4)+'l4 7h-8Z"/>':!b.kind?'<rect x="'+(X-3)+'" y="'+(Y-3)+'" width="6" height="6"/>':'<circle cx="'+X+'" cy="'+Y+'" r="3"/>')+'</g>'
  }).join('');
  const location=panel==='pause'?localToWorld(x,z):outposts[adventure.last]||settlements.home;
  const target=outposts[waypointId]||jobDestination();
@@ -1863,7 +1895,7 @@ function buildWorld(){
  regionRunway=localBases.find(b=>b.id===landscapes[m.region].departure);
  ship=localShips[m.region===2?1:0];
  landingPorts=[...localBases,...localShips].filter(b=>b.side!=='pirate');
- occupiedPorts=[...localBases,...localShips].filter(b=>b.side==='pirate');
+ occupiedPorts=[...localBases,...localShips].filter(b=>b.side==='pirate');indexDefenders();
  cutCoast();
  for(const l of continents){
   const {x:X,z:Z}=worldToLocal(l[0],l[1],m);
@@ -2318,25 +2350,73 @@ function worldMinimap(){
  g.strokeStyle='#d3b783';g.lineWidth=1;g.strokeRect(left+4,top+4,side-8,side-8);
  g.fillStyle='#ffe999';for(const s of journalSites)if(discoveries[s.id])g.fillRect(X(s.x)-2,Z(s.z)-2,4,4);
  g.fillStyle='#e3bd79';
- for(const b of Object.values(outposts)){g.fillStyle=colors[affiliation(b.id)];g.fillRect(X(b.wx)-1,Z(b.wz)-1,3,3)}
- g.fillStyle='#a5dfe3';
+ for(const b of [...localBases,...localShips]){
+  const cx=X(b.wx),cz=Z(b.wz),color=colors[b.side];g.fillStyle=color;
+  if(b.id==='home')poly([[cx,cz-3],[cx+3,cz],[cx,cz+3],[cx-3,cz]],color);
+  else if(b.deck)poly([[cx,cz-2],[cx+2,cz+2],[cx-2,cz+2]],color);
+  else if(b.kind){g.beginPath();g.arc(cx,cz,1.8,0,tau);g.fill()}
+  else g.fillRect(cx-1.5,cz-1.5,3,3)
+ }
+ const target=outposts[waypointId]||jobDestination();
+ if(target){g.strokeStyle='#fff3a1';g.strokeRect(X(target.wx)-4,Z(target.wz)-4,8,8)}
  const {wx,wz}=localToWorld(x,z);
  g.save();g.translate(X(wx),Z(wz));g.rotate(yaw);
  poly([[0,-4],[-3,3],[0,2],[3,3]],'#b7fff0');g.restore()
 }
+function battleMinimap(){
+ const {left,top,side}=minimapBox(),scale=(side-8)/(battleHalf*2),cx=left+side/2,cz=top+side/2;
+ const X=wx=>cx+(wx-encounter.wx)*scale,Z=wz=>cz-(wz-encounter.wz)*scale;
+ g.save();g.fillStyle='#263c42';g.fillRect(left,top,side,side);g.strokeStyle='#ffc76e';g.strokeRect(left+4,top+4,side-8,side-8);
+ g.beginPath();g.rect(left+4,top+4,side-8,side-8);g.clip();
+ g.strokeRect(cx-3,cz-3,6,6);
+ for(const enemy of enemies)if(enemy.hp){const p=localToWorld(enemy.x,enemy.z);g.fillStyle='#ff7369';g.fillRect(X(p.wx)-2,Z(p.wz)-2,4,4)}
+ const p=localToWorld(x,z);g.translate(X(p.wx),Z(p.wz));g.rotate(yaw);poly([[0,-5],[-3,3],[3,3]],colors.player);g.restore()
+}
 let occupiedPorts=[];
 function clearEncounter(){encounter=null;nextAttack=0;grace=0;reload=0;enemies=[];bolts=[];hostile=[];locked=null;trigger=false;syncFireButton()}
+const battleHalf=2500,triggerRadius=900;
+let encounterDelay=0;
+const defenceCells=new Map(),reentryBlocked=new Set();
+function indexDefenders(){
+ defenceCells.clear();
+ for(const b of occupiedPorts){
+  const key=Math.floor(b.wx/triggerRadius)+','+Math.floor(b.wz/triggerRadius);
+  if(!defenceCells.has(key))defenceCells.set(key,[]);
+  defenceCells.get(key).push(b)
+ }
+}
+function outsideBattle(wx,wz){return encounter&&Math.max(Math.abs(wx-encounter.wx),Math.abs(wz-encounter.wz))>battleHalf}
+function homeDistance(wx,wz){return Math.hypot(wx-settlements.home.wx,wz-settlements.home.wz)}
+function nearbyDefender(wx,wz){
+ const cx=Math.floor(wx/triggerRadius),cz=Math.floor(wz/triggerRadius);
+ let nearest=null,distance=triggerRadius;
+ for(let i=cx-1;i<=cx+1;i++)for(let j=cz-1;j<=cz+1;j++)for(const b of defenceCells.get(i+','+j)||[]){
+  const d=Math.hypot(b.wx-wx,b.wz-wz);if(encounterDelay>0&&d<triggerRadius)reentryBlocked.add(b.id);
+  if(b.side==='pirate'&&!reentryBlocked.has(b.id)&&d<distance){nearest=b;distance=d}
+ }
+ return nearest
+}
 function fight(dt){
- if(encounter&&Math.hypot(encounter.x-x,encounter.z-z)>3200)clearEncounter();
+ const {wx,wz}=localToWorld(x,z);
+ if(homeDistance(wx,wz)<400||outsideBattle(wx,wz)){
+  if(encounter){clearEncounter();encounterDelay=4;nearbyDefender(wx,wz);message='防衛隊から離脱';messageUntil=t+3}
+  return
+ }
+ encounterDelay=Math.max(0,encounterDelay-dt);
  if(!encounter){
-  encounter=occupiedPorts.find(b=>Math.hypot(b.x-x,b.z-z)<900);
+  for(const id of reentryBlocked){const b=outposts[id];if(Math.hypot(wx-b.wx,wz-b.wz)>=triggerRadius)reentryBlocked.delete(id)}
+  const candidate=nearbyDefender(wx,wz);if(encounterDelay)return;
+  encounter=candidate;
   if(!encounter)return;
-  deploy();syncFireButton();message=encounter.name+' 空賊防衛隊';messageUntil=t+4
+  deploy();syncFireButton();message=encounter.name+' 空賊防衛隊接近';messageUntil=t+4;
+  if(tutorialBattle())return
  }
  reload=Math.max(0,reload-dt);
  for(const [i,e] of enemies.entries()){
   if(e.hp<=0){e.fall+=dt;e.y-=32*e.fall*dt;continue}
-  moveEnemy(e,i,dt)
+  moveEnemy(e,i,dt);
+  const pos=localToWorld(e.x,e.z),distance=homeDistance(pos.wx,pos.wz);
+  if(distance<400){const a=Math.atan2(pos.wx-settlements.home.wx,pos.wz-settlements.home.wz);const safe=worldToLocal(settlements.home.wx+401*Math.sin(a),settlements.home.wz+401*Math.cos(a));e.x=safe.x;e.z=safe.z;e.heading=a}
  }
  if(t>=nextAttack&&!enemies.some(e=>e.hp&&e.state==='attack')){
   const ready=enemies.filter(e=>e.hp&&e.state==='circle').sort((a,b)=>a.turn-b.turn);
@@ -2376,7 +2456,7 @@ function fight(dt){
  if(enemies.length&&enemies.every(e=>!e.hp)){
   adventure.liberated.push(encounter.id);adventure.money+=60;
   encounter.side='friendly';landingPorts.push(encounter);occupiedPorts=occupiedPorts.filter(b=>b!==encounter);message=encounter.name+' 解放　報酬60';messageUntil=t+5;
-  clearEncounter();saveAdventure()
+  const freed=encounter.id;clearEncounter();encounterDelay=4;saveAdventure();tutorialLiberation(freed)
  }
 }
 const station=[];
@@ -2864,7 +2944,7 @@ function drawScenery(sn,cs,eye,f,horizon,objects){
   const distance=Math.hypot(x-b.x,z-b.z);
   if(distance>=3500||!sceneryVisible(b.x,b.z,360))continue;
   const Y=b.height;
-  if(!settlements[b.id]||b.id==='home')flag(b.x-45,Y,b.z+30,b.id,distance);
+  flag(b.x-45,Y,b.z+30,b.id,distance);
   if(distance>1050)strip(b.x,b.z,Y+.13,b.width,b.length,'#535959');
   else
   for(let offset=10-b.length/2;offset<b.length/2;offset+=20){
@@ -2925,16 +3005,9 @@ function drawCloudBanks(face,visible){
    k<sides/2?'rgba(251,235,222,'+opacity+')':'rgba(229,216,218,'+opacity+')')
  }
 }
-function draw(dt){
- if(panel==='title'){
-  surfaceRenderer?.hide();
-  if(aircraftLayer)aircraftLayer.hidden=true;
-  const backdrop=frontInk.createLinearGradient(0,0,0,h);
-  backdrop.addColorStop(0,'#52496b');backdrop.addColorStop(.44,'#c87976');backdrop.addColorStop(1,'#29474e');
-  frontInk.fillStyle=backdrop;frontInk.fillRect(0,0,w,h);return
- }
+function updateFlight(dt){
  if(live)railClock+=dt;
- if(live)enterNearbyRegion();
+ if(live){enterNearbyRegion();tutorialFlightHints()}
  selectFlightLayer(dt);
  if(!inSky)updateWorld();
  const wasWaiting=deckMode==='moored';
@@ -2949,6 +3022,16 @@ function draw(dt){
   if(Math.abs(error)<.12)returnHeading=null
  }
  bank+=(Math.max(-1,Math.min(1,lr))-bank)*(1-Math.exp(-8*dt));pitch+=(Math.max(-1,Math.min(1,ud))-pitch)*(1-Math.exp(-6*dt));yaw+=bank*dt*(returning?2:1.03+.15*power);if(!trick)applyClimb(dt);advance(dt);limitAirspace();discoverRelics();if(!impact(px,pz,py)){fight(dt);updateSpray(dt)}cameraYaw+=(yaw-cameraYaw)*(1-Math.exp(-5.6*dt));t+=dt}
+}
+function draw(dt){
+ if(panel==='title'){
+  surfaceRenderer?.hide();
+  if(aircraftLayer)aircraftLayer.hidden=true;
+  const backdrop=frontInk.createLinearGradient(0,0,0,h);
+  backdrop.addColorStop(0,'#52496b');backdrop.addColorStop(.44,'#c87976');backdrop.addColorStop(1,'#29474e');
+  frontInk.fillStyle=backdrop;frontInk.fillRect(0,0,w,h);return
+ }
+ updateFlight(dt);
 g=surfaceRenderer?.sky()||frontInk;
 let horizon=h*(.36+pitch*.09),f=h*(.62-.10*Math.max(0,(airspeed-78)/54));let sky=g.createLinearGradient(0,0,0,horizon);sky.addColorStop(0,'#52496b');sky.addColorStop(.65,'#c87976');sky.addColorStop(1,'#f4b479');g.fillStyle=sky;g.fillRect(0,0,w,horizon+1);const sunAngle=.12-cameraYaw;if(Math.cos(sunAngle)>.1){let sunX=w/2+f*Math.tan(sunAngle),radius=h*.033;ellipse(sunX,horizon-radius*(1.7-Math.min(1,t/180)*2.5),radius,radius,'#ffda9b')}const seaBands=inSky?['#e3d2c5','#eddfd4','#eadfd7','#e7dad2','#dfd5cf','#e7dad2','#efdfd4','#e7dad2','#e6d7cd','#e3d2c5']:waterPalette(x+worldRegion().wx,z+worldRegion().wz);
 for(let i=0;i<seaBands.length;i++){
@@ -3091,7 +3174,7 @@ if(!inSky){
  if(aim&&!crash){g.beginPath();g.arc(aim[0],aim[1],8,0,tau);g.lineWidth=1.5;g.strokeStyle='#fff1c7';g.stroke()}
  if(locked&&locked.hp){const mark=project(locked.x,locked.z,locked.y);if(mark){const [a,b,k]=mark,r=Math.max(11,k*9);g.strokeStyle="#aaf5cd";g.lineWidth=2;g.strokeRect(a-r,b-r,r*2,r*2)}}
  const enemy=locked?.hp?locked:enemies.filter(e=>e.hp>0).sort((a,b)=>Math.hypot(a.x-x,a.z-z)-Math.hypot(b.x-x,b.z-z))[0];
- $('place').textContent=encounter.name+' 空賊 '+enemies.filter(e=>e.hp).length+'機';
+ battleMinimap();$('place').textContent=encounter.name+' 空賊 '+enemies.filter(e=>e.hp).length+'機';
  }else{worldMinimap();let dir=target?Math.atan2(target[0]-x,target[1]-z)-yaw:0;$('place').textContent=target?['↑','↗','→','↘','↓','↙','←','↖'][(Math.round(dir/(tau/8))%8+8)%8]+' '+target[2]+'　'+(nearest/1000).toFixed(1)+' km　'+'発見 '+found.size:'自由飛行'}
  if((adventure.job||waypointId)&&!deckMode&&!encounter){
   const site=outposts[waypointId]||jobDestination(),p=worldToLocal(site.wx,site.wz),angle=Math.atan2(p.x-x,p.z-z)-yaw;
@@ -3119,6 +3202,63 @@ $('journalCategory').onchange=journalList;
 $('journalOpen').onclick=()=>{journalList();$('journal').showModal()
 };
 $('journalClose').onclick=()=>$('journal').close();
+const firstCity='brass-city';
+const tutorialNext={
+ new:['home'],home:['flight'],flight:['battle','liberated'],battle:['liberated'],
+ liberated:['landing','visit'],landing:['visit'],visit:['done'],done:[]
+};
+function tutorialStage(stage){
+ if(adventure.tutorial===stage)return;
+ if(!tutorialNext[adventure.tutorial].includes(stage))return;
+ adventure.tutorial=stage;saveAdventure()
+}
+let flightHint=0;
+function tutorialFlightHints(){
+ if(adventure.tutorial!=='flight'||encounter||deckMode)return;
+ const p=localToWorld(x,z),city=outposts[firstCity];
+ if(flightHint<2&&Math.hypot(city.wx-p.wx,city.wz-p.wz)<1500){
+  flightHint=2;message='黄銅港市は空賊占領下。赤い旗に近づくと防衛隊が出現します';messageUntil=t+5
+ }else if(!flightHint&&t>6){
+  flightHint=1;message='左右で旋回、上下で昇降。方位と距離を確認し、地図の黄銅港市へ';messageUntil=t+6
+ }
+}
+function flightHelp(back){
+ showPanel('guide','飛行手帳','離陸ボタンで発進。推力はスライダー、旋回と昇降は操縦桿または矢印キー。空賊は照準内で捕捉し、射撃ボタンかスペースで迎撃します。着陸時は滑走路に沿って低速・低空で進入してください。');
+ action('戻る',back)
+}
+function tutorialArrival(port){
+ if(adventure.tutorial==='done')return;
+ waypointId=firstCity;
+ if(port.id===firstCity&&affiliation(firstCity)==='friendly'){
+  tutorialStage('visit');services();
+  showPanel('guide',port.name+'へようこそ','住民と話し、掲示板で最初の輸送を受注できます。商店と積荷を確認し、旅の記録を残しましょう。飛行場に戻ると再出発できます。');
+  action('依頼掲示板へ',()=>{tutorialStage('done');waypointId=null;jobs()});
+  action('町に入る',()=>{tutorialStage('done');waypointId=null;services()});return
+ }
+ if(adventure.liberated.includes(firstCity)){if(adventure.tutorial==='liberated')landingGuide(dockMenu);return}
+ if(adventure.tutorial==='new'||adventure.tutorial==='home'){
+  tutorialStage('home');
+  showPanel('guide','真鍮の翼工房から旅立つ','ここはあなたの本拠地。外の町や飛行場は空賊に占領されています。まず黄銅港市へ飛び、防衛隊を撃退しましょう。工房では補給と機体状態を確認できます。');
+  action('黄銅港市を目的地にする',()=>{tutorialStage('flight');dockMenu()})
+ }
+}
+function tutorialLaunch(){
+ if(adventure.tutorial==='done')return;
+ waypointId=firstCity;flightHint=0;message=adventure.tutorial==='landing'?'滑走路に沿い、推力42%以下で低空進入':'推力スライダーで速度を調整。上昇して安全な高度を確保しよう';messageUntil=t+12
+}
+function tutorialBattle(){
+ if(encounter.id!==firstCity||adventure.tutorial!=='flight')return false;
+ tutorialStage('battle');showPanel('guide','空賊防衛隊接近','戦闘地図は街を中心に5 km四方。敵機を正面に捉え、捕捉枠が出たら射撃。被弾するとENが低下します。境界を越えれば撤退できます。');
+ action('戦闘を開始',enterFlight);return true
+}
+function landingGuide(back){
+ showPanel('guide','黄銅港市の滑走路へ','南北に延びる滑走路の中心線に機首を合わせ、地上22 m以下・推力42%以下で進入します。着陸補助で停機したら町へ入りましょう。');
+ action('着陸案内を確認',()=>{tutorialStage('landing');waypointId=firstCity;back()})
+}
+function tutorialLiberation(id){
+ if(id!==firstCity||adventure.tutorial==='done')return;
+ tutorialStage('liberated');waypointId=id;landingGuide(enterFlight)
+}
 titleScreen();
 function frame(now){if(live||(crash&&panel!=='crash')||!last||needsRedraw)draw(Math.min(.05,(now-last)/1000));needsRedraw=false;last=now;requestAnimationFrame(frame)}requestAnimationFrame(frame);
 </script></html>

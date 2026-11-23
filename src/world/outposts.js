@@ -25,8 +25,8 @@ const airbases=Object.freeze(Object.fromEntries([
  {"id":"red-strait","name":"赤銅海峡航空基地","region":2,"wx":82775.11961722489,"wz":49505.10366826157,"tier":"small","island":true}
 ].map(b=>[b.id,Object.freeze({...b,height:gradingSites[b.id].h,width:runwayWidth,length:runwayLength,islandOrigin:b.island?regionOrigins[b.region]:null})])));
 const carriers=Object.freeze(Object.fromEntries([
- {"id":"harbour-tender","name":"黄銅港補給母艦","wx":30677.240829346098,"wz":30275.7735247209,"heading":0,"region":0,"deck":true,"height":13},
- {"id":"strait-guard","name":"赤銅海峡警備母艦","wx":83565.11961722489,"wz":49675.10366826157,"heading":0,"region":2,"deck":true,"height":13},
+ {"id":"harbour-tender","name":"黄銅港補給母艦","wx":34604,"wz":28649,"heading":0,"region":0,"deck":true,"height":13},
+ {"id":"strait-guard","name":"赤銅海峡警備母艦","wx":86065,"wz":53417,"heading":0,"region":2,"deck":true,"height":13},
  {"id":"pelagic","name":"遠洋母艦アホウドリ","wx":50000,"wz":50000,"heading":0.663225,"region":0,"deck":true,"height":13},
  {"id":"west-wind","name":"西風","wx":39000,"wz":56500,"heading":-0.488692,"region":0,"deck":true,"height":13},
  {"id":"sea-lark","name":"海雲雀","wx":63400,"wz":45800,"heading":2.094395,"region":2,"deck":true,"height":13},

@@ -1,16 +1,48 @@
 let occupiedPorts=[];
 function clearEncounter(){encounter=null;nextAttack=0;grace=0;reload=0;enemies=[];bolts=[];hostile=[];locked=null;trigger=false;syncFireButton()}
+const battleHalf=2500,triggerRadius=900;
+let encounterDelay=0;
+const defenceCells=new Map(),reentryBlocked=new Set();
+function indexDefenders(){
+ defenceCells.clear();
+ for(const b of occupiedPorts){
+  const key=Math.floor(b.wx/triggerRadius)+','+Math.floor(b.wz/triggerRadius);
+  if(!defenceCells.has(key))defenceCells.set(key,[]);
+  defenceCells.get(key).push(b)
+ }
+}
+function outsideBattle(wx,wz){return encounter&&Math.max(Math.abs(wx-encounter.wx),Math.abs(wz-encounter.wz))>battleHalf}
+function homeDistance(wx,wz){return Math.hypot(wx-settlements.home.wx,wz-settlements.home.wz)}
+function nearbyDefender(wx,wz){
+ const cx=Math.floor(wx/triggerRadius),cz=Math.floor(wz/triggerRadius);
+ let nearest=null,distance=triggerRadius;
+ for(let i=cx-1;i<=cx+1;i++)for(let j=cz-1;j<=cz+1;j++)for(const b of defenceCells.get(i+','+j)||[]){
+  const d=Math.hypot(b.wx-wx,b.wz-wz);if(encounterDelay>0&&d<triggerRadius)reentryBlocked.add(b.id);
+  if(b.side==='pirate'&&!reentryBlocked.has(b.id)&&d<distance){nearest=b;distance=d}
+ }
+ return nearest
+}
 function fight(dt){
- if(encounter&&Math.hypot(encounter.x-x,encounter.z-z)>3200)clearEncounter();
+ const {wx,wz}=localToWorld(x,z);
+ if(homeDistance(wx,wz)<400||outsideBattle(wx,wz)){
+  if(encounter){clearEncounter();encounterDelay=4;nearbyDefender(wx,wz);message='防衛隊から離脱';messageUntil=t+3}
+  return
+ }
+ encounterDelay=Math.max(0,encounterDelay-dt);
  if(!encounter){
-  encounter=occupiedPorts.find(b=>Math.hypot(b.x-x,b.z-z)<900);
+  for(const id of reentryBlocked){const b=outposts[id];if(Math.hypot(wx-b.wx,wz-b.wz)>=triggerRadius)reentryBlocked.delete(id)}
+  const candidate=nearbyDefender(wx,wz);if(encounterDelay)return;
+  encounter=candidate;
   if(!encounter)return;
-  deploy();syncFireButton();message=encounter.name+' 空賊防衛隊';messageUntil=t+4
+  deploy();syncFireButton();message=encounter.name+' 空賊防衛隊接近';messageUntil=t+4;
+  if(tutorialBattle())return
  }
  reload=Math.max(0,reload-dt);
  for(const [i,e] of enemies.entries()){
   if(e.hp<=0){e.fall+=dt;e.y-=32*e.fall*dt;continue}
-  moveEnemy(e,i,dt)
+  moveEnemy(e,i,dt);
+  const pos=localToWorld(e.x,e.z),distance=homeDistance(pos.wx,pos.wz);
+  if(distance<400){const a=Math.atan2(pos.wx-settlements.home.wx,pos.wz-settlements.home.wz);const safe=worldToLocal(settlements.home.wx+401*Math.sin(a),settlements.home.wz+401*Math.cos(a));e.x=safe.x;e.z=safe.z;e.heading=a}
  }
  if(t>=nextAttack&&!enemies.some(e=>e.hp&&e.state==='attack')){
   const ready=enemies.filter(e=>e.hp&&e.state==='circle').sort((a,b)=>a.turn-b.turn);
@@ -50,6 +82,6 @@ function fight(dt){
  if(enemies.length&&enemies.every(e=>!e.hp)){
   adventure.liberated.push(encounter.id);adventure.money+=60;
   encounter.side='friendly';landingPorts.push(encounter);occupiedPorts=occupiedPorts.filter(b=>b!==encounter);message=encounter.name+' 解放　報酬60';messageUntil=t+5;
-  clearEncounter();saveAdventure()
+  const freed=encounter.id;clearEncounter();encounterDelay=4;saveAdventure();tutorialLiberation(freed)
  }
 }

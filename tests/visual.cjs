@@ -22,7 +22,7 @@ const layouts=[['portrait',360,640],['landscape',640,360],['desktop',1100,700],[
    await page.addInitScript(()=>{window.requestAnimationFrame=()=>0});
    const url='http://127.0.0.1:'+server.address().port;
    await page.route('**/*',route=>route.request().url().startsWith(url)?route.continue():route.abort());
-   await page.goto(url);
+   await page.goto(url);await page.evaluate(require('./helpers/adventure.cjs'),{liberated:[],tutorial:'done',persist:true});
    const shot=name=>page.screenshot({path:resolve(output,layout+'-'+name+'.png')});
    const press=selector=>touch?page.locator(selector).tap():page.locator(selector).click();
    const step=n=>page.evaluate(n=>{for(let i=0;i<n;i++)draw(.05)},n);
@@ -32,7 +32,7 @@ const layouts=[['portrait',360,640],['landscape',640,360],['desktop',1100,700],[
     assert(box.y>=card.y&&box.y+box.height<=card.y+card.height,layout+' title action clipped');
    }
    await shot('title');
-   await press('#actions button:first-child');await step(1);await shot('base');
+   await page.evaluate(()=>titleScreen());await press('#actions button:nth-child(2)');await step(1);await shot('base');
    await press('#actions button:has-text("離陸")');
    const thrust=await page.locator('#thrust').boundingBox();
    if(touch)await page.touchscreen.tap(thrust.x+thrust.width/2,thrust.y+10);

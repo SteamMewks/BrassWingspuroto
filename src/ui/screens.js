@@ -13,35 +13,41 @@ function showPanel(state,title,description){
  $('actions').replaceChildren();$('atlas').hidden=!['title','pause','travel'].includes(state);
  $('journalOpen').hidden=false;syncAudio();
  if(state==='pause')atlas();
- if(state==='crash')action('安全な拠点で再開',()=>startFlight(adventure.last));
+ if(state==='crash')action(adventure.tutorial==='done'?'安全な拠点で再開':'本拠地から再挑戦',()=>startFlight(adventure.tutorial==='done'?adventure.last:'home'));
  if(state==='pause'){action('飛行を再開',enterFlight);action('航路を設定',()=>navigationMenu(true))}
 }
 function titleScreen(){
  leaveSky();ruinDistrictCache.clear();clearTerrain();tileCache.clear();groves.length=groundPixels.length=0;clearEncounter();crash=null;needsRedraw=true;
  showPanel('title','Brass Wings','群島飛行記　町村で仕事を引き受け、雲海の向こうへ。');atlas();
- action('冒険を始める・再開',()=>startFlight(adventure.last));
- action('出発地点を選ぶ',()=>travelMenu(true))
+ action('新規ゲーム',()=>hasStoredRecord?confirmRecord(false):newAdventure());
+ action('続きから',()=>{if(hasRecord)startFlight(adventure.last)},!hasRecord);
+ action('記録を初期化',()=>confirmRecord(true))
+}
+function confirmRecord(erase){
+ showPanel('confirm',erase?'記録を初期化':'新規ゲーム','冒険進行、所持金、所持品、倉庫、解放・訪問地点、依頼、機体改造、発見記録、チュートリアル進行を消去します。この操作は取り消せません。');
+ action('キャンセル',titleScreen);action(erase?'記録を消去する':'上書きして始める',erase?eraseAdventure:newAdventure)
 }
 function startFlight(id){
  if(!selectable(id))id='home';
  const site=outposts[id];regionContext={...landscapes[site.region],departure:id};
- returnHeading=null;restartFlight();clearEncounter();energy=100-adventure.wear;ammo=90+adventure.mag*20;buildWorld();parkAtStart();updateWorld();enterFlight();draw(0);arrive(base)
+ encounterDelay=0;reentryBlocked.clear();returnHeading=null;restartFlight();clearEncounter();energy=100-adventure.wear;ammo=90+adventure.mag*20;buildWorld();parkAtStart();updateWorld();enterFlight();draw(0);arrive(base)
 }
 function arrive(port){
+ if(affiliation(port.id)==='pirate')return;
  if(waypointId===port.id)waypointId=null;
  adventure.last=port.id;if(!adventure.visited.includes(port.id))adventure.visited.push(port.id);
  const job=adventure.job;if(job?.kind==='delivery'&&job.to===port.id)job.ready=true;
  power=0;$('thrust').value=0;
- if(port.id==='home'||encounter&&Math.hypot(port.x-encounter.x,port.z-encounter.z)>3200)clearEncounter();
- saveAdventure();dockMenu()
+ if(port.id==='home'||encounter&&outsideBattle(port.wx,port.wz))clearEncounter();
+ saveAdventure();dockMenu();tutorialArrival(port)
 }
 function dockMenu(){
  const b=landingSite;showPanel('dock',b.name,labels[affiliation(b.id)]+(b.kind&&b.kind!=='home'?'・'+({city:'大型都市',town:'町',village:'村'})[b.kind]:'')+'　所持金 '+adventure.money+'　積荷 '+adventure.goods+'/8');
  action(b.kind&&b.kind!=='home'?'町に入る':'施設を利用',services);
- action('移動先を選ぶ',()=>travelMenu(false),Boolean(encounter));
- action('離陸',()=>{if(deckMode!=='moored'||affiliation(landingSite.id)==='pirate')return;deckMode='launch';deckTime=0;power=.78;$('thrust').value=78;enterFlight()});
+ action('移動先を選ぶ',()=>travelMenu(),Boolean(encounter));
+ action('離陸',()=>{if(deckMode!=='moored'||affiliation(landingSite.id)==='pirate')return;deckMode='launch';deckTime=0;power=.78;$('thrust').value=78;enterFlight();tutorialLaunch()});
  action('航路を設定',()=>navigationMenu(false));
- action('タイトルへ',titleScreen,Boolean(encounter))
+ action('操作説明',()=>flightHelp(dockMenu));action('タイトルへ',titleScreen,Boolean(encounter))
 }
 function navigationMenu(airborne){
  showPanel('travel','航路を設定','目的地を選ぶと、飛行中に方位と距離を表示します。');atlas();
@@ -49,11 +55,15 @@ function navigationMenu(airborne){
  action('戻る',back);
  for(const site of Object.values(outposts))action(site.name+'・'+labels[affiliation(site.id)],()=>{waypointId=site.id;back()})
 }
-function travelMenu(start){
- if(start?panel!=='title':live||encounter||deckMode!=='moored'||affiliation(landingSite.id)==='pirate')return;
- showPanel('travel','航路図','青は友好、黄は中立、赤は空賊。中立は自力で初訪問すると移動先に登録。');atlas();
- for(const b of Object.values(outposts))action(b.name+'・'+labels[affiliation(b.id)],()=>startFlight(b.id),!selectable(b.id));
- action('戻る',start?titleScreen:dockMenu)
+function travelMenu(){
+ if(panel!=='dock'||live||encounter||deckMode!=='moored'||affiliation(landingSite.id)==='pirate')return;
+ showPanel('travel','航路図','青は解放済み、赤は空賊占領。着陸した解放地点へ移動できます。');atlas();
+ for(const b of Object.values(outposts))action(b.name+'・'+labels[affiliation(b.id)],()=>fastTravel(b.id),!selectable(b.id));
+ action('戻る',dockMenu)
+}
+function fastTravel(id){
+ if(panel!=='travel'||live||encounter||deckMode!=='moored'||!landingSite||affiliation(landingSite.id)==='pirate'||!selectable(id))return false;
+ startFlight(id);return true
 }
 const industries={works:'工業',timber:'林業',mine:'鉱業',farm:'農業',central:'商業'};
 function services(){

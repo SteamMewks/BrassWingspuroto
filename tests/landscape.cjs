@@ -17,7 +17,7 @@ const views = [
  try{
   const page=await browser.newPage({viewport:{width:800,height:450}});
   await page.evaluate(()=>{window.requestAnimationFrame=()=>0});
-  await page.setContent(html);
+  await page.setContent(html);await page.evaluate(require('./helpers/adventure.cjs'),{liberated:'all',visited:'all',tutorial:'done'});
   for(const [name,...view] of views){
    const sample=await page.evaluate(([stage,X,Z,H,A])=>{
     startFlight(landscapes[stage].departure);

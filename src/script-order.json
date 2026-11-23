@@ -59,5 +59,6 @@
   "render/scenery.js",
   "render/frame.js",
   "ui/journal.js",
+  "ui/tutorial.js",
   "core/start.js"
 ]

@@ -2,7 +2,7 @@ function atlas(){
  const k=500/worldSize;
  const pins=Object.values(outposts).map(b=>{
   const side=affiliation(b.id),X=b.wx*k,Y=500-b.wz*k;
-  return '<g fill="'+colors[side]+'"><title>'+b.name+'・'+labels[side]+'</title>'+(b.id==='home'?'<path d="M'+X+' '+(Y-6)+'l5 6 -5 5 -5 -5Z"/>':'<circle cx="'+X+'" cy="'+Y+'" r="3"/>')+'</g>'
+  return '<g fill="'+colors[side]+'"><title>'+b.name+'・'+labels[side]+'</title>'+(b.id==='home'?'<path d="M'+X+' '+(Y-6)+'l5 6 -5 5 -5 -5Z"/>':b.deck?'<path d="M'+X+' '+(Y-4)+'l4 7h-8Z"/>':!b.kind?'<rect x="'+(X-3)+'" y="'+(Y-3)+'" width="6" height="6"/>':'<circle cx="'+X+'" cy="'+Y+'" r="3"/>')+'</g>'
  }).join('');
  const location=panel==='pause'?localToWorld(x,z):outposts[adventure.last]||settlements.home;
  const target=outposts[waypointId]||jobDestination();

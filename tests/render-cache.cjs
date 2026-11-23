@@ -20,7 +20,7 @@ const fs=require('node:fs');
     surveyBuffers.bytes-=sizes.get(id)||0;sizes.delete(id);return remove.apply(this,arguments)
    }
   });
-  await page.setContent(fs.readFileSync(require.resolve('../BrassWings-preview.html'),'utf8'));
+  await page.setContent(fs.readFileSync(require.resolve('../BrassWings-preview.html'),'utf8'));await page.evaluate(require('./helpers/adventure.cjs'),{liberated:'all',visited:'all',tutorial:'done'});
   console.log(await page.evaluate(()=>{
    if(!surfaceRenderer?.hasTrees())throw Error('WebGL foliage unavailable');
    const baseline=surveyBuffers.bytes;
