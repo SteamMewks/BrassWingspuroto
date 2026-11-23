@@ -1,3 +1,4 @@
+let waypointId=null;
 let panel='title',message='',messageUntil=0,score=0,spray=[],sprayClock=0;
 const flightControls=[document.querySelector('header'),document.querySelector('footer')];
 function action(label,run,disabled=false){
@@ -13,7 +14,7 @@ function showPanel(state,title,description){
  $('journalOpen').hidden=false;syncAudio();
  if(state==='pause')atlas();
  if(state==='crash')action('安全な拠点で再開',()=>startFlight(adventure.last));
- if(state==='pause')action('飛行を再開',enterFlight)
+ if(state==='pause'){action('飛行を再開',enterFlight);action('航路を設定',()=>navigationMenu(true))}
 }
 function titleScreen(){
  leaveSky();ruinDistrictCache.clear();clearTerrain();tileCache.clear();groves.length=groundPixels.length=0;clearEncounter();crash=null;needsRedraw=true;
@@ -27,6 +28,7 @@ function startFlight(id){
  returnHeading=null;restartFlight();clearEncounter();energy=100-adventure.wear;ammo=90+adventure.mag*20;buildWorld();parkAtStart();updateWorld();enterFlight();draw(0);arrive(base)
 }
 function arrive(port){
+ if(waypointId===port.id)waypointId=null;
  adventure.last=port.id;if(!adventure.visited.includes(port.id))adventure.visited.push(port.id);
  const job=adventure.job;if(job?.kind==='delivery'&&job.to===port.id)job.ready=true;
  power=0;$('thrust').value=0;clearEncounter();saveAdventure();dockMenu()
@@ -36,7 +38,14 @@ function dockMenu(){
  action(b.kind&&b.kind!=='home'?'町に入る':'施設を利用',services);
  action('移動先を選ぶ',()=>travelMenu(false),Boolean(encounter));
  action('離陸',()=>{if(deckMode!=='moored'||affiliation(landingSite.id)==='pirate')return;deckMode='launch';deckTime=0;power=.78;$('thrust').value=78;enterFlight()});
+ action('航路を設定',()=>navigationMenu(false));
  action('タイトルへ',titleScreen)
+}
+function navigationMenu(airborne){
+ showPanel('travel','航路を設定','目的地を選ぶと、飛行中に方位と距離を表示します。');atlas();
+ const back=airborne?()=>showPanel('pause','一時停止','飛行を再開できます。'):dockMenu;
+ action('戻る',back);
+ for(const site of Object.values(outposts))action(site.name+'・'+labels[affiliation(site.id)],()=>{waypointId=site.id;back()})
 }
 function travelMenu(start){
  if(start?panel!=='title':live||encounter||deckMode!=='moored'||affiliation(landingSite.id)==='pirate')return;

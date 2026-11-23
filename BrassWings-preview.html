@@ -156,6 +156,7 @@ function readGesture(rawX=ax,rawY=ay){
   tapDir='';
  }else{tapDir=dir;tapAt=now}
 }
+let waypointId=null;
 let panel='title',message='',messageUntil=0,score=0,spray=[],sprayClock=0;
 const flightControls=[document.querySelector('header'),document.querySelector('footer')];
 function action(label,run,disabled=false){
@@ -171,7 +172,7 @@ function showPanel(state,title,description){
  $('journalOpen').hidden=false;syncAudio();
  if(state==='pause')atlas();
  if(state==='crash')action('安全な拠点で再開',()=>startFlight(adventure.last));
- if(state==='pause')action('飛行を再開',enterFlight)
+ if(state==='pause'){action('飛行を再開',enterFlight);action('航路を設定',()=>navigationMenu(true))}
 }
 function titleScreen(){
  leaveSky();ruinDistrictCache.clear();clearTerrain();tileCache.clear();groves.length=groundPixels.length=0;clearEncounter();crash=null;needsRedraw=true;
@@ -185,6 +186,7 @@ function startFlight(id){
  returnHeading=null;restartFlight();clearEncounter();energy=100-adventure.wear;ammo=90+adventure.mag*20;buildWorld();parkAtStart();updateWorld();enterFlight();draw(0);arrive(base)
 }
 function arrive(port){
+ if(waypointId===port.id)waypointId=null;
  adventure.last=port.id;if(!adventure.visited.includes(port.id))adventure.visited.push(port.id);
  const job=adventure.job;if(job?.kind==='delivery'&&job.to===port.id)job.ready=true;
  power=0;$('thrust').value=0;clearEncounter();saveAdventure();dockMenu()
@@ -194,7 +196,14 @@ function dockMenu(){
  action(b.kind&&b.kind!=='home'?'町に入る':'施設を利用',services);
  action('移動先を選ぶ',()=>travelMenu(false),Boolean(encounter));
  action('離陸',()=>{if(deckMode!=='moored'||affiliation(landingSite.id)==='pirate')return;deckMode='launch';deckTime=0;power=.78;$('thrust').value=78;enterFlight()});
+ action('航路を設定',()=>navigationMenu(false));
  action('タイトルへ',titleScreen)
+}
+function navigationMenu(airborne){
+ showPanel('travel','航路を設定','目的地を選ぶと、飛行中に方位と距離を表示します。');atlas();
+ const back=airborne?()=>showPanel('pause','一時停止','飛行を再開できます。'):dockMenu;
+ action('戻る',back);
+ for(const site of Object.values(outposts))action(site.name+'・'+labels[affiliation(site.id)],()=>{waypointId=site.id;back()})
 }
 function travelMenu(start){
  if(start?panel!=='title':live||encounter||deckMode!=='moored'||affiliation(landingSite.id)==='pirate')return;
@@ -1261,7 +1270,7 @@ function atlas(){
   return '<g fill="'+colors[side]+'"><title>'+b.name+'・'+labels[side]+'</title>'+(b.id==='home'?'<path d="M'+X+' '+(Y-6)+'l5 6 -5 5 -5 -5Z"/>':'<circle cx="'+X+'" cy="'+Y+'" r="3"/>')+'</g>'
  }).join('');
  const location=panel==='pause'?localToWorld(x,z):outposts[adventure.last]||settlements.home;
- const target=jobDestination();
+ const target=outposts[waypointId]||jobDestination();
  const objective=target?'<circle cx="'+target.wx*k+'" cy="'+(500-target.wz*k)+'" r="8" fill="none" stroke="#fff2aa" stroke-dasharray="3 2"><title>'+target.name+'</title></circle>':'';
  const marker='<circle id="atlas-position" cx="'+location.wx*k+'" cy="'+(500-location.wz*k)+'" r="6" fill="none" stroke="#fff2b2"/>';
  const rail=railSurvey.map(line=>'<polyline points="'+line.points.map(([X,Z])=>[X*k,500-Z*k].join(',')).join(' ')+'" fill="none" stroke="#916e55" stroke-width=".8"/>').join('');
@@ -3076,8 +3085,8 @@ if(!inSky){
  const enemy=locked?.hp?locked:enemies.filter(e=>e.hp>0).sort((a,b)=>Math.hypot(a.x-x,a.z-z)-Math.hypot(b.x-x,b.z-z))[0];
  $('place').textContent=encounter.name+' 空賊 '+enemies.filter(e=>e.hp).length+'機';
  }else{worldMinimap();let dir=target?Math.atan2(target[0]-x,target[1]-z)-yaw:0;$('place').textContent=target?['↑','↗','→','↘','↓','↙','←','↖'][(Math.round(dir/(tau/8))%8+8)%8]+' '+target[2]+'　'+(nearest/1000).toFixed(1)+' km　'+'発見 '+found.size:'自由飛行'}
- if(adventure.job&&!deckMode&&!encounter){
-  const site=jobDestination(),p=worldToLocal(site.wx,site.wz),angle=Math.atan2(p.x-x,p.z-z)-yaw;
+ if((adventure.job||waypointId)&&!deckMode&&!encounter){
+  const site=outposts[waypointId]||jobDestination(),p=worldToLocal(site.wx,site.wz),angle=Math.atan2(p.x-x,p.z-z)-yaw;
   const arrow=['↑','↗','→','↘','↓','↙','←','↖'][((Math.round(angle/(tau/8))%8)+8)%8];
   $('place').textContent=arrow+' '+site.name+'　'+(Math.hypot(p.x-x,p.z-z)/1000).toFixed(1)+' km'
  }

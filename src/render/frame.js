@@ -166,8 +166,8 @@ if(!inSky){
  const enemy=locked?.hp?locked:enemies.filter(e=>e.hp>0).sort((a,b)=>Math.hypot(a.x-x,a.z-z)-Math.hypot(b.x-x,b.z-z))[0];
  $('place').textContent=encounter.name+' 空賊 '+enemies.filter(e=>e.hp).length+'機';
  }else{worldMinimap();let dir=target?Math.atan2(target[0]-x,target[1]-z)-yaw:0;$('place').textContent=target?['↑','↗','→','↘','↓','↙','←','↖'][(Math.round(dir/(tau/8))%8+8)%8]+' '+target[2]+'　'+(nearest/1000).toFixed(1)+' km　'+'発見 '+found.size:'自由飛行'}
- if(adventure.job&&!deckMode&&!encounter){
-  const site=jobDestination(),p=worldToLocal(site.wx,site.wz),angle=Math.atan2(p.x-x,p.z-z)-yaw;
+ if((adventure.job||waypointId)&&!deckMode&&!encounter){
+  const site=outposts[waypointId]||jobDestination(),p=worldToLocal(site.wx,site.wz),angle=Math.atan2(p.x-x,p.z-z)-yaw;
   const arrow=['↑','↗','→','↘','↓','↙','←','↖'][((Math.round(angle/(tau/8))%8)+8)%8];
   $('place').textContent=arrow+' '+site.name+'　'+(Math.hypot(p.x-x,p.z-z)/1000).toFixed(1)+' km'
  }
