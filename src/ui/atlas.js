@@ -1,15 +1,66 @@
-function atlas(){
- const k=500/worldSize;
- const pins=Object.values(outposts).map(b=>{
-  const side=affiliation(b.id),X=b.wx*k,Y=500-b.wz*k;
-  return '<g fill="'+colors[side]+'"><title>'+b.name+'・'+labels[side]+'</title>'+(b.id==='home'?'<path d="M'+X+' '+(Y-6)+'l5 6 -5 5 -5 -5Z"/>':b.deck?'<path d="M'+X+' '+(Y-4)+'l4 7h-8Z"/>':!b.kind?'<rect x="'+(X-3)+'" y="'+(Y-3)+'" width="6" height="6"/>':'<circle cx="'+X+'" cy="'+Y+'" r="3"/>')+'</g>'
+let mapAirborne=false,mapSelection=null,mapZoom=1,mapScroll=0,mapCluster=null;
+function mapLocations(){
+ const known=Object.values(outposts).filter(b=>knownPort(b.id));
+ for(const s of journalSites)if(discoveries[s.id]||(adventure.job&&!adventure.job.ready&&s.id==='orrery'))known.push({...s,wx:s.x,wz:s.z});
+ return known
+}
+function routeTarget(){
+ if(!waypointId)return jobDestination();
+ const record=outposts[waypointId]?null:journalSites.find(s=>s.id===waypointId);
+ return outposts[waypointId]||(record&&{...record,wx:record.x,wz:record.z})||jobDestination()
+}
+function mapStatus(b){
+ if(!outposts[b.id])return discoveries[b.id]?'発見済み':'位置判明';
+ if(adventure.visited.includes(b.id))return '訪問済み';
+ if(adventure.liberated.includes(b.id))return '解放済み';
+ return adventure.seen.includes(b.id)?'発見済み・未訪問':'位置判明・未訪問'
+}
+function navigationMenu(airborne){
+ mapAirborne=airborne;mapZoom=1;mapCluster=null;mapScroll=0;mapSelection=waypointId||adventure.freight?.to||adventure.last;worldMapPanel()
+}
+function selectMapSite(id){
+ mapScroll=$('actions').scrollTop;mapSelection=id;mapCluster=null;worldMapPanel()
+}
+function worldMapPanel(){
+ const sites=mapLocations(),b=sites.find(s=>s.id===mapSelection)||sites[0],port=outposts[b.id];
+ const p=mapAirborne?localToWorld(x,z):landingSite;
+ const facilities=port?(isTown(b)?'掲示板・商店':b.id==='home'?'補給・整備・改造・倉庫':'補給・整備・改造'):'探訪記録';
+ showPanel('map',b.name,(port?portType(b)+'・'+labels[affiliation(b.id)]:wonders.some(s=>s.id===b.id)?'巨景':'遺構')+'　'+mapStatus(b)+'　'+(portDistance(p,b)/1000).toFixed(1)+' km　'+facilities);
+ $('atlas').hidden=false;atlas(sites,b,p);
+ const choices=mapCluster||sites;
+ const select=document.createElement('select');select.setAttribute('aria-label','地点を選択');
+ for(const s of choices)select.add(new Option(s.name,s.id,false,s.id===b.id));
+ select.onchange=()=>selectMapSite(select.value);$('actions').append(select);
+ action('航路を設定',()=>{waypointId=b.id;mapAirborne?pauseMenu():dockMenu()});
+ if(port&&b.id!=='home')action((adventure.favorites.includes(b.id)?'登録解除':'移動先に登録')+'　'+adventure.favorites.length+'/10',()=>{toggleFavorite(b.id);worldMapPanel()},!selectable(b.id)||(!adventure.favorites.includes(b.id)&&adventure.favorites.length>=10));
+ fixedAction(mapZoom===1?'拡大':'全域',()=>{mapZoom=mapZoom===1?4:1;worldMapPanel()});
+ fixedAction('戻る',mapAirborne?pauseMenu:dockMenu);$('actions').scrollTop=mapScroll
+}
+let atlasTerrain='';
+function atlas(sites=mapLocations(),selected=null,location=outposts[adventure.last]){
+ const k=500/worldSize,zoom=selected?mapZoom:1,span=500/zoom;
+ const clampView=v=>Math.max(0,Math.min(500-span,v-span/2));
+ const X=b=>b.wx*k,Y=b=>500-b.wz*k;
+ const paths=lines=>lines.map(line=>line.map(([x,z])=>x*k+','+(500-z*k)).join(' '));
+ if(!atlasTerrain){
+  const lines=(data,color)=>paths(data).map(points=>'<polyline points="'+points+'" fill="none" stroke="'+color+'" stroke-width=".7"/>').join('');
+  atlasTerrain='<rect width="500" height="500" fill="#29474e"/><path transform="scale('+500/1254+')" d="'+worldOutline+'" fill="#879661" fill-rule="evenodd"/>'+lines(watersheds.reaches.map(r=>r.samples),'#527d79')+lines(railSurvey.map(l=>l.points),'#916e55')
+ }
+ const objectives=[adventure.freight&&outposts[adventure.freight.to],surveyDestination(),routeTarget()].filter(Boolean);
+ const markers=sites.map(b=>{
+  const color=outposts[b.id]?colors[affiliation(b.id)]:'#ffe985';
+  const shape=b.deck?'<path d="M0 -4l4 7h-8Z"/>':outposts[b.id]&&!b.kind?'<rect x="-3" y="-3" width="6" height="6"/>':'<circle r="3"/>';
+  const ring=(r,c)=>'<circle r="'+r+'" fill="none" stroke="'+c+'" stroke-width="2"/>';
+  return '<g transform="translate('+X(b)+' '+Y(b)+') scale('+(2/zoom)+')" fill="'+color+'">'+shape+(adventure.favorites.includes(b.id)?ring(5,'#ecad65'):'')+(objectives.some(target=>target.wx===b.wx&&target.wz===b.wz)?ring(8,'#ffff75'):'')+(selected?.id===b.id?ring(11,'white'):'')+'</g>'
  }).join('');
- const location=panel==='pause'?localToWorld(x,z):outposts[adventure.last]||settlements.home;
- const target=outposts[waypointId]||jobDestination();
- const objective=target?'<circle cx="'+target.wx*k+'" cy="'+(500-target.wz*k)+'" r="8" fill="none" stroke="#fff2aa" stroke-dasharray="3 2"><title>'+target.name+'</title></circle>':'';
- const marker='<circle id="atlas-position" cx="'+location.wx*k+'" cy="'+(500-location.wz*k)+'" r="6" fill="none" stroke="#fff2b2"/>';
- const rail=railSurvey.map(line=>'<polyline points="'+line.points.map(([X,Z])=>[X*k,500-Z*k].join(',')).join(' ')+'" fill="none" stroke="#916e55" stroke-width=".8"/>').join('');
- const water=watersheds.reaches.map(reach=>'<polyline points="'+reach.samples.map(([X,Z])=>[X*k,500-Z*k].join(',')).join(' ')+'" fill="none" stroke="#527d79" stroke-width=".7"/>').join('');
- const records=journalSites.filter(s=>discoveries[s.id]).map(s=>'<circle cx="'+s.x*k+'" cy="'+(500-s.z*k)+'" r="2" fill="#fff4ab"/>').join('');
- $('atlas').innerHTML='<svg viewBox="0 0 500 500" aria-label="世界地図"><rect width="500" height="500" fill="#29474e"/><path transform="scale('+500/1254+')" d="'+worldOutline+'" fill="#879661" fill-rule="evenodd"/>'+water+rail+pins+records+objective+marker+'</svg>'
+ const view=selected?[clampView(X(selected)),clampView(Y(selected)),span,span]:[0,0,500,500];
+ $('atlas').innerHTML='<svg viewBox="'+view.join(' ')+'" aria-label="世界地図">'+atlasTerrain+markers+'<circle id="atlas-position" cx="'+X(location)+'" cy="'+Y(location)+'" r="'+5/zoom+'" fill="none" stroke="#fff2b2"/></svg>';
+ if(!selected)return;
+ const svg=$('atlas').firstChild;
+ svg.onclick=e=>{
+  const m=svg.getScreenCTM(),point=new DOMPoint(e.clientX,e.clientY).matrixTransform(m.inverse());
+  const near=sites.map(s=>({s,d:Math.hypot(X(s)-point.x,Y(s)-point.y)*m.a})).filter(hit=>hit.d<=22).sort((a,b)=>a.d-b.d);
+  if(!near.length)return;
+  mapSelection=near[0].s.id;mapCluster=near.length>1?near.map(hit=>hit.s):null;worldMapPanel()
+ }
 }

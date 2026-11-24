@@ -63,7 +63,7 @@ const assert=require('node:assert/strict');
     for(const b of quarters)if(hitObject(b.x,b.z,b.y+b.h-1)!=='建物')throw Error('Building collision');
     x=worldSize-m.wx+1;z=0;limitAirspace();
     if(Math.abs(x+m.wx-worldSize)>.001||returnHeading===null)throw Error('World boundary');
-    pause();
+    pause();navigationMenu(true);
     const marker=$('atlas').querySelector('#atlas-position');
     if(Math.abs(Number(marker.getAttribute('cx'))-500)>.001)throw Error('Atlas position');
     return {mismatches,worldSize,runway:ground(base.x,base.z),water:m.carrier?ground(ship.x,ship.z):0}

@@ -25,17 +25,20 @@ const html=readFileSync(resolve(__dirname,'../BrassWings-preview.html'));
   for(let i=0;i<75;i++)draw(.05);
   if(panel!=='dock'||landingSite.id!==id)throw Error('Destination '+id)
  },id);
- await land('windmill');await choose('町に入る');await choose('依頼掲示板・報告');
- await page.getByRole('button',{name:/物資輸送 →/}).click();
- const destination=await page.evaluate(()=>adventure.job.to);
+ await land('windmill');await choose('依頼掲示板');
+ await page.getByRole('button',{name:/行/}).first().click();
+ const {to,reward}=await page.evaluate(()=>adventure.freight);
  await page.reload();await choose('続きから');
- await land(destination);await choose('町に入る');await choose('依頼掲示板・報告');await choose('報告して報酬を受領');
- assert.equal(await page.evaluate(()=>adventure.money),60);
+ await land(to);await choose('依頼掲示板');await choose('納品 · '+reward);
+ assert.equal(await page.evaluate(()=>adventure.money),30+reward);
  await page.getByRole('button',{name:/遺構調査 →/}).click();
  await page.evaluate(()=>{const s=relics.find(r=>r.id==='orrery');({x,z}=worldToLocal(s.x,s.z));alt=s.base+130;discoverRelics();if(!adventure.job.ready)throw Error('Survey')});
- await land(destination);await choose('町に入る');await choose('依頼掲示板・報告');await choose('報告して報酬を受領');
- await choose('戻る');await choose('商店　物資を買う · 5');await choose('飛行場へ戻る');await choose('移動先を選ぶ');await choose('真鍮の翼工房・本拠地');await choose('施設を利用');await choose('倉庫に預ける');await choose('弾倉改造 · 40');
- await page.reload();assert.deepEqual(await page.evaluate(()=>[adventure.money,adventure.stored,adventure.mag,adventure.job,adventure.last]),[65,1,1,null,'home']);
+ await land(to);await choose('依頼掲示板');await choose('遺構調査を報告 · 50');
+ await choose('戻る');await choose('商店');await page.getByRole('button',{name:/買う/}).first().click();
+ const cost=await page.evaluate(()=>adventure.cargo[0].price);
+ await choose('戻る');await choose('ファストトラベル');await choose('真鍮の翼工房');await choose('倉庫');await page.getByRole('button',{name:/預ける/}).click();
+ await choose('戻る');await choose('改造 · 40');
+ await page.reload();assert.deepEqual(await page.evaluate(()=>[adventure.money,adventure.warehouse.length,adventure.mag,adventure.job,adventure.last]),[40+reward-cost,1,1,null,'home']);
  assert.deepEqual(errors,[]);console.log('Flight, village delivery, survey, payment, spending, storage, travel and reload passed');
  }finally{await browser?.close();server.close()}
 })().catch(error=>{console.error(error);process.exitCode=1});

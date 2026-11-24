@@ -33,7 +33,7 @@ const layouts=[['portrait',360,640],['landscape',640,360],['desktop',1100,700],[
    }
    await shot('title');
    await page.evaluate(()=>titleScreen());await press('#actions button:nth-child(2)');await step(1);await shot('base');
-   await press('#actions button:has-text("離陸")');
+   await press('#tools button:has-text("離陸")');
    const thrust=await page.locator('#thrust').boundingBox();
    if(touch)await page.touchscreen.tap(thrust.x+thrust.width/2,thrust.y+10);
    else await page.mouse.click(thrust.x+thrust.width/2,thrust.y+10);

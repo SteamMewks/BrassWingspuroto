@@ -22,12 +22,19 @@ function nearbyDefender(wx,wz){
  }
  return nearest
 }
-function fight(dt){
- const {wx,wz}=localToWorld(x,z);
- if(homeDistance(wx,wz)<400||outsideBattle(wx,wz)){
-  if(encounter){clearEncounter();encounterDelay=4;nearbyDefender(wx,wz);message='防衛隊から離脱';messageUntil=t+3}
-  return
+function leaveBattle(wx,wz){
+ const safe=homeDistance(wx,wz)<400;
+ if(!safe&&!outsideBattle(wx,wz))return false;
+ if(encounter){
+  clearEncounter();encounterDelay=4;nearbyDefender(wx,wz);
+  message=safe?'本拠地へ安全に帰還':escapeLoss();messageUntil=t+5
  }
+ return true
+}
+function fight(dt){
+ if(!live)return;
+ const {wx,wz}=localToWorld(x,z);
+ if(leaveBattle(wx,wz))return;
  encounterDelay=Math.max(0,encounterDelay-dt);
  if(!encounter){
   for(const id of reentryBlocked){const b=outposts[id];if(Math.hypot(wx-b.wx,wz-b.wz)>=triggerRadius)reentryBlocked.delete(id)}

@@ -37,7 +37,7 @@ const fs=require('node:fs');
     for(const line of shipping)for(let d=0;d<line.length;d+=35){const p=railSample(line,d),q=deckAxes(b,p.x,p.z);check(Math.abs(q.side)>40||Math.abs(q.along)>145,b.id+' shipping lane')}
     check(hitObject(b.x,b.z,12)==='船体',b.id+' hull');
     const bridge=deckPoint(b,16,14);check(hitObject(bridge.x,bridge.z,20)==='艦橋',b.id+' bridge');
-    $('actions').querySelectorAll('button')[2].click();for(let j=0;j<51;j++)draw(.05);
+    [...$('tools').children].find(button=>button.textContent==='離陸').click();for(let j=0;j<51;j++)draw(.05);
     check(live&&!deckMode&&!crash&&alt>40,b.id+' launch');
     const approach=deckPoint(b,0,-110);x=approach.x;z=approach.z;yaw=cameraYaw=b.heading;power=.3;alt=24;
     for(let j=0;j<76;j++)draw(.05);

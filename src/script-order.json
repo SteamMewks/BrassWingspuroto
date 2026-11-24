@@ -31,6 +31,7 @@
   "data/townLayoutArchive.js",
   "world/towns.js",
   "data/relics.js",
+  "systems/logistics.js",
   "systems/save.js",
   "ui/atlas.js",
   "world/decks.js",

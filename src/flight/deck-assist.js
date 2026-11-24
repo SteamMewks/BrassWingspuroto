@@ -28,6 +28,7 @@ function deckAssist(dt){
   if(Math.abs(angleDelta(yaw-heading))>1.7)return false;
   landingSite=port;landingDirection=direction;deckMode='capture';deckTime=0;trick=null;phase=0;returnHeading=null;clearFlightInput();syncFireButton()
  }
+ const movingX=x,movingZ=z,movingAlt=alt;
  deckTime+=dt;
  const capture=1-Math.exp(-2.4*dt);
  bank*=1-capture;pitch*=1-capture;yaw+=angleDelta(heading-yaw)*capture;
@@ -35,12 +36,15 @@ function deckAssist(dt){
   if(port.deck){const axes=deckAxes(port,x,z),p=deckPoint(port,axes.side*(1-capture),axes.along+(62-axes.along)*(1-Math.exp(-.72*dt)));x=p.x;z=p.z}
   else{x-=side*capture;z+=(stop.z-z)*(1-Math.exp(-.72*dt))}
   alt+=(touchHeight-alt)*(1-Math.exp(-1.45*dt));airspeed*=Math.exp(-1.5*dt);
-  if(deckTime>3.4){deckMode='moored';airspeed=0;alt=touchHeight;x=stop.x;z=stop.z;arrive(port)}
+  if(encounter){const p=localToWorld(x,z);leaveBattle(p.wx,p.wz)}
+  if(deckTime>3.4){deckMode='moored';airspeed=0;alt=touchHeight;x=stop.x;z=stop.z;recordFlight(Math.hypot(x-movingX,z-movingZ,alt-movingAlt));arrive(port)}
+  else recordFlight(Math.hypot(x-movingX,z-movingZ,alt-movingAlt))
  }else if(deckMode==='moored'){
   
  }else{
   const prevX=x,prevZ=z,prevAlt=alt;
   airspeed=Math.min(105,airspeed+64*dt);x+=Math.sin(heading)*airspeed*dt;z+=Math.cos(heading)*airspeed*dt;alt+=Math.min(26,deckTime*14)*dt;
+  recordFlight(Math.hypot(x-prevX,z-prevZ,alt-prevAlt));
   if(impact(prevX,prevZ,prevAlt))return true;
   if(deckTime>=2.2){
    deckMode='';cameraYaw=yaw;
