@@ -27,7 +27,8 @@ thrust.oninput=e=>{power=Number(e.target.value)/100;syncAudio()};
 function pause(){
  if(!live)return;
  live=false;clearFlightInput();
- showPanel('pause','一時停止','現在の飛行を再開できます。');atlas()
+ if(adventure.cargo.length)saveAdventure();
+ pauseMenu()
 }
 $('pause').onclick=pause;onblur=pause;
 document.addEventListener('visibilitychange',()=>{if(document.hidden)pause()});

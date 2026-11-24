@@ -38,7 +38,7 @@ const {chromium}=require('playwright');
      updateWorld();
      check(!groves.some(t=>Math.abs(t.X-b.x)<b.width/2+t.R&&Math.abs(t.Z-b.z)<b.length/2+t.R),'trees '+b.id);
      check(!quarters.some(q=>Math.abs(q.x-b.x)<b.width/2+q.radius&&Math.abs(q.z-b.z)<b.length/2+q.radius),'town buildings '+b.id);
-     [...$('actions').children].find(button=>button.textContent==='離陸').click();
+     [...$('tools').children].find(button=>button.textContent==='離陸').click();
      for(let i=0;i<48;i++)deckAssist(.05);
      check(!deckMode&&live&&!crash,'takeoff '+b.id)
     }
@@ -61,7 +61,7 @@ const {chromium}=require('playwright');
     fight(.05);
     check(adventure.kills===killsBefore+3&&adventure.money===moneyBefore+60,'single reward');
     check(!selectable(target.id)&&landingPorts.includes(target)&&target.side==='friendly','liberation');
-    const approach=target.deck?deckPoint(target,0,-95):{x:target.x,z:target.z-95};x=approach.x;z=approach.z;alt=target.height+12;yaw=target.heading||0;power=.25;for(let i=0;i<73;i++)deckAssist(.05);check(selectable(target.id),'first landing');services();check(panel==='service','liberated service');successes.push(target.id)
+    const approach=target.deck?deckPoint(target,0,-95):{x:target.x,z:target.z-95};x=approach.x;z=approach.z;alt=target.height+12;yaw=target.heading||0;power=.25;for(let i=0;i<73;i++)deckAssist(.05);check(selectable(target.id),'first landing');check(panel==='dock','liberated service');successes.push(target.id)
    }
    return successes
   });

@@ -15,9 +15,9 @@ const seed=require('./helpers/adventure.cjs');
   await press('新規ゲーム');await press('キャンセル');assert.equal(await p.evaluate(()=>localStorage.getItem(saveKey)),'{');
   await press('新規ゲーム');await press('上書きして始める');
   assert.deepEqual(await p.evaluate(()=>[adventure.money,adventure.visited,adventure.liberated,adventure.job,adventure.mag,adventure.wear,discoveries,adventure.tutorial,Object.keys(outposts).filter(id=>affiliation(id)==='pirate').length]),[30,['home'],[],null,0,0,{},'home',46]);
-  await press('黄銅港市を目的地にする');await press('タイトルへ');await press('続きから');
+  await press('黄銅港市を目的地にする');await press('手帳');await press('タイトルへ');await press('続きから');
   assert.equal(await p.evaluate(()=>waypointId),'brass-city');
-  await p.evaluate(()=>{adventure.money=97;adventure.goods=2;discoveries.gear='2000-01-01';saveAdventure();titleScreen()});
+  await p.evaluate(()=>{adventure.money=97;adventure.cargo=[{item:'ore',qty:2,price:5,origin:'home',metres:0}];discoveries.gear='2000-01-01';saveAdventure();titleScreen()});
   await press('新規ゲーム');await press('キャンセル');await press('記録を初期化');await press('キャンセル');
   assert.equal(await p.evaluate(()=>adventure.money),97);
   await p.evaluate(()=>{window.originalRemove=Storage.prototype.removeItem;Storage.prototype.removeItem=function(){throw Error('blocked')}});
@@ -52,7 +52,7 @@ const seed=require('./helpers/adventure.cjs');
    const log=await p.evaluate(id=>{
     const site=outposts[id],first=id==='brass-city',snap=[];
     const check=(v,s)=>{if(!v)throw Error(id+' '+s+' '+JSON.stringify({pos:localToWorld(x,z),alt,deckMode,crash:crash?.cause,tutorial:adventure.tutorial,encounter:encounter?.id,panel}))};
-    const click=label=>{const btn=[...$('actions').children].find(b=>b.textContent===label);check(btn&&!btn.disabled,label);btn.click()};
+    const click=label=>{const btn=[...document.querySelectorAll('#cover button')].find(b=>b.textContent===label);check(btn&&!btn.disabled,label);btn.click()};
     check(!landingPorts.some(b=>b.id===id)&&!selectable(id),'occupied');
     click('離陸');let fought=false;
     const clamp=n=>Math.max(-1,Math.min(1,n));
@@ -89,9 +89,9 @@ const seed=require('./helpers/adventure.cjs');
      step(site.wx,site.wz+direction*160,site.height+Math.max(12,Math.min(240,(along-130)*.15)),.28)
     }
     check(fought&&deckMode==='moored'&&landingSite.id===id&&selectable(id),'landing');
-    click('町に入る');
-    check(panel==='service','reception');click('依頼掲示板・報告');check(panel==='jobs','jobs');
-    click('戻る');click('飛行場へ戻る');click('離陸');for(let i=0;i<50;i++)updateFlight(.05);
+    if(panel==='guide')click('町に入る');
+    check(panel==='dock','reception');click('依頼掲示板');check(panel==='jobs','jobs');
+    click('戻る');click('離陸');for(let i=0;i<50;i++)updateFlight(.05);
     check(!deckMode&&live&&!crash,'takeoff');return {id,firstFlightStages:snap}
    },id);
    await open();assert.ok(await p.evaluate(id=>selectable(id)&&adventure.last===id&&adventure.tutorial==='done',id));console.log(JSON.stringify(log))

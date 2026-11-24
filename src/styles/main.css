@@ -27,3 +27,34 @@ footer{padding:0 max(14px,env(safe-area-inset-right)) 0 max(14px,env(safe-area-i
 
 #notice:not(:empty){position:fixed;inset:auto 8px 8px;z-index:5;background:#452f28;padding:8px;color:#fff0cb;text-align:center}
 #actions button:disabled{opacity:.5}
+.card{padding:max(6px,env(safe-area-inset-top)) max(8px,env(safe-area-inset-right)) max(6px,env(safe-area-inset-bottom)) max(8px,env(safe-area-inset-left))}
+.card article,.card article:has(#atlas:not([hidden])){display:flex;flex-direction:column;gap:6px;width:min(94vw,490px);max-height:calc(100dvh - max(14px,env(safe-area-inset-top)) - max(14px,env(safe-area-inset-bottom)));overflow:hidden;padding:14px;background:#193338f5;text-align:left}
+.card article>small{display:none}.card article h1{font:600 clamp(20px,4vw,30px) Georgia,serif;color:#ffdfa3}
+.card article p{margin:0;line-height:1.4}.card button,.card article:has(#atlas:not([hidden])) button{margin:0;min-height:44px;touch-action:pan-y;padding:6px 10px;font-size:14px}
+#actions{display:grid;grid-template-columns:1fr;gap:5px;min-height:0;overflow-y:auto;overscroll-behavior:contain;touch-action:pan-y;-webkit-overflow-scrolling:touch}
+#tools{display:flex;gap:6px}#tools:empty{display:none}#tools button{flex:1}
+[data-panel=dock] #actions{grid-template-columns:repeat(2,1fr)}
+.card #actions button{background:#29484e;color:#ffedc6;text-align:left}.card #actions button:focus-visible{outline:2px solid white;outline-offset:-3px}
+.card article #atlas{align-self:stretch;min-height:0}.card[data-panel=map] article #atlas svg{height:min(35dvh,270px)}
+@media(max-height:450px) and (min-width:480px){
+ .card article,.card article:has(#atlas:not([hidden])){width:min(96vw,700px);padding:8px}
+ [data-panel=dock] #actions{grid-template-columns:repeat(4,1fr)}
+ .card[data-panel=map] article{display:grid;grid-template-columns:36% 1fr;grid-template-rows:auto auto minmax(0,1fr) auto;height:94dvh}
+ .card[data-panel=map] article #atlas{grid-column:1;grid-row:1/5;align-self:center}
+ .card[data-panel=map] article #atlas svg{height:65dvh}
+ .card[data-panel=map] article :is(h1,p,#actions,#tools){grid-column:2}
+}
+#actions select{min-height:44px;max-width:100%;background:#183239;color:#ffedc6;font:inherit;border:1px solid #ae945b;border-radius:6px}
+@media(max-height:450px) and (min-width:480px){
+ .card[data-panel=title] article:has(#atlas){display:grid;grid-template-columns:minmax(160px,1fr) 1.3fr}
+ .card[data-panel=title] article #atlas{grid-column:1;grid-row:3/5}
+ .card[data-panel=title] article #actions{grid-column:2;grid-row:1/4}
+ .card[data-panel=title] #journalOpen{grid-column:2}
+}
+.card[data-panel=map] article:has(#atlas:not([hidden])) #atlas svg{height:min(32dvh,270px)}
+@media(max-height:450px) and (min-width:480px){
+ .card[data-panel=map] article:has(#atlas:not([hidden])){display:grid;grid-template-columns:minmax(0,.78fr) minmax(0,1fr);grid-template-rows:auto auto minmax(0,1fr) auto;height:94dvh}
+ .card[data-panel=map] article:has(#atlas:not([hidden])) #atlas{grid-column:1;grid-row:1/5;align-self:center}
+ .card[data-panel=map] article:has(#atlas:not([hidden])) #atlas svg{height:min(70dvh,44vw)}
+ .card[data-panel=map] article:has(#atlas:not([hidden])) :is(h1,p,#actions,#tools){grid-column:2}
+}
