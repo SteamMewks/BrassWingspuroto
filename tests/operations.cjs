@@ -18,7 +18,7 @@ const output=process.env.OPERATION_SCREENSHOTS||'/tmp/brass-operations';
   const errors=[];
   page.on('pageerror',error=>errors.push(error.message));
   await page.addInitScript(()=>{window.requestAnimationFrame=()=>0});
-  await page.goto(url);
+  await page.goto(url);await page.evaluate(require('./helpers/adventure.cjs'),{liberated:'all',visited:'all',tutorial:'done'});
   await page.evaluate(()=>{
    for(let region=0;region<3;region++){
     startFlight(landscapes[region].departure);

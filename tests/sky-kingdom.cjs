@@ -15,7 +15,7 @@ const path=require('node:path');
    const gl=WebGLRenderingContext.prototype,draw=gl.drawArrays;
    gl.drawArrays=function(mode,start,count){calls++;if(mode===this.TRIANGLES)tris+=count/3;return draw.call(this,mode,start,count)}
   });
-  async function open(){await page.goto('https://offline.test/game');await page.evaluate(()=>{startFlight('brass-port');deckMode='';live=false})}
+  async function open(){await page.goto('https://offline.test/game');await page.evaluate(()=>{if(!hasRecord){adventure.liberated=Object.keys(outposts).filter(id=>id!=='home');adventure.visited=Object.keys(outposts);adventure.tutorial='done'}});await page.evaluate(()=>{startFlight('brass-port');deckMode='';live=false})}
   await open();
   const tests=await page.evaluate(()=>{
    const heights=[];

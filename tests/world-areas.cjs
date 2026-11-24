@@ -13,7 +13,7 @@ const fs=require('node:fs');
    requestAnimationFrame=()=>0;
    Object.defineProperty(window,'indexedDB',{get(){throw Error('IndexedDB unavailable')}});
   });
-  await page.setContent(fs.readFileSync(require.resolve('../BrassWings-preview.html'),'utf8'));
+  await page.setContent(fs.readFileSync(require.resolve('../BrassWings-preview.html'),'utf8'));await page.evaluate(require('./helpers/adventure.cjs'),{liberated:'all',visited:'all',tutorial:'done'});
   const result=await page.evaluate(()=>{
    const check=(ok,message)=>{if(!ok)throw Error(message)};
    const location=(wx,wz)=>{

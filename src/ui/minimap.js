@@ -27,9 +27,25 @@ function worldMinimap(){
  g.strokeStyle='#d3b783';g.lineWidth=1;g.strokeRect(left+4,top+4,side-8,side-8);
  g.fillStyle='#ffe999';for(const s of journalSites)if(discoveries[s.id])g.fillRect(X(s.x)-2,Z(s.z)-2,4,4);
  g.fillStyle='#e3bd79';
- for(const b of Object.values(outposts)){g.fillStyle=colors[affiliation(b.id)];g.fillRect(X(b.wx)-1,Z(b.wz)-1,3,3)}
- g.fillStyle='#a5dfe3';
+ for(const b of [...localBases,...localShips]){
+  const cx=X(b.wx),cz=Z(b.wz),color=colors[b.side];g.fillStyle=color;
+  if(b.id==='home')poly([[cx,cz-3],[cx+3,cz],[cx,cz+3],[cx-3,cz]],color);
+  else if(b.deck)poly([[cx,cz-2],[cx+2,cz+2],[cx-2,cz+2]],color);
+  else if(b.kind){g.beginPath();g.arc(cx,cz,1.8,0,tau);g.fill()}
+  else g.fillRect(cx-1.5,cz-1.5,3,3)
+ }
+ const target=outposts[waypointId]||jobDestination();
+ if(target){g.strokeStyle='#fff3a1';g.strokeRect(X(target.wx)-4,Z(target.wz)-4,8,8)}
  const {wx,wz}=localToWorld(x,z);
  g.save();g.translate(X(wx),Z(wz));g.rotate(yaw);
  poly([[0,-4],[-3,3],[0,2],[3,3]],'#b7fff0');g.restore()
+}
+function battleMinimap(){
+ const {left,top,side}=minimapBox(),scale=(side-8)/(battleHalf*2),cx=left+side/2,cz=top+side/2;
+ const X=wx=>cx+(wx-encounter.wx)*scale,Z=wz=>cz-(wz-encounter.wz)*scale;
+ g.save();g.fillStyle='#263c42';g.fillRect(left,top,side,side);g.strokeStyle='#ffc76e';g.strokeRect(left+4,top+4,side-8,side-8);
+ g.beginPath();g.rect(left+4,top+4,side-8,side-8);g.clip();
+ g.strokeRect(cx-3,cz-3,6,6);
+ for(const enemy of enemies)if(enemy.hp){const p=localToWorld(enemy.x,enemy.z);g.fillStyle='#ff7369';g.fillRect(X(p.wx)-2,Z(p.wz)-2,4,4)}
+ const p=localToWorld(x,z);g.translate(X(p.wx),Z(p.wz));g.rotate(yaw);poly([[0,-5],[-3,3],[3,3]],colors.player);g.restore()
 }

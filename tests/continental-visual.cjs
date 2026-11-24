@@ -15,7 +15,7 @@ const views = [
  try {
   const page = await browser.newPage({viewport:{width:960,height:540}});
   await page.evaluate(() => {window.requestAnimationFrame=()=>0});
-  await page.setContent(html);
+  await page.setContent(html);await page.evaluate(require('./helpers/adventure.cjs'),{liberated:'all',visited:'all',tutorial:'done'});
   for (const [key,id] of views) {
    await page.evaluate(({key,id}) => {
     titleScreen();startFlight(id);live=false;deckMode='';

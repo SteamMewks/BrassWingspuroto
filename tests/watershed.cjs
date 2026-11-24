@@ -4,7 +4,7 @@ const fs=require('node:fs');
  const browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH,args:['--no-sandbox']});
  try{
   const page=await browser.newPage();
-  await page.setContent(fs.readFileSync(require.resolve('../BrassWings-preview.html'),'utf8'));
+  await page.setContent(fs.readFileSync(require.resolve('../BrassWings-preview.html'),'utf8'));await page.evaluate(require('./helpers/adventure.cjs'),{liberated:'all',visited:'all',tutorial:'done'});
   const report=await page.evaluate(()=>{
    const check=(ok,message)=>{if(!ok)throw Error(message)};
    const {basins,reaches}=watersheds;

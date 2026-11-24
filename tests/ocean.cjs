@@ -5,7 +5,7 @@ const fs=require('node:fs');
  try{
   const page=await browser.newPage();
   await page.evaluate(()=>{window.requestAnimationFrame=()=>0});
-  await page.setContent(fs.readFileSync(require.resolve('../BrassWings-preview.html'),'utf8'));
+  await page.setContent(fs.readFileSync(require.resolve('../BrassWings-preview.html'),'utf8'));await page.evaluate(require('./helpers/adventure.cjs'),{liberated:'all',visited:'all',tutorial:'done'});
   console.log(await page.evaluate(()=>{
    const check=(condition,label)=>{if(!condition)throw Error(label)};
    const land=Object.values(airbases),ships=Object.values(carriers);
@@ -29,7 +29,7 @@ const fs=require('node:fs');
    startFlight('home');
    for(const b of localBases)check(hitObject(b.x,b.z,b.height-.5)==='地面',b.id+' terrain collision');
    for(const def of ships){
-    if(pirates.has(def.id))adventure.liberated.push(def.id);adventure.visited.push(def.id);startFlight(def.id);
+    adventure.visited.push(def.id);startFlight(def.id);
     const b=base;check(b.side===affiliation(b.id),b.id+' neutral affiliation');check(b.id===def.id&&deckAt(x,z)===b&&Math.abs(angleDelta(yaw-b.heading))<.001,b.id+' departure');
     for(const a of [-300,-120,0,120,300])for(const side of [-75,0,75]){
      const p=deckPoint(b,side,a);check(ground(p.x,p.z)===0,b.id+' sea clearance')

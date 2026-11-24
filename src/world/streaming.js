@@ -9,7 +9,7 @@ function buildWorld(){
  regionRunway=localBases.find(b=>b.id===landscapes[m.region].departure);
  ship=localShips[m.region===2?1:0];
  landingPorts=[...localBases,...localShips].filter(b=>b.side!=='pirate');
- occupiedPorts=[...localBases,...localShips].filter(b=>b.side==='pirate');
+ occupiedPorts=[...localBases,...localShips].filter(b=>b.side==='pirate');indexDefenders();
  cutCoast();
  for(const l of continents){
   const {x:X,z:Z}=worldToLocal(l[0],l[1],m);

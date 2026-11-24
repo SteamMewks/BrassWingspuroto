@@ -100,7 +100,7 @@ function drawScenery(sn,cs,eye,f,horizon,objects){
   const distance=Math.hypot(x-b.x,z-b.z);
   if(distance>=3500||!sceneryVisible(b.x,b.z,360))continue;
   const Y=b.height;
-  if(!settlements[b.id]||b.id==='home')flag(b.x-45,Y,b.z+30,b.id,distance);
+  flag(b.x-45,Y,b.z+30,b.id,distance);
   if(distance>1050)strip(b.x,b.z,Y+.13,b.width,b.length,'#535959');
   else
   for(let offset=10-b.length/2;offset<b.length/2;offset+=20){
