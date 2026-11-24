@@ -60,7 +60,7 @@ function triangle(a,b,c,color){
 }
 function plane(enemyView=null){
  const enemy=enemyView!==null;
- const roll=enemy?.12:bank*.62+(trick==='roll'?hand*phase:0),ang=enemy?.27:.40+pitch*.16+(trick==='loop'?phase:0);
+ const roll=enemy?.12:aircraftRoll(),ang=enemy?.27:.40+pitch*.16+(aircraftPitch());
  const ca=Math.cos(ang),sa=Math.sin(ang),cr=Math.cos(roll),sr=Math.sin(roll);
  if(!enemy&&renderMesh&&renderMesh(cr,sr,ca,sa))return;
  const heading=enemy?enemyView:yaw-cameraYaw,ch=Math.cos(heading),sh=Math.sin(heading);

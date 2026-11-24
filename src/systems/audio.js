@@ -1,7 +1,7 @@
 let soundOn=false,audioCtx=null,motor=null,volume=null;
 function syncAudio(){
  if(!audioCtx)return;
- volume.gain.setTargetAtTime(live&&soundOn?.021:0,audioCtx.currentTime,.045);
+ volume.gain.setTargetAtTime(live&&soundOn&&adventure.fuel>0?.021:0,audioCtx.currentTime,.045);
  motor.frequency.setTargetAtTime(46+28*power,audioCtx.currentTime,.12)
 }
 $('sound').onclick=async()=>{

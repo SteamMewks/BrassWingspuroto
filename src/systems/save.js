@@ -9,7 +9,7 @@ function restoreJob(job){
 }
 const tutorialSteps=['new','home','flight','battle','liberated','landing','visit','done'];
 function initialAdventure(){
- return {version:2,known:['home'],seen:['home'],favorites:[],cargo:[],warehouse:[],boards:{},rounds:{},freight:null,freightRecord:null,lastLoss:'',last:'home',visited:['home'],liberated:[],money:30,wear:0,mag:0,kills:0,skyClue:false,job:null,tutorial:'new'}
+ return {version:3,fuelMax:standardTank,fuel:standardTank,ammo:90,known:['home'],seen:['home'],favorites:[],cargo:[],boards:{},rounds:{},freight:null,freightRecord:null,lastLoss:'',last:'home',visited:['home'],liberated:[],money:30,wear:0,mag:0,kills:0,skyClue:false,job:null,tutorial:'new'}
 }
 let adventure=initialAdventure(),discoveries={},hasRecord=false,hasStoredRecord=false;
 function storageNotice(text){$('notice').textContent=text}
@@ -20,7 +20,10 @@ function restoreAdventure(){
  let v;try{v=JSON.parse(raw)}catch{storageNotice('冒険記録を読み取れません。新規ゲームで開始できます。');return}
  if(!v||!Number.isSafeInteger(v.money)||!Array.isArray(v.visited)||!Array.isArray(v.liberated))return;
  adventure={...initialAdventure(),visited:validIds(['home',...v.visited],id=>typeof id==='string'&&Object.hasOwn(outposts,id)),liberated:validIds(v.liberated,id=>typeof id==='string'&&id!=='home'&&Object.hasOwn(outposts,id)),
- money:count(v.money),wear:count(v.wear,40),mag:count(v.mag,3),kills:count(v.kills),skyClue:v.skyClue===true,job:restoreJob(v.job),tutorial:tutorialSteps.includes(v.tutorial)?v.tutorial:'done'};
+ money:count(v.money,Number.MAX_SAFE_INTEGER),wear:count(v.wear,40),mag:count(v.mag,3),kills:count(v.kills),skyClue:v.skyClue===true,job:restoreJob(v.job),tutorial:tutorialSteps.includes(v.tutorial)?v.tutorial:'done'};
+ adventure.fuelMax=Number.isFinite(v.fuelMax)&&v.fuelMax>0?Math.min(1000000,v.fuelMax):standardTank;
+ adventure.fuel=Number.isFinite(v.fuel)?Math.max(0,Math.min(v.fuel,adventure.fuelMax)):adventure.fuelMax;
+ adventure.ammo=Number.isFinite(v.ammo)?Math.max(0,Math.min(Math.floor(v.ammo),ammoCapacity())):ammoCapacity();
  adventure.last=selectable(v.last)?v.last:'home';
  const portId=id=>typeof id==='string'&&Object.hasOwn(outposts,id);
  adventure.known=validIds(v.known,portId);adventure.seen=validIds(v.seen,portId);
@@ -33,12 +36,13 @@ function restoreAdventure(){
  }else if(readFreight(v.freight))adventure.freight=v.freight;
  if(readFreight(v.freightRecord))adventure.freightRecord=v.freightRecord;
  for(const [key,old] of [['cargo','goods'],['warehouse','stored']]){
-  let room=key==='cargo'?8-(adventure.freight?.qty||0):Number.MAX_SAFE_INTEGER;
+  if(key==='warehouse'&&v.version>=3)continue;
   const legacyQty=count(v[old]);
   const lots=v.version>=2?v[key]:[{item:'rations',qty:legacyQty,price:5,origin:adventure.last,metres:0}];
   for(const lot of Array.isArray(lots)?lots:[]){
-   if(!room||!readLot(lot))continue;
-   const qty=Math.min(room,lot.qty);adventure[key].push({...lot,qty});room-=qty
+   if(!readLot(lot))continue;
+   const qty=Math.min(8-cargoUsed(),lot.qty);if(qty)adventure.cargo.push({...lot,qty});
+   if(key==='warehouse')adventure.money+=(lot.qty-qty)*lot.price
   }
  }
  for(const port of Object.values(settlements).filter(isTown)){
@@ -50,10 +54,10 @@ function restoreAdventure(){
  if(adventure.freight)revealPort(adventure.freight.to);
  if(adventure.tutorial!=='new'&&adventure.tutorial!=='done')revealPort('brass-city');
  for(const s of journalSites){const date=v.discoveries?.[s.id];if(typeof date==='string'&&Number.isFinite(Date.parse(date)))discoveries[s.id]=date}
- hasRecord=true
+ hasRecord=true;if(!(v.version>=3))saveAdventure()
 }
 function persist(state,dates){
- try{localStorage.setItem(saveKey,JSON.stringify({...state,discoveries:dates}));hasRecord=hasStoredRecord=true;storageNotice('');return true}
+ try{localStorage.setItem(saveKey,JSON.stringify({...state,ammoMax:90+20*state.mag,discoveries:dates}));hasRecord=hasStoredRecord=true;storageNotice('');return true}
  catch{storageNotice('冒険を保存できません。保存設定と空き容量を確認してください。');return false}
 }
 function saveAdventure(){return persist(adventure,discoveries)}
@@ -74,8 +78,8 @@ function knownPort(id){return adventure.seen.includes(id)||adventure.known.inclu
 function toggleFavorite(id){
  if(id==='home'||!selectable(id))return false;
  const ids=adventure.favorites,index=ids.indexOf(id);
- if(index>=0)ids.splice(index,1);else if(ids.length<10)ids.push(id);else return false;
+ if(index>=0)ids.splice(index,1);else if(townDock(id)&&!encounter&&ids.length<10)ids.push(id);else return false;
  saveAdventure();return true
 }
 restoreAdventure();
-addEventListener('pagehide',()=>{if(live&&adventure.cargo.length)saveAdventure()});
+addEventListener('pagehide',()=>{if(live)saveAdventure()});

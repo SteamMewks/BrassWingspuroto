@@ -18,7 +18,7 @@ function releaseStick(pointerId=id){
  stick(0,0)
 }
 function clearFlightInput(){
- keys.clear();trigger=false;releaseStick();stick(0,0)
+ keys.clear();trigger=false;releaseStick();stick(0,0);resetGesture()
 }
 pad.onpointerdown=e=>{if(!live||id!==null)return;id=e.pointerId;pad.setPointerCapture(id);move(e)};
 pad.onpointermove=e=>{if(live&&id===e.pointerId)move(e)};
@@ -27,7 +27,7 @@ thrust.oninput=e=>{power=Number(e.target.value)/100;syncAudio()};
 function pause(){
  if(!live)return;
  live=false;clearFlightInput();
- if(adventure.cargo.length)saveAdventure();
+ saveAdventure();
  pauseMenu()
 }
 $('pause').onclick=pause;onblur=pause;

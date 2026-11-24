@@ -1,5 +1,5 @@
 let locked=null, hostile=[], grace=0, nextAttack=0;
-let ammo=90,energy=100,supplying=false;
+let energy=100;
 let deckMode='',deckTime=0,landingSite=null,landingDirection=1;
 function parkAtStart(){
  landingSite=base;landingDirection=1;deckMode='moored';deckTime=0;
@@ -10,7 +10,7 @@ function syncFireButton(){$('fire').hidden=!encounter||Boolean(deckMode)}
 function deckAssist(dt){
  let port=landingSite;
  if(!deckMode){
-  if(power>.42)return false;
+  if(trick||(adventure.fuel>0&&power>.42))return false;
   port=null;let nearest=Infinity;
   for(const b of landingPorts){
    const direction=!b.deck&&Math.cos(yaw)<0?-1:1;
@@ -42,10 +42,11 @@ function deckAssist(dt){
  }else if(deckMode==='moored'){
   
  }else{
+  if(!adventure.fuel){deckMode='';return false}
   const prevX=x,prevZ=z,prevAlt=alt;
   airspeed=Math.min(105,airspeed+64*dt);x+=Math.sin(heading)*airspeed*dt;z+=Math.cos(heading)*airspeed*dt;alt+=Math.min(26,deckTime*14)*dt;
-  recordFlight(Math.hypot(x-prevX,z-prevZ,alt-prevAlt));
   if(impact(prevX,prevZ,prevAlt))return true;
+  recordFlight(Math.hypot(x-prevX,z-prevZ,alt-prevAlt));
   if(deckTime>=2.2){
    deckMode='';cameraYaw=yaw;
    
