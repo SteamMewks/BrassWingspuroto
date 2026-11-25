@@ -15,7 +15,7 @@ const seed=require('./helpers/adventure.cjs');
    for(let i=0;i<46;i++)fight(.05);
    check(!encounter&&!enemies.length&&affiliation('home')==='player','workshop sanctuary');
    const results=[];
-   for(const target of [...localBases,...localShips].filter(s=>s.id!=='home')){
+   for(const target of [...localBases,...localShips].filter(s=>campaignTargets.has(s.id))){
     x=target.x;z=target.z;alt=target.height+160;encounterDelay=0;fight(.05);
     check(encounter?.id===target.id&&enemies.length===3,'defenders '+target.id);
     check(!outsideBattle(target.wx+2500,target.wz-2500)&&outsideBattle(target.wx,target.wz+2500.1),'square boundary');

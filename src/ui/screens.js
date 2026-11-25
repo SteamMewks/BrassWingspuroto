@@ -33,7 +33,7 @@ function startFlight(id){
  encounterDelay=0;reentryBlocked.clear();returnHeading=null;restartFlight();clearEncounter();energy=100-adventure.wear;buildWorld();parkAtStart();updateWorld();enterFlight();draw(0);arrive(base)
 }
 function arrive(port){
- if(affiliation(port.id)==='pirate')return;
+ if(!Object.hasOwn(outposts,port.id)||affiliation(port.id)==='pirate')return;
  if(waypointId===port.id)waypointId=null;
  adventure.last=port.id;if(!adventure.visited.includes(port.id))adventure.visited.push(port.id);
 
@@ -45,7 +45,7 @@ function fixedAction(label,run){const button=action(label,run);$('tools').append
 function pauseMenu(){showPanel('pause','一時停止','現在の飛行を再開できます。')}
 function portType(b){return ({home:'本拠地',city:'都市',town:'町',village:'村'})[b.kind]||(b.deck?'空母':'航空基地')}
 function dockMenu(){
- const b=landingSite;
+ const b=landingSite;if(!b||!Object.hasOwn(outposts,b.id)||affiliation(b.id)==='pirate')return;
  showPanel('dock',b.name,portType(b)+'　所持金 '+adventure.money+'　積荷 '+cargoUsed()+'/8');
  action('補給',supplyMenu,Boolean(encounter));
  if(isTown(b)){
@@ -73,9 +73,9 @@ function fastTravel(id){
 function refreshList(render,change){
  const top=$('actions').scrollTop;change();render();$('actions').scrollTop=top
 }
-function lotLabel(l){return merchandise[l.item].name+' ×'+l.qty+'　'+outposts[l.origin].name+'発　'+(l.metres/1000).toFixed(1)+' km'}
+function lotLabel(l){return merchandise[l.item].name+' ×'+l.qty+'　'+(outposts[l.origin]||scenicMarkets[l.origin]).name+'発　'+(l.metres/1000).toFixed(1)+' km'}
 function shop(){
- const b=landingSite;
+ const b=landingSite;if(!isTown(b)||!townDock(b.id))return;
  showPanel('shop',b.name+' 商店','所持金 '+adventure.money+'　積荷 '+cargoUsed()+'/8');
  for(const item of stock(b)){
   const price=buyPrice(item,b);
@@ -145,6 +145,7 @@ function buySupply(id,requested){
  adventure.money-=price;adventure[id]+=amount;saveAdventure();return true
 }
 function supplyMenu(){
+ if(!landingSite||!townDock(landingSite.id)||encounter)return;
  showPanel('supply','補給',resourceText()+'　所持金 '+adventure.money+' G');
  for(const id of ['fuel','ammo']){
   const steps=id==='fuel'?[5000,10000,15000,Infinity]:[30,Infinity];
@@ -169,7 +170,9 @@ function tavern(){
 }
 function travelLog(){
  const towns=adventure.visited.filter(id=>settlements[id]&&id!=='home').map(id=>outposts[id].name);
- showPanel('log','旅の記録','訪問した町村　'+(towns.join('・')||'まだありません')+'。'+adventure.lastLoss+'　解放 '+adventure.liberated.length+'/'+(Object.keys(outposts).length-1)+' 拠点、空賊撃退 '+adventure.kills+' 機。'+(adventure.skyClue?' 観測の手掛かり　中央大海の上空610 mへ。':''));
+ for(const id of adventure.history.visited)towns.push(scenicMarkets[id].name+'（旧飛行場）');
+ const percent=Math.round(adventure.liberated.length*100/campaignTargets.size);
+ showPanel('log','旅の記録','訪問した町村　'+(towns.join('・')||'まだありません')+'。'+adventure.lastLoss+'　解放 '+adventure.liberated.length+'/'+campaignTargets.size+' 拠点（'+percent+'%）、空賊撃退 '+adventure.kills+' 機。'+(adventure.skyClue?' 観測の手掛かり　中央大海の上空610 mへ。':''));
  fixedAction('戻る',dockMenu)
 }
 function jobDestination(){
@@ -191,6 +194,7 @@ function offerDetail(offer){
  action('受注する',()=>{acceptFreight(offer);jobs()},Boolean(adventure.freight)||cargoUsed()+offer.qty>8);fixedAction('戻る',jobs)
 }
 function jobs(){
+ if(!isTown(landingSite)||!townDock(landingSite.id))return;
  const b=landingSite,j=adventure.job,freight=adventure.freight;
  showPanel('jobs','依頼掲示板',freight?'輸送中　'+merchandise[freight.item].name+' ×'+freight.qty+' → '+outposts[freight.to].name+'　納品までファストトラベル不可':'発着距離 10–30 km　積荷 '+cargoUsed()+'/8');
  if(freight){

@@ -36,7 +36,11 @@ function buildWorld(){
  buildRegion();
  if(!townLayoutArchive[m.region])for(const road of roads)for(const v of road)v[1]=ground(v[0],v[2])+.12;
  buildRail();activeRiverCells.clear();
- for(let i=quarters.length-1;i>=0;i--)if(nearRail(quarters[i].x,quarters[i].z))quarters.splice(i,1);
+ for(let i=quarters.length-1;i>=0;i--){
+  const q=quarters[i];
+  const onRunway=localBases.some(b=>Math.abs(q.x-b.x)<b.width/2+q.radius&&Math.abs(q.z-b.z)<b.length/2+q.radius);
+  if(onRunway||nearRail(q.x,q.z))quarters.splice(i,1)
+ }
  mainlandPlan=new Path2D();islandPlan=new Path2D();
  const mapContext=worldMap.getContext('2d'),mapScale=worldMap.width/worldSize;
  const worldMainland=new Path2D(),worldIslands=new Path2D();
@@ -78,7 +82,7 @@ function updateWorld(){
    const approaches=localBases.filter(b=>b.stationId&&Math.abs(b.x-cx)<220&&Math.abs(b.z-cz)<1280);
    const sites=railSites.filter(s=>Math.abs(s.x-cx)<440&&Math.abs(s.z-cz)<440);
    const insideStation=(X,Z,margin)=>sites.some(s=>Math.hypot(s.x-X,s.z-Z)<(s.kind==='central'?180:115)+margin);
-   const districts=[...countryDistricts.values()];
+   const districts=[...countryDistricts.values()].filter(d=>Math.abs(d.x-cx)<500&&Math.abs(d.z-cz)<500);
    const ruralLots=districts.flatMap(d=>d.lots.filter(b=>Math.abs(b.x-cx)<220&&Math.abs(b.z-cz)<220));
    const ruralRoads=districts.flatMap(d=>d.roads.filter(r=>Math.abs(r[0][0]-cx)<190&&Math.abs(r[0][2]-cz)<190));
    const town=quarters.filter(b=>Math.abs(b.x-cx)<265&&Math.abs(b.z-cz)<265);

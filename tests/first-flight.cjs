@@ -14,7 +14,7 @@ const seed=require('./helpers/adventure.cjs');
   await open();assert.equal(await p.getByText('続きから').isDisabled(),true);
   await press('新規ゲーム');await press('キャンセル');assert.equal(await p.evaluate(()=>localStorage.getItem(saveKey)),'{');
   await press('新規ゲーム');await press('上書きして始める');
-  assert.deepEqual(await p.evaluate(()=>[adventure.money,adventure.visited,adventure.liberated,adventure.job,adventure.mag,adventure.wear,discoveries,adventure.tutorial,Object.keys(outposts).filter(id=>affiliation(id)==='pirate').length]),[500,['home'],[],null,0,0,{},'home',await p.evaluate(()=>Object.keys(outposts).length-1)]);
+  assert.deepEqual(await p.evaluate(()=>[adventure.money,adventure.visited,adventure.liberated,adventure.job,adventure.mag,adventure.wear,discoveries,adventure.tutorial,Object.keys(outposts).filter(id=>affiliation(id)==='pirate').length]),[500,['home'],[],null,0,0,{},'home',46]);
   await press('黄銅港市を目的地にする');await press('手帳');await press('タイトルへ');await press('続きから');
   assert.equal(await p.evaluate(()=>waypointId),'brass-city');
   await p.evaluate(()=>{adventure.money=97;adventure.cargo=[{item:'ore',qty:2,price:5,origin:'home',metres:0}];discoveries.gear='2000-01-01';saveAdventure();titleScreen()});
@@ -38,7 +38,7 @@ const seed=require('./helpers/adventure.cjs');
   await p.evaluate(()=>{const v=JSON.parse(localStorage.getItem(saveKey));v.last='deleted';v.liberated.push('home','missing',null);v.visited.push({id:'invalid'});localStorage.setItem(saveKey,JSON.stringify(v))});
   await open();await press('続きから');assert.deepEqual(await p.evaluate(()=>[landingSite.id,adventure.liberated,adventure.visited]),['home',['brass-city'],['home']]);
   await p.evaluate(()=>titleScreen());await press('新規ゲーム');await press('上書きして始める');await press('黄銅港市を目的地にする');
-  const towns=await p.evaluate(()=>Object.keys(settlements).filter(id=>id!=='home'));
+  const towns=await p.evaluate(()=>Object.keys(settlements).filter(id=>campaignTargets.has(id)));
   for(const id of towns){
    // For subsequent flights all other ports are safe, isolating the target's defence.
    if(id!=='brass-city'){

@@ -18,9 +18,9 @@ const seed=require('./helpers/adventure.cjs');
    localStorage.setItem(saveKey,JSON.stringify(legacy))
   });
   await page.reload();
-  assert.deepEqual(await page.evaluate(()=>[cargoUsed(),adventure.version,adventure.freight.reward,adventure.mag,adventure.money,adventure.visited.length]),[8,4,await page.evaluate(()=>transportFloor(portDistance(settlements.windmill,settlements['west-city']))),1,107,2]);
+  assert.deepEqual(await page.evaluate(()=>[cargoUsed(),adventure.version,adventure.freight.reward,adventure.mag,adventure.money,adventure.visited.length]),[8,5,await page.evaluate(()=>transportFloor(portDistance(settlements.windmill,settlements['west-city']))),1,107,2]);
   await page.evaluate(()=>{startFlight('windmill');navigationMenu(false)});
-  assert.deepEqual(await page.locator('#actions option').allTextContents(),['西都鋳造廠','風車村','真鍮の翼工房']);
+  assert.deepEqual((await page.locator('#actions option').allTextContents()).sort(),['西都鋳造廠','風車村','真鍮の翼工房'].sort());
   await page.evaluate(()=>{
    const b=outposts.windmill,hidden=outposts['mill-village'];
    if(toggleFavorite(hidden.id))throw Error('unvisited registration');

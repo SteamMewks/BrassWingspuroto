@@ -17,7 +17,7 @@ function portDistance(a,b){return Math.hypot(a.wx-b.wx,a.wz-b.wz)}
 const townFuelPrice=15;
 function transportFloor(metres){return Math.ceil(metres*1.3*townFuelPrice/5000)}
 function salePrice(lot,port){
- const item=merchandise[lot.item],km=Math.min(lot.metres,portDistance(outposts[lot.origin],port))/1000;
+ const item=merchandise[lot.item],km=Math.min(lot.metres,portDistance(outposts[lot.origin]||scenicMarkets[lot.origin],port))/1000;
  const demand=item.demand===port.industry?economy.demand:1;
  const market=Math.min(lot.price,buyPrice(item,port))*economy.buyback+item.base*demand*economy.maxBonus*(1-Math.exp(-km*economy.perKm/economy.maxBonus));
  return Math.max(lot.price+transportFloor(km*1000),Math.ceil(market))
@@ -34,7 +34,7 @@ function recordFlight(metres){
  for(const lot of adventure.cargo)lot.metres+=metres;
  if(t<cargoSaveTime||t-cargoSaveTime>=20){saveAdventure();cargoSaveTime=t}
 }
-function townDock(id){return !live&&deckMode==='moored'&&landingSite?.id===id&&affiliation(id)!=='pirate'}
+function townDock(id){return Object.hasOwn(outposts,id)&&!live&&deckMode==='moored'&&landingSite?.id===id&&affiliation(id)!=='pirate'}
 function purchaseLimit(item,port){return Math.min(Math.floor((8-cargoUsed())/item.slots),Math.floor(adventure.money/buyPrice(item,port)))}
 function buyItem(item,qty=1){
  const port=landingSite,price=buyPrice(item,port);
@@ -46,7 +46,7 @@ function sellUnit(lot){
  if(!townDock(landingSite.id)||!adventure.cargo.includes(lot)||!isTown(landingSite))return;
  adventure.money+=salePrice(lot,landingSite);removeUnit(adventure.cargo,lot);saveAdventure()
 }
-function isTown(port){return Boolean(port?.kind&&port.kind!=='home')}
+function isTown(port){return Boolean(port&&settlements[port.id]&&port.id!=='home')}
 function fillOffers(origin,offers){
  const port=settlements[origin],generation=adventure.rounds[origin]||0;
  const candidates=Object.values(settlements).filter(to=>{
@@ -61,6 +61,7 @@ function fillOffers(origin,offers){
  }
 }
 function boardFor(origin){
+ if(!isTown(settlements[origin]))return [];
  if(!adventure.boards[origin]){adventure.boards[origin]=[];fillOffers(origin,adventure.boards[origin]);saveAdventure()}
  return adventure.boards[origin]
 }

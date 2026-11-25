@@ -10,15 +10,17 @@ function drawRail(face,gpu){
   for(const id of ['brass-port','red-strait']){const b=airbases[id];add(worldToLocal(b.wx+265,b.wz))}
   railTileCenters=[...cells.values()]
  }
+ const sn=Math.sin(cameraYaw),cs=Math.cos(cameraYaw),aspect=w/h;
  for(const area of countryDistricts.values()){
   const dx=area.x-x,dz=area.z-z,range=Math.hypot(dx,dz);
-  if(range>2650||dx*Math.sin(cameraYaw)+dz*Math.cos(cameraYaw)<-385)continue;
+  const depth=dx*sn+dz*cs;
+  if(range>2650||depth< -420||Math.abs(dx*cs-dz*sn)>(depth+452)*aspect+420)continue;
   const tier=range<680?0:range<1450?1:2;
   if(gpu)gpu.railTile('country/'+area.key+'/'+tier,area,emit=>railGeometry(emit,null,tier,false,area));
   else railGeometry(face,null,tier,false,area)
  }
  if(!gpu){railGeometry(face);return}
- const sn=Math.sin(cameraYaw),cs=Math.cos(cameraYaw),detail=Math.max(.8,Math.min(1.4,h/420));
+ const detail=Math.max(.8,Math.min(1.4,h/420));
  for(const tile of railTileCenters){
   const dx=tile.x-x,dz=tile.z-z,d=dx*sn+dz*cs,r=Math.hypot(dx,dz);
   if(r>2900||d< -540||Math.abs(dx*cs-dz*sn)>Math.max(0,d)*w/h+540)continue;
@@ -169,7 +171,24 @@ function railGeometry(face,tile=null,tier=0,movingOnly=false,area=null){
     continue
    }
    if(!tile&&b.style==='stack'&&near(b,800))for(let j=0;j<4;j++){const u=(railClock*.14+j/4)%1,R=1+u*3;box(b,2*u,u*5,R,R,R,'rgba(102,99,91,.35)','rgba(126,122,112,.35)',b.h+u*12)}
-   if(movingOnly||!near(b,1900))continue;const colors={field:['#90804f','#aa9657'],coal:['#4c4843','#5c5146'],logs:['#805a3c','#ae8555'],tank:['#625748','#88918a'],stack:['#9a5948','#d1aa84'],house:['#a17a64','#746457'],hall:['#a05d48','#687673'],works:['#995e49','#736759'],shed:['#947459','#70746b']};
+   if(movingOnly||!near(b,1900))continue;
+   if(b.style==='nets'){
+    for(const u of [-1,1])box(b,u*b.w*.48,0,.55,.55,b.h,'#80654b','#9f8567');
+    const span=b.w*.48;
+    face([railOffset(b,-span,0,b.h),railOffset(b,span,0,b.h),railOffset(b,span,0,1.4),railOffset(b,0,0,.5),railOffset(b,-span,0,1.4)],'#698984',3);
+    continue
+   }
+   if(b.style==='mill'){
+    box(b,0,0,b.w*.5,b.l*.55,b.h*.72,'#baaa80','#765c4d',0,2);
+    const R=b.h*.32,along=-b.l*.3;
+    for(let n=0;n<4;n++){
+     const a=n*Math.PI/2+.45,c=Math.cos(a),s=Math.sin(a);
+     const point=(r,v)=>railOffset(b,r*c-v*s,along,b.h*.66+r*s+v*c);
+     face([point(0,-.25),point(R,-.25),point(R,1.3),point(R*.34,1.3)],'#d5bc88',4)
+    }
+    continue
+   }
+   const colors={field:['#90804f','#aa9657'],coal:['#4c4843','#5c5146'],logs:['#805a3c','#ae8555'],tank:['#625748','#88918a'],stack:['#9a5948','#d1aa84'],house:['#a17a64','#746457'],hall:['#a05d48','#687673'],works:['#995e49','#736759'],shed:['#947459','#70746b']};
    const [wall,roof]=colors[b.style],gable=['house','hall','shed','works'].includes(b.style);
    box(b,0,0,b.w,b.l,b.h,wall,roof,0,gable&&tier<2&&near(b,950)?b.w*.22:0);
    if(gable&&near(b,600))for(let k=-b.l/2+3;k<b.l/2-1;k+=6)box(b,0,k,b.w+.16,2,2.4,'#dab889','#b79a70',b.h-4);

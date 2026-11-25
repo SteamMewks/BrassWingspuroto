@@ -10,9 +10,10 @@ function loadCountryTile(i,j,encoded){
   for(let k=n+1;k<n+13;k+=3)road.push([origin.x+points[k]/10,points[k+1]/10,origin.z+points[k+2]/10]);
   roads.push(road)
  }
+ const owners=encoded[2]?unpack(encoded[2]):null;
  for(let n=0;n<buildings.length;n+=9){
   const [station,style,X,Y,Z,W,L,H,angle]=buildings.subarray(n,n+9);
-  lots.push({stationId:countryStations[station],style:countryStyles[style],x:origin.x+X/10,y:Y/10,z:origin.z+Z/10,
+  lots.push({hamletId:owners?countryHamlets[owners[n/9]-1]?.id:undefined,stationId:countryStations[station],style:countryStyles[style],x:origin.x+X/10,y:Y/10,z:origin.z+Z/10,
    w:W/10,l:L/10,h:H/10,radius:Math.hypot(W,L)/20,dx:Math.sin(angle/1000),dz:Math.cos(angle/1000)})
  }
  return {key:i+','+j,i,j,x:origin.x+256,z:origin.z+256,roads,lots}

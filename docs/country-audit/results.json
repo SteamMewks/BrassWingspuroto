@@ -1,0 +1,292 @@
+{
+  "baseline": "de2ea6742018c8db30f33cd5c0ada8f406cbfecc",
+  "chromium": "156.0.8078.79",
+  "viewport": {
+    "width": 844,
+    "height": 390
+  },
+  "seed": 4315,
+  "builds": {
+    "main": {
+      "sha256": "b46fc0381452db07198323101047271bdf793b18254b34bbe7696788e4479523",
+      "large": 0,
+      "medium": 7,
+      "scenicMarkets": 0,
+      "saveVersion": 3,
+      "laps": [
+        {
+          "fps": 54.001350033750846,
+          "p95ms": 33.30000000000018,
+          "maxTerrainTiles": 25,
+          "maxCountryTiles": 0,
+          "endCaches": [
+            25,
+            0
+          ],
+          "retainedJSBytes": 13401028
+        },
+        {
+          "fps": 56.59487501965099,
+          "p95ms": 33.19999999999891,
+          "maxTerrainTiles": 25,
+          "maxCountryTiles": 0,
+          "endCaches": [
+            25,
+            0
+          ],
+          "retainedJSBytes": 13447108
+        },
+        {
+          "fps": 55.624227441285555,
+          "p95ms": 33.29999999999927,
+          "maxTerrainTiles": 25,
+          "maxCountryTiles": 0,
+          "endCaches": [
+            25,
+            0
+          ],
+          "retainedJSBytes": 13510072
+        }
+      ],
+      "portraitLaps": [
+        {
+          "fps": 55.15128303332057,
+          "p95ms": 33.20000000000073,
+          "maxTerrainTiles": 25,
+          "maxCountryTiles": 0,
+          "endCaches": [
+            25,
+            0
+          ],
+          "retainedJSBytes": 13540204
+        },
+        {
+          "fps": 58.64624908365232,
+          "p95ms": 16.799999999999272,
+          "maxTerrainTiles": 25,
+          "maxCountryTiles": 0,
+          "endCaches": [
+            25,
+            0
+          ],
+          "retainedJSBytes": 13547976
+        },
+        {
+          "fps": 57.85920925747352,
+          "p95ms": 16.799999999999272,
+          "maxTerrainTiles": 25,
+          "maxCountryTiles": 0,
+          "endCaches": [
+            25,
+            0
+          ],
+          "retainedJSBytes": 13571964
+        }
+      ]
+    },
+    "baseline": {
+      "sha256": "2cff4602db949dcc15fa9705a14bb40c5d5ccf45a32ba409339c76df09c1b20d",
+      "large": 77,
+      "medium": 81,
+      "scenicMarkets": 0,
+      "saveVersion": 4,
+      "laps": [
+        {
+          "fps": 54.91571962474258,
+          "p95ms": 33.30000000000018,
+          "maxTerrainTiles": 25,
+          "maxCountryTiles": 8,
+          "endCaches": [
+            25,
+            1
+          ],
+          "retainedJSBytes": 14309808
+        },
+        {
+          "fps": 54.001350033750846,
+          "p95ms": 33.30000000000018,
+          "maxTerrainTiles": 25,
+          "maxCountryTiles": 8,
+          "endCaches": [
+            25,
+            1
+          ],
+          "retainedJSBytes": 14540152
+        },
+        {
+          "fps": 56.106810743415224,
+          "p95ms": 33.30000000000109,
+          "maxTerrainTiles": 25,
+          "maxCountryTiles": 8,
+          "endCaches": [
+            25,
+            1
+          ],
+          "retainedJSBytes": 14599692
+        }
+      ],
+      "portraitLaps": [
+        {
+          "fps": 58.64624908365235,
+          "p95ms": 16.799999999999272,
+          "maxTerrainTiles": 25,
+          "maxCountryTiles": 8,
+          "endCaches": [
+            25,
+            1
+          ],
+          "retainedJSBytes": 14554136
+        },
+        {
+          "fps": 57.85920925747352,
+          "p95ms": 16.799999999999272,
+          "maxTerrainTiles": 25,
+          "maxCountryTiles": 8,
+          "endCaches": [
+            25,
+            1
+          ],
+          "retainedJSBytes": 14734676
+        },
+        {
+          "fps": 53.55416160464137,
+          "p95ms": 33.29999999999927,
+          "maxTerrainTiles": 25,
+          "maxCountryTiles": 8,
+          "endCaches": [
+            25,
+            1
+          ],
+          "retainedJSBytes": 14741756
+        }
+      ]
+    },
+    "revised": {
+      "sha256": "daee2eb82d57afa29fca67ef8b4797da689b95018ba6e3b11b5e3cd43180141e",
+      "large": 77,
+      "medium": 24,
+      "scenicMarkets": 57,
+      "saveVersion": 5,
+      "laps": [
+        {
+          "fps": 54.22639519995984,
+          "p95ms": 33.30000000000018,
+          "maxTerrainTiles": 25,
+          "maxCountryTiles": 16,
+          "endCaches": [
+            25,
+            7
+          ],
+          "retainedJSBytes": 15097780
+        },
+        {
+          "fps": 55.8644769171085,
+          "p95ms": 33.29999999999927,
+          "maxTerrainTiles": 25,
+          "maxCountryTiles": 16,
+          "endCaches": [
+            25,
+            7
+          ],
+          "retainedJSBytes": 15163356
+        },
+        {
+          "fps": 56.35125616341864,
+          "p95ms": 33.29999999999927,
+          "maxTerrainTiles": 25,
+          "maxCountryTiles": 16,
+          "endCaches": [
+            25,
+            7
+          ],
+          "retainedJSBytes": 15225672
+        }
+      ],
+      "portraitLaps": [
+        {
+          "fps": 59.72460321849253,
+          "p95ms": 16.700000000000728,
+          "maxTerrainTiles": 25,
+          "maxCountryTiles": 16,
+          "endCaches": [
+            25,
+            7
+          ],
+          "retainedJSBytes": 14126312
+        },
+        {
+          "fps": 58.910162002945476,
+          "p95ms": 16.799999999999272,
+          "maxTerrainTiles": 25,
+          "maxCountryTiles": 16,
+          "endCaches": [
+            25,
+            7
+          ],
+          "retainedJSBytes": 14192572
+        },
+        {
+          "fps": 57.857659443387895,
+          "p95ms": 16.799999999999272,
+          "maxTerrainTiles": 25,
+          "maxCountryTiles": 16,
+          "endCaches": [
+            25,
+            7
+          ],
+          "retainedJSBytes": 14203396
+        }
+      ]
+    }
+  },
+  "scenes": [
+    {
+      "id": "station",
+      "wx": 26959.475697490434,
+      "wz": 80022.91559534983,
+      "heading": 0.799402849980909,
+      "station": "小麦台",
+      "nearestStationMetres": 0
+    },
+    {
+      "id": "city-town",
+      "wx": 25687.8,
+      "wz": 79671.2,
+      "heading": -2.113836095767749,
+      "station": "小麦台",
+      "nearestStationMetres": 1319.4176516933767
+    },
+    {
+      "id": "town-village",
+      "wx": 24759,
+      "wz": 79011.7,
+      "heading": -1.4048803941130619,
+      "station": "小麦台",
+      "nearestStationMetres": 2421.7040024587463
+    },
+    {
+      "id": "farmland",
+      "wx": 24290.5,
+      "wz": 79210.4,
+      "heading": 0.5,
+      "station": "小麦台",
+      "nearestStationMetres": 2789.9126987203786
+    },
+    {
+      "id": "remote",
+      "wx": 47232.9,
+      "wz": 84224.4,
+      "heading": 0,
+      "station": "北入江",
+      "nearestStationMetres": 6235.551761472278
+    },
+    {
+      "id": "coast",
+      "wx": 83187.8,
+      "wz": 54680.1,
+      "heading": 2.0943951023931953,
+      "station": "紫煙河口",
+      "nearestStationMetres": 154.46957629255346
+    }
+  ]
+}

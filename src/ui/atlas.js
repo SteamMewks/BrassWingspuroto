@@ -30,7 +30,16 @@ function worldMapPanel(){
  $('atlas').hidden=false;atlas(sites,b,p);
  const choices=mapCluster||sites;
  const select=document.createElement('select');select.setAttribute('aria-label','地点を選択');
- for(const s of choices)select.add(new Option(s.name,s.id,false,s.id===b.id));
+ const groups=new Map();
+ for(const site of choices){
+  const region=outposts[site.id]?['黄銅港地方','紫煙高地方','赤銅海峡地方'][site.region]:'探訪地点';
+  const label=region||'海域';
+  if(!groups.has(label)){
+   const group=document.createElement('optgroup');group.label=label;
+   groups.set(label,group);select.append(group)
+  }
+  groups.get(label).append(new Option(site.name,site.id,false,site.id===b.id))
+ }
  select.onchange=()=>selectMapSite(select.value);$('actions').append(select);
  action('航路を設定',()=>{waypointId=b.id;mapBack()});
  if(port&&b.id!=='home'){
