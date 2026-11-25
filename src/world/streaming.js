@@ -75,6 +75,7 @@ function updateWorld(){
     const pad=gradingSites[b.id]||{rx:100,rz:185};
     return Math.abs(X-b.x)<pad.rx+margin&&Math.abs(Z-b.z)<pad.rz+margin
    });
+   const approaches=localBases.filter(b=>b.stationId&&Math.abs(b.x-cx)<220&&Math.abs(b.z-cz)<1280);
    const sites=railSites.filter(s=>Math.abs(s.x-cx)<440&&Math.abs(s.z-cz)<440);
    const insideStation=(X,Z,margin)=>sites.some(s=>Math.hypot(s.x-X,s.z-Z)<(s.kind==='central'?180:115)+margin);
    const districts=[...countryDistricts.values()];
@@ -139,6 +140,10 @@ function updateWorld(){
     if(val(4)<density&&Y>=5&&!tile.trees.some(tree=>tree.planted&&Math.hypot(tree.X-X,tree.Z-Z)<18))tile.trees.push({X,Z,Y,H:15+val(2)*16+6*canopy,R:4+val(3)*3});
     else if(val(6)<.28)tile.pixels.push({X,Z,Y,width:1+val(2)*5,color:Y<6?'#dbc299':slope>.38?'#a29882':canopy<.4?'#a1a06c':'#798c61'})
    }
+   if(approaches.length)tile.trees=tile.trees.filter(tree=>!approaches.some(b=>{
+    const along=Math.abs(tree.Z-b.z)-b.length/2;
+    return Math.abs(tree.X-b.x)<70+tree.R&&along>=0&&along<1050&&tree.Y+tree.H>b.height+5+along*.085
+   }))
   }
   if(!tile.relicChecked){tile.trees=tile.trees.filter(p=>!relics.some(s=>Math.abs(p.X+m.wx-s.x)<s.rx&&Math.abs(p.Z+m.wz-s.z)<s.rz&&relicDistance(s,p.X+m.wx,p.Y+p.H/2,p.Z+m.wz)<p.H/2+p.R));tile.relicChecked=true}
   groves.push(...tile.trees);groundPixels.push(...tile.pixels)
