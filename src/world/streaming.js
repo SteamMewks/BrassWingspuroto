@@ -1,6 +1,6 @@
 
 function buildWorld(){
- leaveSky();ruinDistrictCache.clear();clearTerrain();terrainFocus='';
+ countryDistricts.clear();leaveSky();ruinDistrictCache.clear();clearTerrain();terrainFocus='';
  terraces.length=isles.length=groves.length=groundPixels.length=0;tileCache.clear();tileKey='';
  const m=worldRegion();
  localBases=Object.values({...airbases,...settlements}).map(b=>({...b,...worldToLocal(b.wx,b.wz,m),side:affiliation(b.id)}));
@@ -36,7 +36,11 @@ function buildWorld(){
  buildRegion();
  if(!townLayoutArchive[m.region])for(const road of roads)for(const v of road)v[1]=ground(v[0],v[2])+.12;
  buildRail();activeRiverCells.clear();
- for(let i=quarters.length-1;i>=0;i--)if(nearRail(quarters[i].x,quarters[i].z))quarters.splice(i,1);
+ for(let i=quarters.length-1;i>=0;i--){
+  const q=quarters[i];
+  const onRunway=localBases.some(b=>Math.abs(q.x-b.x)<b.width/2+q.radius&&Math.abs(q.z-b.z)<b.length/2+q.radius);
+  if(onRunway||nearRail(q.x,q.z))quarters.splice(i,1)
+ }
  mainlandPlan=new Path2D();islandPlan=new Path2D();
  const mapContext=worldMap.getContext('2d'),mapScale=worldMap.width/worldSize;
  const worldMainland=new Path2D(),worldIslands=new Path2D();
@@ -59,7 +63,7 @@ function updateWorld(){
  updateTerrainFocus();
  const m=worldRegion(),tx=Math.floor(x/256),tz=Math.floor(z/256);
  if(!groundWarmup&&tileKey===tx+','+tz)return;
- tileKey=tx+','+tz;groves.length=groundPixels.length=0;
+ streamDistricts();tileKey=tx+','+tz;groves.length=groundPixels.length=0;
  for(let i=tx-2;i<=tx+2;i++)for(let j=tz-2;j<=tz+2;j++){
   const key=i+','+j;
   let tile=tileCache.get(key);
@@ -75,11 +79,16 @@ function updateWorld(){
     const pad=gradingSites[b.id]||{rx:100,rz:185};
     return Math.abs(X-b.x)<pad.rx+margin&&Math.abs(Z-b.z)<pad.rz+margin
    });
+   const approaches=localBases.filter(b=>b.stationId&&Math.abs(b.x-cx)<220&&Math.abs(b.z-cz)<1280);
    const sites=railSites.filter(s=>Math.abs(s.x-cx)<440&&Math.abs(s.z-cz)<440);
    const insideStation=(X,Z,margin)=>sites.some(s=>Math.hypot(s.x-X,s.z-Z)<(s.kind==='central'?180:115)+margin);
+   const districts=[...countryDistricts.values()].filter(d=>Math.abs(d.x-cx)<500&&Math.abs(d.z-cz)<500);
+   const ruralLots=districts.flatMap(d=>d.lots.filter(b=>Math.abs(b.x-cx)<220&&Math.abs(b.z-cz)<220));
+   const ruralRoads=districts.flatMap(d=>d.roads.filter(r=>Math.abs(r[0][0]-cx)<190&&Math.abs(r[0][2]-cz)<190));
    const town=quarters.filter(b=>Math.abs(b.x-cx)<265&&Math.abs(b.z-cz)<265);
    const nearbyRoads=roads.filter(r=>r.some(([X,,Z])=>Math.abs(X-cx)<280&&Math.abs(Z-cz)<280));
-   const streets=nearbyRoads.map(r=>[Math.min(...r.map(p=>p[0]))-15,Math.max(...r.map(p=>p[0]))+15,Math.min(...r.map(p=>p[2]))-15,Math.max(...r.map(p=>p[2]))+15]);
+   town.push(...ruralLots);
+   const streets=[...nearbyRoads,...ruralRoads].map(r=>[Math.min(...r.map(p=>p[0]))-15,Math.max(...r.map(p=>p[0]))+15,Math.min(...r.map(p=>p[2]))-15,Math.max(...r.map(p=>p[2]))+15]);
    function plant(X,Z,place){
     if(Math.floor(X/256)!==i||Math.floor(Z/256)!==j||insideBase(X,Z,28)||insideStation(X,Z,8)||nearRail(X,Z))return;
     if(town.some(b=>Math.hypot(X-b.x,Z-b.z)<b.radius+6))return;
@@ -135,6 +144,10 @@ function updateWorld(){
     if(val(4)<density&&Y>=5&&!tile.trees.some(tree=>tree.planted&&Math.hypot(tree.X-X,tree.Z-Z)<18))tile.trees.push({X,Z,Y,H:15+val(2)*16+6*canopy,R:4+val(3)*3});
     else if(val(6)<.28)tile.pixels.push({X,Z,Y,width:1+val(2)*5,color:Y<6?'#dbc299':slope>.38?'#a29882':canopy<.4?'#a1a06c':'#798c61'})
    }
+   if(approaches.length)tile.trees=tile.trees.filter(tree=>!approaches.some(b=>{
+    const along=Math.abs(tree.Z-b.z)-b.length/2;
+    return Math.abs(tree.X-b.x)<70+tree.R&&along>=0&&along<1050&&tree.Y+tree.H>b.height+5+along*.085
+   }))
   }
   if(!tile.relicChecked){tile.trees=tile.trees.filter(p=>!relics.some(s=>Math.abs(p.X+m.wx-s.x)<s.rx&&Math.abs(p.Z+m.wz-s.z)<s.rz&&relicDistance(s,p.X+m.wx,p.Y+p.H/2,p.Z+m.wz)<p.H/2+p.R));tile.relicChecked=true}
   groves.push(...tile.trees);groundPixels.push(...tile.pixels)

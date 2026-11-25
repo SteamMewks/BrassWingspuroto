@@ -60,7 +60,7 @@ const assert=require('node:assert/strict');
     if(!tree||hitObject(tree.X,tree.Z,tree.Y+tree.H*.5)!=='木')throw Error('Tree collision');
     x+=5000;updateWorld();x-=5000;updateWorld();
     if(JSON.stringify(groves)!==snapshot)throw Error('Forest regeneration');
-    for(const b of quarters)if(hitObject(b.x,b.z,b.y+b.h-1)!=='建物')throw Error('Building collision');
+    for(const b of quarters)if(hitObject(b.x,b.z,b.y+b.h-1)!=='建物')throw Error('Building collision '+[stage,b.x,b.z,b.y,b.h,hitObject(b.x,b.z,b.y+b.h-1)]);
     x=worldSize-m.wx+1;z=0;limitAirspace();
     if(Math.abs(x+m.wx-worldSize)>.001||returnHeading===null)throw Error('World boundary');
     pause();navigationMenu(true);

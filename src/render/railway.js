@@ -1,8 +1,7 @@
 const railwayTileSize=384;
 let chartLines=null,railTileCenters=[];
 function drawRail(face,gpu){
- if(!gpu){railGeometry(face);return}
- if(chartLines!==railLines){
+ if(gpu&&chartLines!==railLines){
   chartLines=railLines;gpu.clearRail();const cells=new Map();
   const add=p=>{const i=Math.floor(p.x/railwayTileSize),j=Math.floor(p.z/railwayTileSize);cells.set(i+','+j,{i,j,x:(i+.5)*railwayTileSize,z:(j+.5)*railwayTileSize})};
   for(const l of railLines){l.path.forEach(add);for(const b of l.bridges)add(railSample(l,(b.start+b.end)/2))}
@@ -11,7 +10,17 @@ function drawRail(face,gpu){
   for(const id of ['brass-port','red-strait']){const b=airbases[id];add(worldToLocal(b.wx+265,b.wz))}
   railTileCenters=[...cells.values()]
  }
- const sn=Math.sin(cameraYaw),cs=Math.cos(cameraYaw),detail=Math.max(.8,Math.min(1.4,h/420));
+ const sn=Math.sin(cameraYaw),cs=Math.cos(cameraYaw),aspect=w/h;
+ for(const area of countryDistricts.values()){
+  const dx=area.x-x,dz=area.z-z,range=Math.hypot(dx,dz);
+  const depth=dx*sn+dz*cs;
+  if(range>2650||depth< -420||Math.abs(dx*cs-dz*sn)>(depth+452)*aspect+420)continue;
+  const tier=range<680?0:range<1450?1:2;
+  if(gpu)gpu.railTile('country/'+area.key+'/'+tier,area,emit=>railGeometry(emit,null,tier,false,area));
+  else railGeometry(face,null,tier,false,area)
+ }
+ if(!gpu){railGeometry(face);return}
+ const detail=Math.max(.8,Math.min(1.4,h/420));
  for(const tile of railTileCenters){
   const dx=tile.x-x,dz=tile.z-z,d=dx*sn+dz*cs,r=Math.hypot(dx,dz);
   if(r>2900||d< -540||Math.abs(dx*cs-dz*sn)>Math.max(0,d)*w/h+540)continue;
@@ -21,9 +30,10 @@ function drawRail(face,gpu){
  }
  railGeometry(face,null,0,true)
 }
-function railGeometry(face,tile=null,tier=0,movingOnly=false){
+function railGeometry(face,tile=null,tier=0,movingOnly=false,area=null){
  const sn=Math.sin(cameraYaw),cs=Math.cos(cameraYaw);
  const near=(p,r,margin=180)=>{
+  if(area)return tier===0||r>=(tier===1?500:1000);
   if(tile)return Math.floor(p.x/railwayTileSize)===tile.i&&Math.floor(p.z/railwayTileSize)===tile.j&&(tier===0||r>=(tier===1?500:1000));
   const dx=p.x-x,dz=p.z-z,forward=dx*sn+dz*cs;
   return Math.abs(dx)<r&&Math.abs(dz)<r&&forward>=-margin&&Math.abs(dx*cs-dz*sn)<Math.max(0,forward)*w/h+margin
@@ -36,6 +46,10 @@ function railGeometry(face,tile=null,tier=0,movingOnly=false){
   for(let i=0;i<4;i++){const j=(i+1)%4;face([foot[i],foot[j],top[j],top[i]],color,3)}
   if(pitch){const a=at(0,-l/2,h+pitch),b=at(0,l/2,h+pitch);face([top[0],top[3],b,a],roof,4);face([a,b,top[2],top[1]],roof,4);face([top[0],a,top[1]],color,4);face([top[3],top[2],b],color,4)}
   else face(top,roof,4)
+ }
+ if(area){
+  for(const quad of area.roads)face(quad,quad.crossing?'#7b6550':'#ae8961',2);
+  drawLots(area.lots);return
  }
  // Eight-sided boiler and driving wheels share the vehicle heading through bends.
  function roundPart(p,axis,side,along,up,radius,length,colors){
@@ -144,21 +158,47 @@ function railGeometry(face,tile=null,tier=0,movingOnly=false){
    }
   }
  }
- for(const b of railLots){
-  if(b.style==='beacon'){if(tile)continue;
-   if(near(b,2300)){
-    box(b,0,0,7,7,7,'#958a74','#ae9e84');box(b,0,0,5,5,11,'#c4b9a1','#ac9a7c',7);
-    box(b,0,0,6,6,1,'#595e51','#777469',18);
-    box(b,0,0,3.8,3.8,2.6,Math.cos(railClock*1.6)>.45?'#ffe7a3':'#bfaa78','#9a8f71',19);
-    box(b,0,0,5,5,.5,'#745344','#87634e',21.6,1)
+ drawLots(railLots);
+ function drawLots(lots){
+  for(const b of lots){
+   if(b.style==='beacon'){if(tile)continue;
+    if(near(b,2300)){
+     box(b,0,0,7,7,7,'#958a74','#ae9e84');box(b,0,0,5,5,11,'#c4b9a1','#ac9a7c',7);
+     box(b,0,0,6,6,1,'#595e51','#777469',18);
+     box(b,0,0,3.8,3.8,2.6,Math.cos(railClock*1.6)>.45?'#ffe7a3':'#bfaa78','#9a8f71',19);
+     box(b,0,0,5,5,.5,'#745344','#87634e',21.6,1)
+    }
+    continue
    }
-   continue
+   if(!tile&&b.style==='stack'&&near(b,800))for(let j=0;j<4;j++){const u=(railClock*.14+j/4)%1,R=1+u*3;box(b,2*u,u*5,R,R,R,'rgba(102,99,91,.35)','rgba(126,122,112,.35)',b.h+u*12)}
+   if(movingOnly||!near(b,1900))continue;
+   if(b.style==='nets'){
+    for(const u of [-1,1])box(b,u*b.w*.48,0,.55,.55,b.h,'#80654b','#9f8567');
+    const span=b.w*.48;
+    face([railOffset(b,-span,0,b.h),railOffset(b,span,0,b.h),railOffset(b,span,0,1.4),railOffset(b,0,0,.5),railOffset(b,-span,0,1.4)],'#698984',3);
+    continue
+   }
+   if(b.style==='mill'){
+    box(b,0,0,b.w*.5,b.l*.55,b.h*.72,'#baaa80','#765c4d',0,2);
+    const R=b.h*.32,along=-b.l*.3;
+    for(let n=0;n<4;n++){
+     const a=n*Math.PI/2+.45,c=Math.cos(a),s=Math.sin(a);
+     const point=(r,v)=>railOffset(b,r*c-v*s,along,b.h*.66+r*s+v*c);
+     face([point(0,-.25),point(R,-.25),point(R,1.3),point(R*.34,1.3)],'#d5bc88',4)
+    }
+    continue
+   }
+   const colors={field:['#90804f','#aa9657'],coal:['#4c4843','#5c5146'],logs:['#805a3c','#ae8555'],tank:['#625748','#88918a'],stack:['#9a5948','#d1aa84'],house:['#a17a64','#746457'],hall:['#a05d48','#687673'],works:['#995e49','#736759'],shed:['#947459','#70746b']};
+   const [wall,roof]=colors[b.style],gable=['house','hall','shed','works'].includes(b.style);
+   box(b,0,0,b.w,b.l,b.h,wall,roof,0,gable&&tier<2&&near(b,950)?b.w*.22:0);
+   if(gable&&near(b,600))for(let k=-b.l/2+3;k<b.l/2-1;k+=6)box(b,0,k,b.w+.16,2,2.4,'#dab889','#b79a70',b.h-4);
+   if(b.stationId&&b.style==='field'&&near(b,340)){
+    for(const side of [-1,1]){
+     box(b,side*b.w/2,0,.6,b.l,1.1,'#806649','#ac9467');
+     for(const along of [-1,0,1])box(b,side*b.w/2,along*b.l/2,1,1,2,'#765a43','#a1875c')
+    }
+   }
+   if(tier<2&&b.style==='tank')box(b,0,0,b.w+3,b.l+3,5,'#758080','#9a9b89',b.h-4)
   }
-  if(!tile&&b.style==='stack'&&near(b,800))for(let j=0;j<4;j++){const u=(railClock*.14+j/4)%1,R=1+u*3;box(b,2*u,u*5,R,R,R,'rgba(102,99,91,.35)','rgba(126,122,112,.35)',b.h+u*12)}
-  if(movingOnly||!near(b,1700))continue;const colors={field:['#90804f','#aa9657'],coal:['#4c4843','#5c5146'],logs:['#805a3c','#ae8555'],tank:['#625748','#88918a'],stack:['#9a5948','#d1aa84'],house:['#a17a64','#746457'],hall:['#a05d48','#687673'],works:['#995e49','#736759'],shed:['#947459','#70746b']};
-  const [wall,roof]=colors[b.style],gable=['house','hall','shed','works'].includes(b.style);
-  box(b,0,0,b.w,b.l,b.h,wall,roof,0,gable&&tier<2?b.w*.22:0);
-  if(gable&&near(b,600))for(let k=-b.l/2+3;k<b.l/2-1;k+=6)box(b,0,k,b.w+.16,2,2.4,'#dab889','#b79a70',b.h-4);
-  if(tier<2&&b.style==='tank')box(b,0,0,b.w+3,b.l+3,5,'#758080','#9a9b89',b.h-4)
  }
 }

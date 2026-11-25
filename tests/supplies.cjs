@@ -61,7 +61,7 @@ const seed=require('./helpers/adventure.cjs');
     adventure.ammo=ammoCapacity()-1;buySupply('ammo',30);check(adventure.ammo===ammoCapacity()&&adventure.money===0,'partial magazine');
     adventure.fuel=adventure.fuelMax-43;adventure.money=1;buySupply('fuel',5000);check(adventure.fuel===adventure.fuelMax&&adventure.money===0,'partial tank')
    }
-   startFlight('windmill');supplyMenu();adventure.fuel=350;adventure.money=200;check(!buySupply('fuel',5000),'no town pump');
+   startFlight('windmill');supplyMenu();adventure.fuel=350;adventure.money=200;check(buySupply('fuel',5000)&&adventure.money===185&&adventure.fuel===5350,'town fuel price');
    for(const port of Object.values(settlements).filter(isTown)){
     const b=nearestBase(port);check(Object.values(airbases).every(air=>portDistance(air,port)>=portDistance(b,port)),'nearest '+port.id)
    }

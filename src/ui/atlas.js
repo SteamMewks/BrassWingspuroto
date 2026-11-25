@@ -25,12 +25,21 @@ function selectMapSite(id){
 function worldMapPanel(){
  const sites=mapLocations(),b=sites.find(s=>s.id===mapSelection)||sites[0],port=outposts[b.id];
  const p=mapAirborne?localToWorld(x,z):landingSite;
- const facilities=port?(isTown(b)?'掲示板・商店・酒場':'補給・整備・改造'):'探訪記録';
+ const facilities=port?(isTown(b)?'掲示板・商店・酒場・補給':'補給・整備・改造'):'探訪記録';
  showPanel('map',b.name,(port?portType(b)+'・'+labels[affiliation(b.id)]:wonders.some(s=>s.id===b.id)?'巨景':'遺構')+'　'+mapStatus(b)+'　'+(portDistance(p,b)/1000).toFixed(1)+' km　'+facilities);
  $('atlas').hidden=false;atlas(sites,b,p);
  const choices=mapCluster||sites;
  const select=document.createElement('select');select.setAttribute('aria-label','地点を選択');
- for(const s of choices)select.add(new Option(s.name,s.id,false,s.id===b.id));
+ const groups=new Map();
+ for(const site of choices){
+  const region=outposts[site.id]?['黄銅港地方','紫煙高地方','赤銅海峡地方'][site.region]:'探訪地点';
+  const label=region||'海域';
+  if(!groups.has(label)){
+   const group=document.createElement('optgroup');group.label=label;
+   groups.set(label,group);select.append(group)
+  }
+  groups.get(label).append(new Option(site.name,site.id,false,site.id===b.id))
+ }
  select.onchange=()=>selectMapSite(select.value);$('actions').append(select);
  action('航路を設定',()=>{waypointId=b.id;mapBack()});
  if(port&&b.id!=='home'){
