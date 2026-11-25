@@ -14,10 +14,13 @@ function stock(port){return Object.values(merchandise).filter(item=>producer(ite
 const marketFactors={'brass-city':1.02,'west-city':1.08,'casting-town':.97,'smoke-city':1.03,windmill:.94,'mill-village':.96,'copper-city':1.01,'red-city':1.06,'fortress-town':1.04,charcoal:.95,smelter:.98,'south-city':1.05,kiln:.96,'net-village':.97};
 function buyPrice(item,port){return Math.ceil(item.base*(marketFactors[port.id]||1)*(producer(item,port)?economy.producer:economy.retail))}
 function portDistance(a,b){return Math.hypot(a.wx-b.wx,a.wz-b.wz)}
+const townFuelPrice=15;
+function transportFloor(metres){return Math.ceil(metres*1.3*townFuelPrice/5000)}
 function salePrice(lot,port){
  const item=merchandise[lot.item],km=Math.min(lot.metres,portDistance(outposts[lot.origin],port))/1000;
  const demand=item.demand===port.industry?economy.demand:1;
- return Math.floor(Math.min(lot.price,buyPrice(item,port))*economy.buyback+item.base*demand*economy.maxBonus*(1-Math.exp(-km*economy.perKm/economy.maxBonus)))
+ const market=Math.min(lot.price,buyPrice(item,port))*economy.buyback+item.base*demand*economy.maxBonus*(1-Math.exp(-km*economy.perKm/economy.maxBonus));
+ return Math.max(lot.price+transportFloor(km*1000),Math.ceil(market))
 }
 function cargoUsed(){return adventure.cargo.reduce((sum,l)=>sum+l.qty*merchandise[l.item].slots,adventure.freight?.qty||0)}
 const standardTank=20000;
@@ -25,16 +28,18 @@ function ammoCapacity(){return 90+20*adventure.mag}
 let cargoSaveTime=0;
 function recordFlight(metres){
  if(!(metres>0))return;
+ adventure.flightMetres+=metres;
  const before=adventure.fuel;adventure.fuel=Math.max(0,before-metres);
  if(before>0&&!adventure.fuel)syncAudio();
  for(const lot of adventure.cargo)lot.metres+=metres;
  if(t<cargoSaveTime||t-cargoSaveTime>=20){saveAdventure();cargoSaveTime=t}
 }
 function townDock(id){return !live&&deckMode==='moored'&&landingSite?.id===id&&affiliation(id)!=='pirate'}
-function buyItem(item){
+function purchaseLimit(item,port){return Math.min(Math.floor((8-cargoUsed())/item.slots),Math.floor(adventure.money/buyPrice(item,port)))}
+function buyItem(item,qty=1){
  const port=landingSite,price=buyPrice(item,port);
- if(!townDock(port.id)||!stock(port).includes(item)||adventure.money<price||cargoUsed()+item.slots>8)return;
- adventure.cargo.push({item:item.id,qty:1,origin:port.id,price,metres:0});adventure.money-=price;saveAdventure()
+ if(!townDock(port.id)||!stock(port).includes(item)||!Number.isSafeInteger(qty)||qty<1||qty>purchaseLimit(item,port))return;
+ adventure.cargo.push({item:item.id,qty,origin:port.id,price,metres:0,acquiredAt:adventure.flightMetres});adventure.money-=price*qty;saveAdventure()
 }
 function removeUnit(list,lot){if(--lot.qty===0)list.splice(list.indexOf(lot),1)}
 function sellUnit(lot){
@@ -52,7 +57,7 @@ function fillOffers(origin,offers){
   const to=candidates[(i+generation)%candidates.length],distance=portDistance(port,to);
   if(offers.some(offer=>offer.to===to.id))continue;
   const item=local[(i+generation)%local.length],qty=1+(i+generation)%3;
-  offers.push({id:[origin,generation,to.id].join('/'),origin,to:to.id,item:item.id,qty,distance,reward:Math.round(distance/1000+qty*item.base*.7),status:'posted'})
+  offers.push({id:[origin,generation,to.id].join('/'),origin,to:to.id,item:item.id,qty,distance,reward:Math.max(transportFloor(distance),Math.round(distance/1000+qty*item.base*.7)),status:'posted'})
  }
 }
 function boardFor(origin){

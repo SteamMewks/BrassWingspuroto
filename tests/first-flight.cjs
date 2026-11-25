@@ -14,7 +14,7 @@ const seed=require('./helpers/adventure.cjs');
   await open();assert.equal(await p.getByText('続きから').isDisabled(),true);
   await press('新規ゲーム');await press('キャンセル');assert.equal(await p.evaluate(()=>localStorage.getItem(saveKey)),'{');
   await press('新規ゲーム');await press('上書きして始める');
-  assert.deepEqual(await p.evaluate(()=>[adventure.money,adventure.visited,adventure.liberated,adventure.job,adventure.mag,adventure.wear,discoveries,adventure.tutorial,Object.keys(outposts).filter(id=>affiliation(id)==='pirate').length]),[30,['home'],[],null,0,0,{},'home',46]);
+  assert.deepEqual(await p.evaluate(()=>[adventure.money,adventure.visited,adventure.liberated,adventure.job,adventure.mag,adventure.wear,discoveries,adventure.tutorial,Object.keys(outposts).filter(id=>affiliation(id)==='pirate').length]),[500,['home'],[],null,0,0,{},'home',await p.evaluate(()=>Object.keys(outposts).length-1)]);
   await press('黄銅港市を目的地にする');await press('手帳');await press('タイトルへ');await press('続きから');
   assert.equal(await p.evaluate(()=>waypointId),'brass-city');
   await p.evaluate(()=>{adventure.money=97;adventure.cargo=[{item:'ore',qty:2,price:5,origin:'home',metres:0}];discoveries.gear='2000-01-01';saveAdventure();titleScreen()});
@@ -25,7 +25,7 @@ const seed=require('./helpers/adventure.cjs');
   await p.evaluate(()=>{Storage.prototype.removeItem=window.originalRemove;titleScreen();window.originalSet=Storage.prototype.setItem;Storage.prototype.setItem=function(){throw Error('full')}});
   await press('新規ゲーム');await press('上書きして始める');assert.match(await p.locator('#notice').innerText(),/保存できません/);assert.equal(await p.evaluate(()=>adventure.money),97);
   await p.evaluate(()=>{Storage.prototype.setItem=window.originalSet;titleScreen()});await press('記録を初期化');await press('記録を消去する');
-  assert.deepEqual(await p.evaluate(()=>[localStorage.getItem(saveKey),localStorage.getItem('brassWings.worldCampaign.v1'),localStorage.getItem('other.game'),adventure.money,discoveries]),[null,null,'keep',30,{}]);
+  assert.deepEqual(await p.evaluate(()=>[localStorage.getItem(saveKey),localStorage.getItem('brassWings.worldCampaign.v1'),localStorage.getItem('other.game'),adventure.money,discoveries]),[null,null,'keep',500,{}]);
   await press('新規ゲーム');await press('黄銅港市を目的地にする');
   // Restore each interruption from storage, including the safe-spawn fallback.
   for(const stage of ['battle','liberated','landing','visit','done']){

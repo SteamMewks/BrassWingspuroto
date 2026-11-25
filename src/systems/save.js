@@ -9,7 +9,7 @@ function restoreJob(job){
 }
 const tutorialSteps=['new','home','flight','battle','liberated','landing','visit','done'];
 function initialAdventure(){
- return {version:3,fuelMax:standardTank,fuel:standardTank,ammo:90,known:['home'],seen:['home'],favorites:[],cargo:[],boards:{},rounds:{},freight:null,freightRecord:null,lastLoss:'',last:'home',visited:['home'],liberated:[],money:30,wear:0,mag:0,kills:0,skyClue:false,job:null,tutorial:'new'}
+ return {version:4,flightMetres:0,fuelMax:standardTank,fuel:standardTank,ammo:90,known:['home'],seen:['home'],favorites:[],cargo:[],boards:{},rounds:{},freight:null,freightRecord:null,lastLoss:'',last:'home',visited:['home'],liberated:[],money:500,wear:0,mag:0,kills:0,skyClue:false,job:null,tutorial:'new'}
 }
 let adventure=initialAdventure(),discoveries={},hasRecord=false,hasStoredRecord=false;
 function storageNotice(text){$('notice').textContent=text}
@@ -21,6 +21,7 @@ function restoreAdventure(){
  if(!v||!Number.isSafeInteger(v.money)||!Array.isArray(v.visited)||!Array.isArray(v.liberated))return;
  adventure={...initialAdventure(),visited:validIds(['home',...v.visited],id=>typeof id==='string'&&Object.hasOwn(outposts,id)),liberated:validIds(v.liberated,id=>typeof id==='string'&&id!=='home'&&Object.hasOwn(outposts,id)),
  money:count(v.money,Number.MAX_SAFE_INTEGER),wear:count(v.wear,40),mag:count(v.mag,3),kills:count(v.kills),skyClue:v.skyClue===true,job:restoreJob(v.job),tutorial:tutorialSteps.includes(v.tutorial)?v.tutorial:'done'};
+ adventure.flightMetres=Number.isFinite(v.flightMetres)?Math.max(0,v.flightMetres):0;
  adventure.fuelMax=Number.isFinite(v.fuelMax)&&v.fuelMax>0?Math.min(1000000,v.fuelMax):standardTank;
  adventure.fuel=Number.isFinite(v.fuel)?Math.max(0,Math.min(v.fuel,adventure.fuelMax)):adventure.fuelMax;
  adventure.ammo=Number.isFinite(v.ammo)?Math.max(0,Math.min(Math.floor(v.ammo),ammoCapacity())):ammoCapacity();
@@ -49,6 +50,10 @@ function restoreAdventure(){
   adventure.rounds[port.id]=count(v.rounds?.[port.id]);
   const board=v.boards?.[port.id];
   if(Array.isArray(board)&&board.length<=5&&board.every(j=>readFreight(j)&&j.origin===port.id&&j.distance>=10000&&j.distance<=30000))adventure.boards[port.id]=board
+ }
+ for(const job of [adventure.freight,...Object.values(adventure.boards).flat()].filter(Boolean)){
+  job.distance=portDistance(settlements[job.origin],settlements[job.to]);
+  job.reward=Math.max(job.reward,transportFloor(job.distance))
  }
  if(typeof v.lastLoss==='string')adventure.lastLoss=v.lastLoss;
  if(adventure.freight)revealPort(adventure.freight.to);

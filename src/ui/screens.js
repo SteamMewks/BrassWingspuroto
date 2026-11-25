@@ -47,11 +47,11 @@ function portType(b){return ({home:'本拠地',city:'都市',town:'町',village:
 function dockMenu(){
  const b=landingSite;
  showPanel('dock',b.name,portType(b)+'　所持金 '+adventure.money+'　積荷 '+cargoUsed()+'/8');
+ action('補給',supplyMenu,Boolean(encounter));
  if(isTown(b)){
   action('依頼掲示板',jobs);action('商店',shop);action('住民',()=>{showPanel('resident',b.name+'の住民','「'+b.name+'の特産は'+stock(b).filter(i=>producer(i,b)).map(i=>i.name).join('・')+'。輸送先は掲示板で確認できます。」');fixedAction('戻る',dockMenu)});
   action('積荷',()=>cargoMenu(false));action('酒場',tavern);action('旅の記録',travelLog)
  }else{
-  action('補給',supplyMenu,Boolean(encounter));
   action('整備 · 10',()=>{adventure.money-=10;adventure.wear=0;energy=100;saveAdventure();dockMenu()},!adventure.wear||adventure.money<10);
   action('改造 · 40',()=>{adventure.money-=40;adventure.mag++;saveAdventure();dockMenu()},adventure.mag>=3||adventure.money<40);
   action('積荷',()=>cargoMenu(false))
@@ -79,7 +79,7 @@ function shop(){
  showPanel('shop',b.name+' 商店','所持金 '+adventure.money+'　積荷 '+cargoUsed()+'/8');
  for(const item of stock(b)){
   const price=buyPrice(item,b);
-  action('買う　'+item.name+' · '+price,()=>refreshList(shop,()=>buyItem(item)),adventure.money<price||cargoUsed()>=8)
+  action('買う　'+item.name+' · '+price,()=>purchaseMenu(item),adventure.money<price||cargoUsed()>=8)
  }
  for(const lot of adventure.cargo)action('売る　'+lotLabel(lot)+' · '+salePrice(lot,b),()=>refreshList(shop,()=>sellUnit(lot)));
  fixedAction('戻る',dockMenu)
@@ -119,13 +119,28 @@ function reserveAmount(id){
  return 0
 }
 function supplyAmount(id,amount){return id==='fuel'?(amount/1000).toLocaleString('ja-JP',{maximumFractionDigits:3})+' km':amount+' 発'}
+function purchaseMenu(item){
+ const port=landingSite,price=buyPrice(item,port),max=purchaseLimit(item,port);
+ showPanel('purchase',item.name,'単価 '+price+' G　積荷 '+cargoUsed()+'/8　購入上限 '+max+' 個');
+ const label=document.createElement('label'),input=document.createElement('input');
+ label.textContent='購入数量　';input.type='number';input.inputMode='numeric';input.min='1';input.max=String(max);input.step='1';input.value='1';
+ label.append(input);$('actions').append(label);
+ const confirm=action('',()=>{if(panel==='purchase'&&input.validity.valid){buyItem(item,input.valueAsNumber);shop()}});
+ function update(){
+  const qty=input.valueAsNumber;
+  confirm.disabled=!Number.isSafeInteger(qty)||qty<1||qty>max;
+  confirm.textContent=confirm.disabled?'1〜'+max+'の整数を入力':'購入確定　'+qty*price+' G'
+ }
+ input.oninput=update;update();fixedAction('戻る',shop)
+}
 function supplyQuote(id,requested){
- const fuel=id==='fuel',perGold=fuel?500:6;
- const amount=Math.max(0,Math.min(requested,(fuel?adventure.fuelMax:ammoCapacity())-adventure[id],adventure.money*perGold));
- return {amount,price:Math.ceil(amount/perGold)}
+ const fuel=id==='fuel',town=isTown(landingSite);
+ const units=fuel?5000:30,rate=fuel?(town?townFuelPrice:10):(town?8:5);
+ const amount=Math.max(0,Math.min(requested,(fuel?adventure.fuelMax:ammoCapacity())-adventure[id],Math.floor(adventure.money*units/rate)));
+ return {amount,price:Math.ceil(amount*rate/units)}
 }
 function buySupply(id,requested){
- if(!['fuel','ammo'].includes(id)||!(requested>0)||panel!=='supply'||!townDock(landingSite.id)||isTown(landingSite)||encounter)return false;
+ if(!['fuel','ammo'].includes(id)||!(requested>0)||panel!=='supply'||!townDock(landingSite.id)||encounter)return false;
  const {amount,price}=supplyQuote(id,requested);if(!amount)return false;
  adventure.money-=price;adventure[id]+=amount;saveAdventure();return true
 }
@@ -154,7 +169,7 @@ function tavern(){
 }
 function travelLog(){
  const towns=adventure.visited.filter(id=>settlements[id]&&id!=='home').map(id=>outposts[id].name);
- showPanel('log','旅の記録','訪問した町村　'+(towns.join('・')||'まだありません')+'。'+adventure.lastLoss+'　解放 '+adventure.liberated.length+' 拠点、空賊撃退 '+adventure.kills+' 機。'+(adventure.skyClue?' 観測の手掛かり　中央大海の上空610 mへ。':''));
+ showPanel('log','旅の記録','訪問した町村　'+(towns.join('・')||'まだありません')+'。'+adventure.lastLoss+'　解放 '+adventure.liberated.length+'/'+(Object.keys(outposts).length-1)+' 拠点、空賊撃退 '+adventure.kills+' 機。'+(adventure.skyClue?' 観測の手掛かり　中央大海の上空610 mへ。':''));
  fixedAction('戻る',dockMenu)
 }
 function jobDestination(){

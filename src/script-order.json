@@ -45,6 +45,8 @@
   "data/railElevationArchive.js",
   "world/railway.js",
   "render/railway.js",
+  "data/countrySurvey.js",
+  "world/countryside.js",
   "world/streaming.js",
   "flight/climb.js",
   "flight/collision.js",

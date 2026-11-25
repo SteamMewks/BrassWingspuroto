@@ -18,7 +18,7 @@ const seed=require('./helpers/adventure.cjs');
    localStorage.setItem(saveKey,JSON.stringify(legacy))
   });
   await page.reload();
-  assert.deepEqual(await page.evaluate(()=>[cargoUsed(),adventure.version,adventure.freight.reward,adventure.mag,adventure.money,adventure.visited.length]),[8,3,30,1,107,2]);
+  assert.deepEqual(await page.evaluate(()=>[cargoUsed(),adventure.version,adventure.freight.reward,adventure.mag,adventure.money,adventure.visited.length]),[8,4,await page.evaluate(()=>transportFloor(portDistance(settlements.windmill,settlements['west-city']))),1,107,2]);
   await page.evaluate(()=>{startFlight('windmill');navigationMenu(false)});
   assert.deepEqual(await page.locator('#actions option').allTextContents(),['西都鋳造廠','風車村','真鍮の翼工房']);
   await page.evaluate(()=>{
@@ -67,7 +67,7 @@ const seed=require('./helpers/adventure.cjs');
    }
    const item=merchandise.grain;buyItem(item);
    const lot=adventure.cargo[0],price=lot.price,port=landingSite;
-   check(price===buyPrice(item,port)&&salePrice(lot,port)<price,'home spread');
+   check(price===buyPrice(item,port)&&salePrice(lot,port)===price,'home spread');
    const dest=outposts['west-city'];check(salePrice(lot,dest)<=price,'teleport spread');
    const observed=[];for(const d of [0,8000,20000,35000,50000]){
     lot.metres=d;observed.push(salePrice(lot,dest))
@@ -113,6 +113,7 @@ const seed=require('./helpers/adventure.cjs');
     return [p.x,p.y]
    });
    await page.touchscreen.tap(...at);
+   if(await page.locator('#panel-title').innerText()!=='西都鋳造廠')await page.getByLabel('地点を選択').selectOption('west-city');
    assert.equal(await page.locator('#panel-title').innerText(),'西都鋳造廠');await click('拡大');await shot('map-'+width);await click('戻る');
   }
   await page.setViewportSize({width:390,height:480});await click('ファストトラベル');

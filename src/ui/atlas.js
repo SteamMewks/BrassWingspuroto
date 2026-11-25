@@ -25,7 +25,7 @@ function selectMapSite(id){
 function worldMapPanel(){
  const sites=mapLocations(),b=sites.find(s=>s.id===mapSelection)||sites[0],port=outposts[b.id];
  const p=mapAirborne?localToWorld(x,z):landingSite;
- const facilities=port?(isTown(b)?'掲示板・商店・酒場':'補給・整備・改造'):'探訪記録';
+ const facilities=port?(isTown(b)?'掲示板・商店・酒場・補給':'補給・整備・改造'):'探訪記録';
  showPanel('map',b.name,(port?portType(b)+'・'+labels[affiliation(b.id)]:wonders.some(s=>s.id===b.id)?'巨景':'遺構')+'　'+mapStatus(b)+'　'+(portDistance(p,b)/1000).toFixed(1)+' km　'+facilities);
  $('atlas').hidden=false;atlas(sites,b,p);
  const choices=mapCluster||sites;

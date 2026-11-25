@@ -1,6 +1,6 @@
 
 function buildWorld(){
- leaveSky();ruinDistrictCache.clear();clearTerrain();terrainFocus='';
+ countryDistricts.clear();leaveSky();ruinDistrictCache.clear();clearTerrain();terrainFocus='';
  terraces.length=isles.length=groves.length=groundPixels.length=0;tileCache.clear();tileKey='';
  const m=worldRegion();
  localBases=Object.values({...airbases,...settlements}).map(b=>({...b,...worldToLocal(b.wx,b.wz,m),side:affiliation(b.id)}));
@@ -59,7 +59,7 @@ function updateWorld(){
  updateTerrainFocus();
  const m=worldRegion(),tx=Math.floor(x/256),tz=Math.floor(z/256);
  if(!groundWarmup&&tileKey===tx+','+tz)return;
- tileKey=tx+','+tz;groves.length=groundPixels.length=0;
+ streamDistricts();tileKey=tx+','+tz;groves.length=groundPixels.length=0;
  for(let i=tx-2;i<=tx+2;i++)for(let j=tz-2;j<=tz+2;j++){
   const key=i+','+j;
   let tile=tileCache.get(key);
@@ -77,9 +77,13 @@ function updateWorld(){
    });
    const sites=railSites.filter(s=>Math.abs(s.x-cx)<440&&Math.abs(s.z-cz)<440);
    const insideStation=(X,Z,margin)=>sites.some(s=>Math.hypot(s.x-X,s.z-Z)<(s.kind==='central'?180:115)+margin);
+   const districts=[...countryDistricts.values()];
+   const ruralLots=districts.flatMap(d=>d.lots.filter(b=>Math.abs(b.x-cx)<220&&Math.abs(b.z-cz)<220));
+   const ruralRoads=districts.flatMap(d=>d.roads.filter(r=>Math.abs(r[0][0]-cx)<190&&Math.abs(r[0][2]-cz)<190));
    const town=quarters.filter(b=>Math.abs(b.x-cx)<265&&Math.abs(b.z-cz)<265);
    const nearbyRoads=roads.filter(r=>r.some(([X,,Z])=>Math.abs(X-cx)<280&&Math.abs(Z-cz)<280));
-   const streets=nearbyRoads.map(r=>[Math.min(...r.map(p=>p[0]))-15,Math.max(...r.map(p=>p[0]))+15,Math.min(...r.map(p=>p[2]))-15,Math.max(...r.map(p=>p[2]))+15]);
+   town.push(...ruralLots);
+   const streets=[...nearbyRoads,...ruralRoads].map(r=>[Math.min(...r.map(p=>p[0]))-15,Math.max(...r.map(p=>p[0]))+15,Math.min(...r.map(p=>p[2]))-15,Math.max(...r.map(p=>p[2]))+15]);
    function plant(X,Z,place){
     if(Math.floor(X/256)!==i||Math.floor(Z/256)!==j||insideBase(X,Z,28)||insideStation(X,Z,8)||nearRail(X,Z))return;
     if(town.some(b=>Math.hypot(X-b.x,Z-b.z)<b.radius+6))return;

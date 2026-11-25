@@ -36,6 +36,7 @@ const html=readFileSync(resolve(__dirname,'../BrassWings-preview.html'));
  await page.evaluate(()=>{const s=relics.find(r=>r.id==='orrery');({x,z}=worldToLocal(s.x,s.z));alt=s.base+130;discoverRelics();if(!adventure.job.ready)throw Error('Survey')});
  await land(to);await choose('依頼掲示板');await choose('遺構調査を報告 · 50');
  await choose('戻る');await choose('商店');await page.getByRole('button',{name:/買う/}).first().click();
+ await page.getByRole('button',{name:/購入確定/}).click();
  const cost=await page.evaluate(()=>adventure.cargo[0].price);
  await choose('戻る');await choose('ファストトラベル');await choose('真鍮の翼工房');await choose('改造 · 40');
  await page.reload();assert.deepEqual(await page.evaluate(()=>[adventure.money,adventure.cargo.length,adventure.mag,adventure.job,adventure.last]),[40+reward-cost,1,1,null,'home']);

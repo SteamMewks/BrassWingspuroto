@@ -163,7 +163,7 @@ function railHit(X,Z,Y){
   if(big&&Math.abs(along)<40.5&&Math.abs(side)<9.5&&Y>=s.y+8.5&&Y<s.y+12.5)return '駅大屋根';
   if(Math.abs(along)<(big?49:21.5)&&Math.abs((big?Math.abs(side):side)- (big?6:-6))<1.75&&Y<=s.y+1)return 'ホーム'
  }
- for(const b of railLots){
+ for(const group of [railLots,...Array.from(countryDistricts.values()).filter(a=>Math.abs(a.x-X)<310&&Math.abs(a.z-Z)<310).map(a=>a.lots)])for(const b of group){
   const u=X-b.x,v=Z-b.z;if(Math.abs(u*b.dz-v*b.dx)<b.w/2&&Math.abs(u*b.dx+v*b.dz)<b.l/2&&Y<b.y+b.h+1)return '駅施設'
  }
  for(const l of railLines)if(nearLine(l,X,Z,12))for(const s of [0,1])for(const c of railCars(l,s)){
