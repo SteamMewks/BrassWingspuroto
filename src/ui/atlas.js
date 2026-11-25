@@ -1,4 +1,4 @@
-let mapAirborne=false,mapSelection=null,mapZoom=1,mapScroll=0,mapCluster=null;
+let mapBack=null,mapAirborne=false,mapSelection=null,mapZoom=1,mapScroll=0,mapCluster=null;
 function mapLocations(){
  const known=Object.values(outposts).filter(b=>knownPort(b.id));
  for(const s of journalSites)if(discoveries[s.id]||(adventure.job&&!adventure.job.ready&&s.id==='orrery'))known.push({...s,wx:s.x,wz:s.z});
@@ -15,8 +15,9 @@ function mapStatus(b){
  if(adventure.liberated.includes(b.id))return '解放済み';
  return adventure.seen.includes(b.id)?'発見済み・未訪問':'位置判明・未訪問'
 }
-function navigationMenu(airborne){
- mapAirborne=airborne;mapZoom=1;mapCluster=null;mapScroll=0;mapSelection=waypointId||adventure.freight?.to||adventure.last;worldMapPanel()
+function navigationMenu(airborne,selected=null,back=null){
+ mapBack=back||(airborne?pauseMenu:dockMenu);
+ mapAirborne=airborne;mapZoom=1;mapCluster=null;mapScroll=0;mapSelection=selected||waypointId||adventure.freight?.to||adventure.last;worldMapPanel()
 }
 function selectMapSite(id){
  mapScroll=$('actions').scrollTop;mapSelection=id;mapCluster=null;worldMapPanel()
@@ -24,17 +25,20 @@ function selectMapSite(id){
 function worldMapPanel(){
  const sites=mapLocations(),b=sites.find(s=>s.id===mapSelection)||sites[0],port=outposts[b.id];
  const p=mapAirborne?localToWorld(x,z):landingSite;
- const facilities=port?(isTown(b)?'掲示板・商店':b.id==='home'?'補給・整備・改造・倉庫':'補給・整備・改造'):'探訪記録';
+ const facilities=port?(isTown(b)?'掲示板・商店・酒場':'補給・整備・改造'):'探訪記録';
  showPanel('map',b.name,(port?portType(b)+'・'+labels[affiliation(b.id)]:wonders.some(s=>s.id===b.id)?'巨景':'遺構')+'　'+mapStatus(b)+'　'+(portDistance(p,b)/1000).toFixed(1)+' km　'+facilities);
  $('atlas').hidden=false;atlas(sites,b,p);
  const choices=mapCluster||sites;
  const select=document.createElement('select');select.setAttribute('aria-label','地点を選択');
  for(const s of choices)select.add(new Option(s.name,s.id,false,s.id===b.id));
  select.onchange=()=>selectMapSite(select.value);$('actions').append(select);
- action('航路を設定',()=>{waypointId=b.id;mapAirborne?pauseMenu():dockMenu()});
- if(port&&b.id!=='home')action((adventure.favorites.includes(b.id)?'登録解除':'移動先に登録')+'　'+adventure.favorites.length+'/10',()=>{toggleFavorite(b.id);worldMapPanel()},!selectable(b.id)||(!adventure.favorites.includes(b.id)&&adventure.favorites.length>=10));
+ action('航路を設定',()=>{waypointId=b.id;mapBack()});
+ if(port&&b.id!=='home'){
+  const registered=adventure.favorites.includes(b.id),here=townDock(b.id)&&!encounter&&selectable(b.id);
+  action((registered?'登録解除':here?'この地点をファストトラベルに登録':'現地へ着陸すると登録できます')+'　'+adventure.favorites.length+'/10',()=>{toggleFavorite(b.id);worldMapPanel()},!registered&&(!here||adventure.favorites.length>=10))
+ }
  fixedAction(mapZoom===1?'拡大':'全域',()=>{mapZoom=mapZoom===1?4:1;worldMapPanel()});
- fixedAction('戻る',mapAirborne?pauseMenu:dockMenu);$('actions').scrollTop=mapScroll
+ fixedAction('戻る',mapBack);$('actions').scrollTop=mapScroll
 }
 let atlasTerrain='';
 function atlas(sites=mapLocations(),selected=null,location=outposts[adventure.last]){

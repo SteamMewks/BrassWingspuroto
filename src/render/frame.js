@@ -14,7 +14,18 @@ function updateFlight(dt){
   lr=Math.max(-1,Math.min(1,error*2.6));
   if(Math.abs(error)<.12)returnHeading=null
  }
- bank+=(Math.max(-1,Math.min(1,lr))-bank)*(1-Math.exp(-8*dt));pitch+=(Math.max(-1,Math.min(1,ud))-pitch)*(1-Math.exp(-6*dt));yaw+=bank*dt*(returning?2:1.03+.15*power);if(!trick)applyClimb(dt);advance(dt);limitAirspace();if(adventure.cargo.length)recordFlight(Math.hypot(x-px,z-pz,alt-py));discoverRelics();if(!impact(px,pz,py)){fight(dt);updateSpray(dt)}cameraYaw+=(yaw-cameraYaw)*(1-Math.exp(-5.6*dt));t+=dt}
+ const reversing=trick==='loop';
+ bank+=((reversing?0:Math.max(-1,Math.min(1,lr)))-bank)*(1-Math.exp(-8*dt));
+ pitch+=((reversing?0:Math.max(-1,Math.min(1,ud)))-pitch)*(1-Math.exp(-6*dt));
+ if(!reversing)yaw+=bank*dt*(returning?2:1.03+.15*power);
+ if(!trick&&adventure.fuel>0)applyClimb(dt);
+ advance(dt);limitAirspace();
+ if(!impact(px,pz,py)){
+  recordFlight(Math.hypot(x-px,z-pz,alt-py));discoverRelics();fight(dt);updateSpray(dt)
+ }
+ const cameraTarget=reversing?turnHeading+Math.PI*smoothTurn(elapsedTrick/3.5):yaw;
+ cameraYaw+=angleDelta(cameraTarget-cameraYaw)*(1-Math.exp(-5.6*dt));t+=dt
+ }
 }
 function draw(dt){
  if(panel==='title'){
@@ -95,7 +106,7 @@ if(!inSky){
  const aboveIsland=levels&&alt>=levels.top;
  const floorY=aboveIsland?levels.top:onCarrier?deckHeight:ground(x,z),clearance=Math.max(0,alt-floorY);
  if(!inSky&&clearance<95&&!crash){
-  const offset=clearance*.48,roll=bank*.62+(trick==='roll'?hand*phase:0),loop=trick==='loop'?phase:0;
+  const offset=clearance*.48,roll=aircraftRoll(),loop=aircraftPitch();
   const sx=x-Math.sin(.12)*offset,sz=z-Math.cos(.12)*offset;
   const silhouette=shadowOutline.map(([side,nose])=>{
    const u=side*Math.cos(roll),v=nose*Math.cos(loop)+side*Math.sin(roll)*Math.sin(loop);
@@ -127,7 +138,7 @@ if(!inSky){
  // Sample both wing tips in world space so the wake stays behind the aircraft.
  if(live&&airspeed>0&&t>=wakeTime){
   wakeTime=t+.035;
-  const roll=bank*.62+(trick==='roll'?hand*phase:0), tilt=trick==='loop'?phase:0;
+  const roll=aircraftRoll(), tilt=aircraftPitch();
   const span=Math.min(w/79,h/115)*26*32/f;
   const tips=[-1,1].map(sign=>{
    const lateral=sign*span*Math.cos(roll),vertical=sign*span*Math.sin(roll);
@@ -176,5 +187,5 @@ if(!inSky){
  }
  if(deckMode&&live)$('place').textContent=landingSite.name;
  $('feedback').textContent=t<messageUntil?message:'';
- const scoreboard=(encounter?'弾 '+Math.floor(ammo)+'　EN '+Math.ceil(energy)+'%　':'')+score+' pt';
- if($('score').textContent!==scoreboard)$('score').textContent=scoreboard}
+ updateResourceHud()
+}

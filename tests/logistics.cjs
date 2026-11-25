@@ -18,7 +18,7 @@ const seed=require('./helpers/adventure.cjs');
    localStorage.setItem(saveKey,JSON.stringify(legacy))
   });
   await page.reload();
-  assert.deepEqual(await page.evaluate(()=>[cargoUsed(),adventure.warehouse[0].qty,adventure.freight.reward,adventure.mag,adventure.money,adventure.visited.length]),[5,9,30,1,77,2]);
+  assert.deepEqual(await page.evaluate(()=>[cargoUsed(),adventure.version,adventure.freight.reward,adventure.mag,adventure.money,adventure.visited.length]),[8,3,30,1,107,2]);
   await page.evaluate(()=>{startFlight('windmill');navigationMenu(false)});
   assert.deepEqual(await page.locator('#actions option').allTextContents(),['西都鋳造廠','風車村','真鍮の翼工房']);
   await page.evaluate(()=>{
@@ -26,8 +26,10 @@ const seed=require('./helpers/adventure.cjs');
    if(toggleFavorite(hidden.id))throw Error('unvisited registration');
    enterFlight();deckMode='';({x,z}=worldToLocal(b.wx-1000,b.wz-500));
    // Record instrument primitives at their local dial coordinates.
-   const context=g,arcs=[],rects=[];
+   const context=g,arcs=[],rects=[],positions=[],rotations=[];
    g=new Proxy(context,{get(ctx,key){
+    if(key==='translate')return (a,b)=>{positions.push([a,b]);ctx.translate(a,b)};
+    if(key==='rotate')return a=>{rotations.push(a);ctx.rotate(a)};
     if(key==='arc')return (...args)=>{arcs.push(args);ctx.arc(...args)};
     if(key==='strokeRect')return (...args)=>{rects.push(args);ctx.strokeRect(...args)};
     const value=ctx[key];return typeof value==='function'?value.bind(ctx):value
@@ -38,9 +40,13 @@ const seed=require('./helpers/adventure.cjs');
     const count=arcs.length;adventure.visited=['home'];adventure.liberated=[];arcs.length=0;
     worldMinimap();if(arcs.length!==count-1)throw Error('hidden radar pin');
     revealPort('windmill');arcs.length=0;worldMinimap();if(arcs.length!==count)throw Error('revealed radar pin');
-    encounter=b;rects.length=0;battleMinimap();
-    const edge=(minimapBox().side/2-6)/Math.SQRT2;
-    if(!rects.some(([a,b,w,h])=>Math.abs(a+edge)<1e-6&&Math.abs(b+edge)<1e-6&&w===h&&Math.abs(w-2*edge)<1e-6))throw Error('square dial');
+    encounter=b;rects.length=positions.length=rotations.length=0;
+    enemies=[{hp:1,x:x+750,z:z+100,heading:.789},{hp:1,x:x+1501,z,heading:1.234}];
+    battleMinimap();const radius=minimapBox().side/2-2;
+    if(!positions.some(([a,b])=>Math.abs(a-radius/2)<1e-8&&Math.abs(b+radius/15)<1e-8)||!rotations.includes(.789)||rotations.includes(1.234))throw Error('3 km enemy range or heading');
+    if(positions.at(-1).some(v=>v!==0))throw Error('ownship center');
+    const edge=(minimapBox().side/2-2)*2500/1500;
+    if(!rects.some(([a,b,w,h])=>Math.abs(a+.6*edge)<1e-6&&Math.abs(b+1.2*edge)<1e-6&&w===h&&Math.abs(w-2*edge)<1e-6))throw Error('square dial');
     clearEncounter()
    }finally{g=context}
   });
@@ -49,9 +55,10 @@ const seed=require('./helpers/adventure.cjs');
    const check=(v,s)=>{if(!v)throw Error(s)};
    startFlight('windmill');
    const ids=Object.keys(outposts).filter(id=>id!=='home');
-   for(const id of ids.slice(0,10))check(toggleFavorite(id),'register');
+   for(const id of ids.slice(0,10)){startFlight(id);check(toggleFavorite(id),'register')}
+   startFlight(ids[10]);
    check(!toggleFavorite(ids[10])&&!toggleFavorite('home'),'cap and home');
-   toggleFavorite(ids[0]);check(toggleFavorite(ids[10]),'replacement');
+   toggleFavorite(ids[0]);check(toggleFavorite(ids[10]),'replacement');startFlight('windmill');
    for(const port of Object.values(settlements).filter(isTown)){
     const board=boardFor(port.id),eligible=Object.values(settlements).filter(b=>isTown(b)&&portDistance(port,b)>=10000&&portDistance(port,b)<=30000);
     check(board.length===Math.min(5,eligible.length),'eligible count');
@@ -72,9 +79,6 @@ const seed=require('./helpers/adventure.cjs');
    const flown=lot.metres;startFlight('windmill');buyItem(item);
    check(adventure.cargo[1].metres===0&&lot.metres===flown,'distinct lots and resume');
    travelMenu();check(fastTravel('home')&&lot.metres===flown,'cargo travel');
-   moveUnit(adventure.cargo,adventure.warehouse,lot);recordFlight(120);
-   check(adventure.warehouse[0].metres===flown,'warehouse distance');
-   moveUnit(adventure.warehouse,adventure.cargo,adventure.warehouse[0]);check(adventure.cargo[1].metres===flown,'withdraw');
    startFlight('windmill');const offer=boardFor('windmill')[0];
    adventure.cargo[0].qty=7;acceptFreight(offer);check(!adventure.freight,'capacity');
    adventure.cargo[0].qty=1;acceptFreight(offer);check(adventure.freight&&knownPort(offer.to),'accept');

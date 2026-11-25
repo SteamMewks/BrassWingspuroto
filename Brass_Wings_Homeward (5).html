@@ -59,6 +59,13 @@ footer{padding:0 max(14px,env(safe-area-inset-right)) 0 max(14px,env(safe-area-i
  .card[data-panel=map] article:has(#atlas:not([hidden])) #atlas svg{height:min(70dvh,44vw)}
  .card[data-panel=map] article:has(#atlas:not([hidden])) :is(h1,p,#actions,#tools){grid-column:2}
 }
+#score{font-size:clamp(12px,2.8vw,15px);background:#183239dd;padding:3px 7px;border-radius:5px}#score[data-low=yes]{color:#ffe09a;border:1px solid #e2a844}
+
+#score{white-space:pre-line;text-align:center}
+@media(min-width:480px) and (max-height:450px){[data-panel=supply] #actions{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(min-width:480px) and (max-height:450px){
+ #score{position:fixed;bottom:max(5px,env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);white-space:nowrap}
+}
 </style>
 <canvas></canvas><header><div><b>Brass Wings</b><small>群島飛行</small></div><strong id="meter"></strong><button id="sound" aria-label="サウンド切替" aria-pressed="false">音 OFF</button><button id="pause" aria-label="一時停止">Ⅱ</button></header><div id="notice" role="alert"></div><div id="place"></div><div id="feedback" role="status"></div><footer><div id="pad" aria-label="操縦桿"><i id="knob"></i></div><div style="display:grid;gap:6px"><button id="fire" hidden>射撃</button><strong id="score">0 pt</strong><label><span>推力</span><input id="thrust" type="range" min="0" max="100" value="0" aria-label="推力"></label></div></footer><div class="card" id="cover" role="dialog" aria-modal="true" aria-labelledby="panel-title"><article><small>夕 暮 れ の 飛 行</small><h1 id="panel-title">Brass Wings</h1><p></p><div id="atlas"></div><div id="actions"></div><div id="tools"></div><button id="journalOpen">探訪記録</button></article></div><dialog id="journal" aria-labelledby="journalTitle"><h2 id="journalTitle">探訪記録</h2><select id="journalCategory" aria-label="記録カテゴリ"><option>人工遺構</option><option>巨景・天然地形</option></select><p id="progress"></p><div id="entries"></div><section id="entryDetail"></section><canvas id="journalMap" width="256" height="256" aria-label="発見済み地点の世界地図"></canvas><button id="journalClose">閉じる</button></dialog><script>
 const canvas=document.querySelector('canvas'),frontInk=canvas.getContext('2d'),$=s=>document.getElementById(s);
@@ -87,7 +94,7 @@ function releaseStick(pointerId=id){
  stick(0,0)
 }
 function clearFlightInput(){
- keys.clear();trigger=false;releaseStick();stick(0,0)
+ keys.clear();trigger=false;releaseStick();stick(0,0);resetGesture()
 }
 pad.onpointerdown=e=>{if(!live||id!==null)return;id=e.pointerId;pad.setPointerCapture(id);move(e)};
 pad.onpointermove=e=>{if(live&&id===e.pointerId)move(e)};
@@ -96,7 +103,7 @@ thrust.oninput=e=>{power=Number(e.target.value)/100;syncAudio()};
 function pause(){
  if(!live)return;
  live=false;clearFlightInput();
- if(adventure.cargo.length)saveAdventure();
+ saveAdventure();
  pauseMenu()
 }
 $('pause').onclick=pause;onblur=pause;
@@ -169,11 +176,14 @@ for(let i=0;i<32;i++){
  slice(10.38,'#4b4838',[point(i,1.85),point(i,outer),point(i+1,outer),point(i+1,1.85)]);
  if(i%8===0)slice(10.38,'#4b4838',[point(i,.1),point(i,2),point(i+1,2),point(i+1,.1)])
 }
+let turnHeading=0,turnPitch=0,turnRoll=0;
+function aircraftRoll(){return bank*.62+(trick==='loop'?turnRoll:trick==='roll'?hand*phase:0)}
+function aircraftPitch(){return trick==='loop'?turnPitch:0}
 let trick=null,phase=0,hand=1;
 let tapDir='',tapAt=0,stickOut=false;
 function resetGesture(){tapDir='';tapAt=0;stickOut=false}
 function readGesture(rawX=ax,rawY=ay){
- if(!live||trick||deckMode){resetGesture();return}
+ if(!live||trick||deckMode||!adventure.fuel){resetGesture();return}
  const u=rawX+Number(keys.has('ArrowRight'))-Number(keys.has('ArrowLeft'));
  const v=-rawY+Number(keys.has('ArrowUp'))-Number(keys.has('ArrowDown'));
  if(Math.hypot(u,v)<.4){stickOut=false;return}
@@ -184,7 +194,7 @@ function readGesture(rawX=ax,rawY=ay){
  if(dir!=='down'&&dir===tapDir&&now-tapAt<=380){
   trick=dir==='up'?'loop':'roll';
   hand=dir==='left'?-1:1;
-  phase=elapsedTrick=0;
+  turnHeading=yaw;turnPitch=turnRoll=0;phase=elapsedTrick=0;
   tapDir='';
  }else{tapDir=dir;tapAt=now}
 }
@@ -199,12 +209,12 @@ function enterFlight(){
 }
 function showPanel(state,title,description){
  live=false;clearFlightInput();panel=state;$('cover').hidden=false;flightControls.forEach(e=>e.inert=true);
- $('panel-title').textContent=title;document.querySelector('.card p').textContent=description;
+ updateResourceHud();$('panel-title').textContent=title;document.querySelector('.card p').textContent=description;
  $('cover').dataset.panel=state;$('actions').replaceChildren();$('tools').replaceChildren();$('actions').scrollTop=0;$('atlas').hidden=state!=='title';
  $('journalOpen').hidden=!['title','log','pause'].includes(state);syncAudio();
 
  if(state==='crash')action(adventure.tutorial==='done'?'安全な拠点で再開':'本拠地から再挑戦',()=>startFlight(adventure.tutorial==='done'?adventure.last:'home'));
- if(state==='pause'){action('飛行を再開',enterFlight);action('世界地図',()=>navigationMenu(true));action('操作説明',()=>flightHelp(()=>pauseMenu()))}
+ if(state==='pause'){action('飛行を再開',enterFlight);action('世界地図',()=>navigationMenu(true));action('積荷',()=>cargoMenu(true));action('操作説明',()=>flightHelp(pauseMenu))}
 }
 function titleScreen(){
  leaveSky();ruinDistrictCache.clear();clearTerrain();tileCache.clear();groves.length=groundPixels.length=0;clearEncounter();crash=null;needsRedraw=true;
@@ -214,13 +224,13 @@ function titleScreen(){
  action('記録を初期化',()=>confirmRecord(true))
 }
 function confirmRecord(erase){
- showPanel('confirm',erase?'記録を初期化':'新規ゲーム','冒険進行、所持金、所持品、倉庫、解放・訪問地点、依頼、機体改造、発見記録、チュートリアル進行を消去します。この操作は取り消せません。');
+ showPanel('confirm',erase?'記録を初期化':'新規ゲーム','冒険進行、所持金、所持品、解放・訪問地点、依頼、機体改造、発見記録、チュートリアル進行を消去します。この操作は取り消せません。');
  action('キャンセル',titleScreen);action(erase?'記録を消去する':'上書きして始める',erase?eraseAdventure:newAdventure)
 }
 function startFlight(id){
  if(!selectable(id))id='home';
  const site=outposts[id];regionContext={...landscapes[site.region],departure:id};
- encounterDelay=0;reentryBlocked.clear();returnHeading=null;restartFlight();clearEncounter();energy=100-adventure.wear;ammo=90+adventure.mag*20;buildWorld();parkAtStart();updateWorld();enterFlight();draw(0);arrive(base)
+ encounterDelay=0;reentryBlocked.clear();returnHeading=null;restartFlight();clearEncounter();energy=100-adventure.wear;buildWorld();parkAtStart();updateWorld();enterFlight();draw(0);arrive(base)
 }
 function arrive(port){
  if(affiliation(port.id)==='pirate')return;
@@ -239,12 +249,12 @@ function dockMenu(){
  showPanel('dock',b.name,portType(b)+'　所持金 '+adventure.money+'　積荷 '+cargoUsed()+'/8');
  if(isTown(b)){
   action('依頼掲示板',jobs);action('商店',shop);action('住民',()=>{showPanel('resident',b.name+'の住民','「'+b.name+'の特産は'+stock(b).filter(i=>producer(i,b)).map(i=>i.name).join('・')+'。輸送先は掲示板で確認できます。」');fixedAction('戻る',dockMenu)});
-  action('積荷',cargoMenu);action('旅の記録',travelLog)
+  action('積荷',()=>cargoMenu(false));action('酒場',tavern);action('旅の記録',travelLog)
  }else{
-  action('補給',()=>{ammo=90+20*adventure.mag;energy=100-adventure.wear;dockMenu();document.querySelector('.card p').append('　補給完了')});
+  action('補給',supplyMenu,Boolean(encounter));
   action('整備 · 10',()=>{adventure.money-=10;adventure.wear=0;energy=100;saveAdventure();dockMenu()},!adventure.wear||adventure.money<10);
   action('改造 · 40',()=>{adventure.money-=40;adventure.mag++;saveAdventure();dockMenu()},adventure.mag>=3||adventure.money<40);
-  if(b.id==='home')action('倉庫',warehouseMenu)
+  action('積荷',()=>cargoMenu(false))
  }
  action('世界地図',()=>navigationMenu(false));action('ファストトラベル',travelMenu,Boolean(encounter||adventure.freight));
  fixedAction('手帳',()=>{showPanel('book','飛行手帳','冒険の記録と操作');action('操作説明',()=>flightHelp(dockMenu));action('旅の記録',travelLog);action('タイトルへ',titleScreen,Boolean(encounter));fixedAction('戻る',dockMenu)});
@@ -274,18 +284,73 @@ function shop(){
  for(const lot of adventure.cargo)action('売る　'+lotLabel(lot)+' · '+salePrice(lot,b),()=>refreshList(shop,()=>sellUnit(lot)));
  fixedAction('戻る',dockMenu)
 }
-function cargoMenu(){
- showPanel('cargo','積荷',cargoUsed()+'/8 枠');
- for(const lot of adventure.cargo)action(lotLabel(lot)+'　仕入 '+lot.price,null,true);
- const j=adventure.freight;if(j)action('預かり品　'+merchandise[j.item].name+' ×'+j.qty+' → '+outposts[j.to].name,jobs);
- fixedAction('戻る',dockMenu)
+function resourceText(){
+ return '燃料 '+(adventure.fuel/1000).toFixed(1)+' / '+(adventure.fuelMax/1000)+' km　弾薬 '+adventure.ammo+' / '+ammoCapacity()+' 発'
 }
-function warehouseMenu(){
- showPanel('warehouse','工房倉庫','積荷 '+cargoUsed()+'/8　預けた商品の飛行距離は保管されます。');
- for(const [from,to,label] of [[adventure.cargo,adventure.warehouse,'預ける'],[adventure.warehouse,adventure.cargo,'取り出す']]){
-  for(const lot of from)action(label+'　'+lotLabel(lot),()=>refreshList(warehouseMenu,()=>moveUnit(from,to,lot)),to===adventure.cargo&&cargoUsed()>=8)
+function cargoMenu(airborne){
+ showPanel('cargo','積荷',cargoUsed()+'/8 枠　'+resourceText());
+ for(const lot of adventure.cargo){
+  const item=merchandise[lot.item],available=airborne&&reserveAmount(item.id)>0;
+  action(lotLabel(lot)+'　'+item.category+(available?'・使用可':'・使用不可'),()=>cargoDetail(lot,airborne))
+ }
+ const j=adventure.freight;if(j)action('預かり品　'+merchandise[j.item].name+' ×'+j.qty+' → '+outposts[j.to].name,null,true);
+ fixedAction('戻る',airborne?pauseMenu:dockMenu)
+}
+function cargoDetail(lot,airborne){
+ const back=()=>cargoMenu(airborne),item=merchandise[lot.item];
+ showPanel('cargo-detail',item.name,item.category+'　'+lotLabel(lot)+'　'+resourceText());
+ const amount=reserveAmount(item.id);
+ if(item.id==='fuel'||item.id==='ammo')action('1個使用　'+supplyAmount(item.id,amount),()=>{
+  if(airborne&&panel==='cargo-detail'&&!live&&deckMode!=='moored'&&adventure.cargo.includes(lot)&&reserveAmount(item.id)>0){
+   adventure[item.id]+=reserveAmount(item.id);removeUnit(adventure.cargo,lot);saveAdventure()
+  }
+  back()
+ },!airborne||!amount);
+ action('破棄を確認',()=>{
+  showPanel('discard','積荷を破棄',item.name+'を1個破棄しますか？');
+  action('1個破棄する',()=>{if(panel==='discard'&&adventure.cargo.includes(lot)){removeUnit(adventure.cargo,lot);saveAdventure()}back()});
+  fixedAction('戻る',()=>cargoDetail(lot,airborne))
+ });
+ fixedAction('戻る',back)
+}
+function reserveAmount(id){
+ if(id==='fuel')return Math.min(20000,adventure.fuelMax-adventure.fuel);
+ if(id==='ammo')return Math.min(30,ammoCapacity()-adventure.ammo);
+ return 0
+}
+function supplyAmount(id,amount){return id==='fuel'?(amount/1000).toLocaleString('ja-JP',{maximumFractionDigits:3})+' km':amount+' 発'}
+function supplyQuote(id,requested){
+ const fuel=id==='fuel',perGold=fuel?500:6;
+ const amount=Math.max(0,Math.min(requested,(fuel?adventure.fuelMax:ammoCapacity())-adventure[id],adventure.money*perGold));
+ return {amount,price:Math.ceil(amount/perGold)}
+}
+function buySupply(id,requested){
+ if(!['fuel','ammo'].includes(id)||!(requested>0)||panel!=='supply'||!townDock(landingSite.id)||isTown(landingSite)||encounter)return false;
+ const {amount,price}=supplyQuote(id,requested);if(!amount)return false;
+ adventure.money-=price;adventure[id]+=amount;saveAdventure();return true
+}
+function supplyMenu(){
+ showPanel('supply','補給',resourceText()+'　所持金 '+adventure.money+' G');
+ for(const id of ['fuel','ammo']){
+  const steps=id==='fuel'?[5000,10000,15000,Infinity]:[30,Infinity];
+  let previous=-1;
+  for(const step of steps){
+   const {amount,price}=supplyQuote(id,step);if(previous===amount)continue;previous=amount;
+   action((id==='fuel'?'燃料 ':'弾薬 ')+supplyAmount(id,amount)+' · '+price+' G',()=>{buySupply(id,step);supplyMenu()},!amount)
+  }
  }
  fixedAction('戻る',dockMenu)
+}
+function nearestBase(port){
+ return Object.values(airbases).reduce((best,b)=>portDistance(b,port)<portDistance(best,port)?b:best)
+}
+function tavern(){
+ const port=landingSite,b=nearestBase(port);
+ const angle=Math.atan2(b.wx-port.wx,b.wz-port.wz);
+ const direction=['北','北東','東','南東','南','南西','西','北西'][(Math.round(angle/(Math.PI/4))+8)%8];
+ if(!knownPort(b.id)){revealPort(b.id);saveAdventure()}
+ showPanel('tavern',port.name+'の酒場','「最寄りは'+b.name+'。ここから'+direction+'へ約'+(portDistance(b,port)/1000).toFixed(1)+' kmだ。今は'+labels[affiliation(b.id)]+'だよ」');
+ action('世界地図で確認',()=>navigationMenu(false,b.id,tavern));fixedAction('戻る',dockMenu)
 }
 function travelLog(){
  const towns=adventure.visited.filter(id=>settlements[id]&&id!=='home').map(id=>outposts[id].name);
@@ -304,6 +369,12 @@ function surveyDestination(){
  }
  return outposts[job.kind==='delivery'?job.to:job.origin]
 }
+function offerDetail(offer){
+ const to=outposts[offer.to];
+ showPanel('offer','輸送依頼の詳細',outposts[offer.origin].name+' → '+to.name+'（'+labels[affiliation(to.id)]+'）　'+merchandise[offer.item].name+' ×'+offer.qty+'　'+(offer.distance/1000).toFixed(1)+' km　報酬 '+offer.reward+' G　積荷 '+cargoUsed()+'/8');
+ action('世界地図で位置を確認',()=>{revealPort(to.id);saveAdventure();navigationMenu(false,to.id,()=>offerDetail(offer))});
+ action('受注する',()=>{acceptFreight(offer);jobs()},Boolean(adventure.freight)||cargoUsed()+offer.qty>8);fixedAction('戻る',jobs)
+}
 function jobs(){
  const b=landingSite,j=adventure.job,freight=adventure.freight;
  showPanel('jobs','依頼掲示板',freight?'輸送中　'+merchandise[freight.item].name+' ×'+freight.qty+' → '+outposts[freight.to].name+'　納品までファストトラベル不可':'発着距離 10–30 km　積荷 '+cargoUsed()+'/8');
@@ -312,17 +383,22 @@ function jobs(){
   action('輸送を破棄',()=>{showPanel('abandon','輸送を破棄','預かり品を返却し、この依頼を終了します。');action('破棄する',()=>{endFreight('abandoned');jobs()});fixedAction('戻る',jobs)})
  }else if(isTown(b)){
   const offers=boardFor(b.id);if(!offers.length)document.querySelector('.card p').append('　現在、この距離帯の輸送先はありません。');
-  for(const offer of offers)action(outposts[offer.to].name+'行　'+merchandise[offer.item].name+' ×'+offer.qty+'　'+(offer.distance/1000).toFixed(1)+' km · '+offer.reward,()=>{acceptFreight(offer);jobs()},cargoUsed()+offer.qty>8)
+  for(const offer of offers)action(outposts[offer.to].name+'行　'+merchandise[offer.item].name+' ×'+offer.qty+'　'+(offer.distance/1000).toFixed(1)+' km · '+offer.reward,()=>offerDetail(offer))
  }
  if(j){action('遺構調査を報告 · 50',()=>{if(adventure.job!==j||!j.ready||!townDock(j.origin))return;adventure.money+=50;adventure.skyClue=true;adventure.job=null;saveAdventure();jobs()},!j.ready||b.id!==j.origin)}
  else if(isTown(b))action('遺構調査 → 天象演算儀',()=>{adventure.job={origin:b.id,kind:'survey',ready:false};saveAdventure();jobs()});
  fixedAction('戻る',dockMenu)
 }
 function award(points,label){score+=points;message=label;messageUntil=t+2}
+
+function updateResourceHud(){
+ const scoreboard=(adventure.fuel===0?'滑空':adventure.fuel<=1000?'燃料危険':adventure.fuel<=5000?'燃料注意':'燃料')+' '+(adventure.fuel/1000).toFixed(1)+' km　弾 '+adventure.ammo+'\n'+(encounter?'EN '+Math.ceil(energy)+'%　':'')+score+' pt';
+ const low=adventure.fuel<=5000?'yes':'';if($('score').dataset.low!==low)$('score').dataset.low=low;
+ if($('score').textContent!==scoreboard)$('score').textContent=scoreboard}
 let soundOn=false,audioCtx=null,motor=null,volume=null;
 function syncAudio(){
  if(!audioCtx)return;
- volume.gain.setTargetAtTime(live&&soundOn?.021:0,audioCtx.currentTime,.045);
+ volume.gain.setTargetAtTime(live&&soundOn&&adventure.fuel>0?.021:0,audioCtx.currentTime,.045);
  motor.frequency.setTargetAtTime(46+28*power,audioCtx.currentTime,.12)
 }
 $('sound').onclick=async()=>{
@@ -412,7 +488,7 @@ function triangle(a,b,c,color){
 }
 function plane(enemyView=null){
  const enemy=enemyView!==null;
- const roll=enemy?.12:bank*.62+(trick==='roll'?hand*phase:0),ang=enemy?.27:.40+pitch*.16+(trick==='loop'?phase:0);
+ const roll=enemy?.12:aircraftRoll(),ang=enemy?.27:.40+pitch*.16+(aircraftPitch());
  const ca=Math.cos(ang),sa=Math.sin(ang),cr=Math.cos(roll),sr=Math.sin(roll);
  if(!enemy&&renderMesh&&renderMesh(cr,sr,ca,sa))return;
  const heading=enemy?enemyView:yaw-cameraYaw,ch=Math.cos(heading),sh=Math.sin(heading);
@@ -1308,7 +1384,7 @@ const merchandise = Object.fromEntries([
  ['timber','木材','林産物','timber','works',10],['resin','樹脂','林産物','timber','central',14],
  ['ore','鉱石','鉱産物','mine','works',16],['coal','石炭','鉱産物','mine','central',11],
  ['parts','機械部品','工業品','works','farm',18],['precision','精密部品','工業品','central','works',24],
- ['fuel','予備燃料','航空用品','works','timber',15],['patch','補修材','航空用品','central','farm',9],
+ ['fuel','予備燃料','航空用品','works','timber',52],['ammo','予備弾薬','航空用品','central','mine',7],['patch','補修材','航空用品','central','farm',9],
  ['ceramic','登窯の焼物','地域特産品','kiln','central',22],['fish','東岸の干物','地域特産品','net-village','mine',13],
  ['flour','北原の挽き粉','地域特産品','mill-village','works',12]
 ].map(([id,name,category,source,demand,base])=>[id,{id,name,category,source,demand,base,slots:1}]));
@@ -1324,9 +1400,13 @@ function salePrice(lot,port){
  return Math.floor(Math.min(lot.price,buyPrice(item,port))*economy.buyback+item.base*demand*economy.maxBonus*(1-Math.exp(-km*economy.perKm/economy.maxBonus)))
 }
 function cargoUsed(){return adventure.cargo.reduce((sum,l)=>sum+l.qty*merchandise[l.item].slots,adventure.freight?.qty||0)}
+const standardTank=20000;
+function ammoCapacity(){return 90+20*adventure.mag}
 let cargoSaveTime=0;
 function recordFlight(metres){
- if(!metres||!adventure.cargo.length)return;
+ if(!(metres>0))return;
+ const before=adventure.fuel;adventure.fuel=Math.max(0,before-metres);
+ if(before>0&&!adventure.fuel)syncAudio();
  for(const lot of adventure.cargo)lot.metres+=metres;
  if(t<cargoSaveTime||t-cargoSaveTime>=20){saveAdventure();cargoSaveTime=t}
 }
@@ -1337,28 +1417,27 @@ function buyItem(item){
  adventure.cargo.push({item:item.id,qty:1,origin:port.id,price,metres:0});adventure.money-=price;saveAdventure()
 }
 function removeUnit(list,lot){if(--lot.qty===0)list.splice(list.indexOf(lot),1)}
-function moveUnit(from,to,lot){
- if(!townDock('home')||!from.includes(lot)||(to===adventure.cargo&&cargoUsed()>=8))return;
- to.push({...lot,qty:1});removeUnit(from,lot);saveAdventure()
-}
 function sellUnit(lot){
  if(!townDock(landingSite.id)||!adventure.cargo.includes(lot)||!isTown(landingSite))return;
  adventure.money+=salePrice(lot,landingSite);removeUnit(adventure.cargo,lot);saveAdventure()
 }
 function isTown(port){return Boolean(port?.kind&&port.kind!=='home')}
-function boardFor(origin){
- if(adventure.boards[origin])return adventure.boards[origin];
+function fillOffers(origin,offers){
  const port=settlements[origin],generation=adventure.rounds[origin]||0;
  const candidates=Object.values(settlements).filter(to=>{
   const d=portDistance(port,to);return isTown(to)&&d>=10000&&d<=30000
  });
  const local=stock(port).filter(item=>producer(item,port));
- const offers=candidates.slice(0,5).map((_,i)=>{
+ for(let i=0;i<candidates.length&&offers.length<5;i++){
   const to=candidates[(i+generation)%candidates.length],distance=portDistance(port,to);
+  if(offers.some(offer=>offer.to===to.id))continue;
   const item=local[(i+generation)%local.length],qty=1+(i+generation)%3;
-  return {id:[origin,generation,to.id].join('/'),origin,to:to.id,item:item.id,qty,distance,reward:Math.round(distance/1000+qty*item.base*.7),status:'posted'}
- });
- adventure.boards[origin]=offers;saveAdventure();return offers
+  offers.push({id:[origin,generation,to.id].join('/'),origin,to:to.id,item:item.id,qty,distance,reward:Math.round(distance/1000+qty*item.base*.7),status:'posted'})
+ }
+}
+function boardFor(origin){
+ if(!adventure.boards[origin]){adventure.boards[origin]=[];fillOffers(origin,adventure.boards[origin]);saveAdventure()}
+ return adventure.boards[origin]
 }
 function acceptFreight(offer){
  if(adventure.freight||!townDock(offer.origin)||!boardFor(offer.origin).includes(offer)||cargoUsed()+offer.qty>8)return;
@@ -1370,8 +1449,10 @@ function endFreight(status){
   if(!townDock(job.to))return false;
   adventure.money+=job.reward
  }
- adventure.freightRecord={...job,status};adventure.freight=null;
- adventure.rounds[job.origin]=(adventure.rounds[job.origin]||0)+1;delete adventure.boards[job.origin];saveAdventure();return true
+ adventure.freightRecord={...job,status,lost:status==='failed'?1:0,returned:status==='failed'?job.qty-1:status==='abandoned'?job.qty:0};adventure.freight=null;
+ adventure.rounds[job.origin]=(adventure.rounds[job.origin]||0)+1;
+ const remaining=(adventure.boards[job.origin]||[]).filter(offer=>offer.id!==job.id);
+ fillOffers(job.origin,remaining);adventure.boards[job.origin]=remaining;saveAdventure();return true
 }
 function escapeLoss(random=Math.random){
  const freight=adventure.freight,types=[...new Set(adventure.cargo.map(l=>l.item))];
@@ -1379,7 +1460,7 @@ function escapeLoss(random=Math.random){
  if(!types.length||random()>=economy.loss)return '空賊から逃走した。積荷は無事だった';
  const type=types[Math.floor(random()*types.length)];
  const item=type==='freight'?freight.item:type;
- const result='空賊の追撃で'+merchandise[item].name+'を1個失った'+(type==='freight'?'。輸送依頼に失敗した':'');
+ const result='空賊の追撃で'+merchandise[item].name+'を1個失った'+(type==='freight'?'。輸送依頼失敗。残り'+(freight.qty-1)+'個は返却扱い':'');
  adventure.lastLoss=result;
  if(type==='freight')endFreight('failed');
  else{removeUnit(adventure.cargo,adventure.cargo.find(l=>l.item===type));saveAdventure()}
@@ -1396,7 +1477,7 @@ function restoreJob(job){
 }
 const tutorialSteps=['new','home','flight','battle','liberated','landing','visit','done'];
 function initialAdventure(){
- return {version:2,known:['home'],seen:['home'],favorites:[],cargo:[],warehouse:[],boards:{},rounds:{},freight:null,freightRecord:null,lastLoss:'',last:'home',visited:['home'],liberated:[],money:30,wear:0,mag:0,kills:0,skyClue:false,job:null,tutorial:'new'}
+ return {version:3,fuelMax:standardTank,fuel:standardTank,ammo:90,known:['home'],seen:['home'],favorites:[],cargo:[],boards:{},rounds:{},freight:null,freightRecord:null,lastLoss:'',last:'home',visited:['home'],liberated:[],money:30,wear:0,mag:0,kills:0,skyClue:false,job:null,tutorial:'new'}
 }
 let adventure=initialAdventure(),discoveries={},hasRecord=false,hasStoredRecord=false;
 function storageNotice(text){$('notice').textContent=text}
@@ -1407,7 +1488,10 @@ function restoreAdventure(){
  let v;try{v=JSON.parse(raw)}catch{storageNotice('冒険記録を読み取れません。新規ゲームで開始できます。');return}
  if(!v||!Number.isSafeInteger(v.money)||!Array.isArray(v.visited)||!Array.isArray(v.liberated))return;
  adventure={...initialAdventure(),visited:validIds(['home',...v.visited],id=>typeof id==='string'&&Object.hasOwn(outposts,id)),liberated:validIds(v.liberated,id=>typeof id==='string'&&id!=='home'&&Object.hasOwn(outposts,id)),
- money:count(v.money),wear:count(v.wear,40),mag:count(v.mag,3),kills:count(v.kills),skyClue:v.skyClue===true,job:restoreJob(v.job),tutorial:tutorialSteps.includes(v.tutorial)?v.tutorial:'done'};
+ money:count(v.money,Number.MAX_SAFE_INTEGER),wear:count(v.wear,40),mag:count(v.mag,3),kills:count(v.kills),skyClue:v.skyClue===true,job:restoreJob(v.job),tutorial:tutorialSteps.includes(v.tutorial)?v.tutorial:'done'};
+ adventure.fuelMax=Number.isFinite(v.fuelMax)&&v.fuelMax>0?Math.min(1000000,v.fuelMax):standardTank;
+ adventure.fuel=Number.isFinite(v.fuel)?Math.max(0,Math.min(v.fuel,adventure.fuelMax)):adventure.fuelMax;
+ adventure.ammo=Number.isFinite(v.ammo)?Math.max(0,Math.min(Math.floor(v.ammo),ammoCapacity())):ammoCapacity();
  adventure.last=selectable(v.last)?v.last:'home';
  const portId=id=>typeof id==='string'&&Object.hasOwn(outposts,id);
  adventure.known=validIds(v.known,portId);adventure.seen=validIds(v.seen,portId);
@@ -1420,12 +1504,13 @@ function restoreAdventure(){
  }else if(readFreight(v.freight))adventure.freight=v.freight;
  if(readFreight(v.freightRecord))adventure.freightRecord=v.freightRecord;
  for(const [key,old] of [['cargo','goods'],['warehouse','stored']]){
-  let room=key==='cargo'?8-(adventure.freight?.qty||0):Number.MAX_SAFE_INTEGER;
+  if(key==='warehouse'&&v.version>=3)continue;
   const legacyQty=count(v[old]);
   const lots=v.version>=2?v[key]:[{item:'rations',qty:legacyQty,price:5,origin:adventure.last,metres:0}];
   for(const lot of Array.isArray(lots)?lots:[]){
-   if(!room||!readLot(lot))continue;
-   const qty=Math.min(room,lot.qty);adventure[key].push({...lot,qty});room-=qty
+   if(!readLot(lot))continue;
+   const qty=Math.min(8-cargoUsed(),lot.qty);if(qty)adventure.cargo.push({...lot,qty});
+   if(key==='warehouse')adventure.money+=(lot.qty-qty)*lot.price
   }
  }
  for(const port of Object.values(settlements).filter(isTown)){
@@ -1437,10 +1522,10 @@ function restoreAdventure(){
  if(adventure.freight)revealPort(adventure.freight.to);
  if(adventure.tutorial!=='new'&&adventure.tutorial!=='done')revealPort('brass-city');
  for(const s of journalSites){const date=v.discoveries?.[s.id];if(typeof date==='string'&&Number.isFinite(Date.parse(date)))discoveries[s.id]=date}
- hasRecord=true
+ hasRecord=true;if(!(v.version>=3))saveAdventure()
 }
 function persist(state,dates){
- try{localStorage.setItem(saveKey,JSON.stringify({...state,discoveries:dates}));hasRecord=hasStoredRecord=true;storageNotice('');return true}
+ try{localStorage.setItem(saveKey,JSON.stringify({...state,ammoMax:90+20*state.mag,discoveries:dates}));hasRecord=hasStoredRecord=true;storageNotice('');return true}
  catch{storageNotice('冒険を保存できません。保存設定と空き容量を確認してください。');return false}
 }
 function saveAdventure(){return persist(adventure,discoveries)}
@@ -1461,12 +1546,12 @@ function knownPort(id){return adventure.seen.includes(id)||adventure.known.inclu
 function toggleFavorite(id){
  if(id==='home'||!selectable(id))return false;
  const ids=adventure.favorites,index=ids.indexOf(id);
- if(index>=0)ids.splice(index,1);else if(ids.length<10)ids.push(id);else return false;
+ if(index>=0)ids.splice(index,1);else if(townDock(id)&&!encounter&&ids.length<10)ids.push(id);else return false;
  saveAdventure();return true
 }
 restoreAdventure();
-addEventListener('pagehide',()=>{if(live&&adventure.cargo.length)saveAdventure()});
-let mapAirborne=false,mapSelection=null,mapZoom=1,mapScroll=0,mapCluster=null;
+addEventListener('pagehide',()=>{if(live)saveAdventure()});
+let mapBack=null,mapAirborne=false,mapSelection=null,mapZoom=1,mapScroll=0,mapCluster=null;
 function mapLocations(){
  const known=Object.values(outposts).filter(b=>knownPort(b.id));
  for(const s of journalSites)if(discoveries[s.id]||(adventure.job&&!adventure.job.ready&&s.id==='orrery'))known.push({...s,wx:s.x,wz:s.z});
@@ -1483,8 +1568,9 @@ function mapStatus(b){
  if(adventure.liberated.includes(b.id))return '解放済み';
  return adventure.seen.includes(b.id)?'発見済み・未訪問':'位置判明・未訪問'
 }
-function navigationMenu(airborne){
- mapAirborne=airborne;mapZoom=1;mapCluster=null;mapScroll=0;mapSelection=waypointId||adventure.freight?.to||adventure.last;worldMapPanel()
+function navigationMenu(airborne,selected=null,back=null){
+ mapBack=back||(airborne?pauseMenu:dockMenu);
+ mapAirborne=airborne;mapZoom=1;mapCluster=null;mapScroll=0;mapSelection=selected||waypointId||adventure.freight?.to||adventure.last;worldMapPanel()
 }
 function selectMapSite(id){
  mapScroll=$('actions').scrollTop;mapSelection=id;mapCluster=null;worldMapPanel()
@@ -1492,17 +1578,20 @@ function selectMapSite(id){
 function worldMapPanel(){
  const sites=mapLocations(),b=sites.find(s=>s.id===mapSelection)||sites[0],port=outposts[b.id];
  const p=mapAirborne?localToWorld(x,z):landingSite;
- const facilities=port?(isTown(b)?'掲示板・商店':b.id==='home'?'補給・整備・改造・倉庫':'補給・整備・改造'):'探訪記録';
+ const facilities=port?(isTown(b)?'掲示板・商店・酒場':'補給・整備・改造'):'探訪記録';
  showPanel('map',b.name,(port?portType(b)+'・'+labels[affiliation(b.id)]:wonders.some(s=>s.id===b.id)?'巨景':'遺構')+'　'+mapStatus(b)+'　'+(portDistance(p,b)/1000).toFixed(1)+' km　'+facilities);
  $('atlas').hidden=false;atlas(sites,b,p);
  const choices=mapCluster||sites;
  const select=document.createElement('select');select.setAttribute('aria-label','地点を選択');
  for(const s of choices)select.add(new Option(s.name,s.id,false,s.id===b.id));
  select.onchange=()=>selectMapSite(select.value);$('actions').append(select);
- action('航路を設定',()=>{waypointId=b.id;mapAirborne?pauseMenu():dockMenu()});
- if(port&&b.id!=='home')action((adventure.favorites.includes(b.id)?'登録解除':'移動先に登録')+'　'+adventure.favorites.length+'/10',()=>{toggleFavorite(b.id);worldMapPanel()},!selectable(b.id)||(!adventure.favorites.includes(b.id)&&adventure.favorites.length>=10));
+ action('航路を設定',()=>{waypointId=b.id;mapBack()});
+ if(port&&b.id!=='home'){
+  const registered=adventure.favorites.includes(b.id),here=townDock(b.id)&&!encounter&&selectable(b.id);
+  action((registered?'登録解除':here?'この地点をファストトラベルに登録':'現地へ着陸すると登録できます')+'　'+adventure.favorites.length+'/10',()=>{toggleFavorite(b.id);worldMapPanel()},!registered&&(!here||adventure.favorites.length>=10))
+ }
  fixedAction(mapZoom===1?'拡大':'全域',()=>{mapZoom=mapZoom===1?4:1;worldMapPanel()});
- fixedAction('戻る',mapAirborne?pauseMenu:dockMenu);$('actions').scrollTop=mapScroll
+ fixedAction('戻る',mapBack);$('actions').scrollTop=mapScroll
 }
 let atlasTerrain='';
 function atlas(sites=mapLocations(),selected=null,location=outposts[adventure.last]){
@@ -2289,8 +2378,10 @@ function hitObject(X,Z,Y){
  }for(const s of relics)if(relicDistance(s,X+m.wx,Y,Z+m.wz)<2)return s.name;
  for(const spur of baseSpurs){const p=spur.end,dx=X-p.x,dz=Z-p.z; if(Math.abs(dx*p.dz-dz*p.dx+13)<5&&Math.abs(dx*p.dx+dz*p.dz)<10.5&&Y<p.y+8)return '貨物倉庫'}
  const rail=railHit(X,Z,Y);if(rail)return rail;
+ const roll=aircraftRoll(),tilt=aircraftPitch(),right=Math.cos(roll),up=Math.sin(roll),along=-up*Math.sin(tilt);
+ const wingX=right*Math.cos(yaw)+along*Math.sin(yaw),wingZ=along*Math.cos(yaw)-right*Math.sin(yaw),wingY=up*Math.cos(tilt);
  for(const offset of [-3.8,0,3.8]){
-  const px=X+offset*Math.cos(yaw),pz=Z-offset*Math.sin(yaw),py=Y-offset*Math.sin(bank*.62);
+  const px=X+offset*wingX,pz=Z+offset*wingZ,py=Y+offset*wingY;
   if(encounter)for(const e of enemies){
    if(e.hp>0&&Math.abs(py-e.y)<2.4&&Math.hypot(px-e.x,pz-e.z)<5.4)return '敵機'
   }
@@ -2302,6 +2393,7 @@ function hitObject(X,Z,Y){
   }
   if(cliffs.length&&hitsArch(px,pz,py))return '岩のアーチ';
   const land=ground(px,pz);if(land&&py-.55<=land)return '地面';
+  if(!land&&py<=.65)return '海面';
   const water=riverAt(px+worldRegion().wx,pz+worldRegion().wz);if(water&&py-.55<=water.height)return '川面';
   if(overDeck(px,pz)&&py-.55<=deckHeight)return '船体';
   const carrier=deckAt(px,pz);if(carrier)for(const [dx,dz,y,width,length,height] of shipStructures){
@@ -2325,13 +2417,13 @@ function impact(px,pz,py){
  for(let i=1;i<=steps;i++){
   const u=i/steps,X=px+(x-px)*u,Z=pz+(z-pz)*u,Y=py+(alt-py)*u,cause=hitObject(X,Z,Y);
   if(!cause)continue;
-  x=X;z=Z;alt=Y;down(cause);
+  x=X;z=Z;alt=Y;recordFlight(Math.hypot(X-px,Z-pz,Y-py));down(cause);
   return true
  }
  return false
 }
 function down(cause){
-  saveAdventure();
+  adventure.fuel=adventure.fuelMax;saveAdventure();
   live=false;syncAudio();clearFlightInput();
   crash={cause,age:0,pieces:Array.from({length:36},(_,j)=>({dx:(rand()-.5)*.38,dy:-rand()*.31-.035,spin:(rand()-.5)*8,c:['#b18b52','#454c40','#f9be68','#745247'][j%4]}))};
 }
@@ -2348,12 +2440,14 @@ function wreck(dt){
 }
 function advance(dt){
  const previousAltitude=alt;
+ if(!adventure.fuel){trick=null;airspeed+=(52-airspeed)*(1-Math.exp(-dt));alt-=dt*(10-4*pitch);x+=airspeed*dt*Math.sin(yaw);z+=airspeed*dt*Math.cos(yaw);return}
+ if(trick==='loop'){advanceReversal(dt);return}
  const targetSpeed=78+54*power;
  airspeed+=(targetSpeed-airspeed)*(1-Math.exp(-dt*3.6));
  const speed=airspeed;
  let forward=speed*dt,side=0;
  if(trick){
-  const old=phase,duration=trick==='loop'?3.5:1.65;
+  const old=phase,duration=1.65;
   const step=Math.min(dt,duration-elapsedTrick);
   elapsedTrick+=step;
   const u=elapsedTrick/duration;
@@ -2362,14 +2456,8 @@ function advance(dt){
   function eased(v){return v<ramp?v*v/(2*ramp*(1-ramp)):
    v>1-ramp?1-(1-v)*(1-v)/(2*ramp*(1-ramp)):(v-ramp/2)/(1-ramp)}
   phase=tau*eased(u);
-  const mid=(old+phase)/2;
-  if(trick==='loop'){
-   forward=speed*(step*Math.cos(mid)+dt-step);
-   alt+=speed*step*Math.sin(mid)
-  }else{
-   side=hand*9*(Math.sin(phase)-Math.sin(old));
-   alt+=9*(Math.cos(old)-Math.cos(phase))
-  }
+  side=hand*9*(Math.sin(phase)-Math.sin(old));
+  alt+=9*(Math.cos(old)-Math.cos(phase));
   // Blend vertical stick authority back in as the plane levels out.
   const endWeight=Math.min(1,Math.max(0,(u-.82)/.18));
   const startWeight=Math.max(0,1-u/.18);
@@ -2380,6 +2468,26 @@ function advance(dt){
  z+=Math.cos(yaw)*forward-Math.sin(yaw)*side;
  if(trick&&alt>previousAltitude)alt=Math.min(alt,Math.max(previousAltitude,ground(x,z)+flightCeiling));
  alt=Math.max(.65,alt);
+}
+function smoothTurn(value){
+ const u=Math.max(0,Math.min(1,value));return u*u*(3-2*u)
+}
+function reversalPose(seconds){
+ const arc=Math.PI*smoothTurn(seconds/2.25);
+ // Blend the compass heading near the vertical, where horizontal speed approaches zero.
+ const flip=smoothTurn((arc/Math.PI-.46)/.08);
+ return {heading:turnHeading+Math.PI*flip,pitch:Math.min(arc,Math.PI-arc),roll:-Math.PI*flip*(1-smoothTurn((seconds-2.25)/1.25))}
+}
+function advanceReversal(dt){
+ const end=Math.min(3.5,elapsedTrick+dt),mid=reversalPose((elapsedTrick+end)/2);
+ const step=end-elapsedTrick,span=airspeed*step,horizontal=span*Math.cos(mid.pitch);
+ x+=horizontal*Math.sin(mid.heading);z+=horizontal*Math.cos(mid.heading);
+ alt+=Math.min(span*Math.sin(mid.pitch),Math.max(0,ground(x,z)+flightCeiling-alt));
+ elapsedTrick=end;const pose=reversalPose(end);yaw=pose.heading;turnPitch=pose.pitch;turnRoll=pose.roll;
+ if(end===3.5){
+  const remaining=airspeed*Math.max(0,dt-step);x+=remaining*Math.sin(yaw);z+=remaining*Math.cos(yaw);
+  trick=null;turnPitch=turnRoll=0;pitch=bank=0
+ }
 }
 function artwork(width,height,paint){
  const image=document.createElement('canvas');image.width=width;image.height=height;
@@ -2414,7 +2522,7 @@ const enemyFrames=new Map();let enemies=[],bolts=[],trigger=false,reload=0;
 $('fire').onpointerdown=e=>{if(live&&encounter&&!deckMode){$('fire').setPointerCapture(e.pointerId);trigger=true}};
 $('fire').onpointerup=$('fire').onlostpointercapture=$('fire').onpointercancel=()=>{trigger=false};
 let locked=null, hostile=[], grace=0, nextAttack=0;
-let ammo=90,energy=100,supplying=false;
+let energy=100;
 let deckMode='',deckTime=0,landingSite=null,landingDirection=1;
 function parkAtStart(){
  landingSite=base;landingDirection=1;deckMode='moored';deckTime=0;
@@ -2425,7 +2533,7 @@ function syncFireButton(){$('fire').hidden=!encounter||Boolean(deckMode)}
 function deckAssist(dt){
  let port=landingSite;
  if(!deckMode){
-  if(power>.42)return false;
+  if(trick||(adventure.fuel>0&&power>.42))return false;
   port=null;let nearest=Infinity;
   for(const b of landingPorts){
    const direction=!b.deck&&Math.cos(yaw)<0?-1:1;
@@ -2457,10 +2565,11 @@ function deckAssist(dt){
  }else if(deckMode==='moored'){
   
  }else{
+  if(!adventure.fuel){deckMode='';return false}
   const prevX=x,prevZ=z,prevAlt=alt;
   airspeed=Math.min(105,airspeed+64*dt);x+=Math.sin(heading)*airspeed*dt;z+=Math.cos(heading)*airspeed*dt;alt+=Math.min(26,deckTime*14)*dt;
-  recordFlight(Math.hypot(x-prevX,z-prevZ,alt-prevAlt));
   if(impact(prevX,prevZ,prevAlt))return true;
+  recordFlight(Math.hypot(x-prevX,z-prevZ,alt-prevAlt));
   if(deckTime>=2.2){
    deckMode='';cameraYaw=yaw;
    
@@ -2606,13 +2715,21 @@ function worldMinimap(){
   g.save();g.translate(dx*k,dy*k);g.strokeStyle='#ffdf69';if(d>radarRange){g.rotate(Math.atan2(dx,-dy));poly([[0,-4],[-4,3],[4,3]],'#ffdf69')}else g.strokeRect(-4,-4,8,8);g.restore()}
  radarAircraft(0,0);g.restore()
 }
+const combatRadarRange=1500;
 function battleMinimap(){
- const r=radarDial(true),scale=(r-4)/(Math.SQRT2*battleHalf),p=localToWorld(x,z);
- const X=wx=>(wx-encounter.wx)*scale,Y=wz=>(encounter.wz-wz)*scale;
- const edge=battleHalf*scale;g.strokeStyle='#efc27e';g.strokeRect(-edge,-edge,2*edge,2*edge);
- g.strokeRect(-2,-2,4,4);
- for(const e of enemies)if(e.hp){const b=localToWorld(e.x,e.z);g.fillStyle='#ff7168';g.beginPath();g.arc(X(b.wx),Y(b.wz),2.5,0,tau);g.fill()}
- radarAircraft(X(p.wx),Y(p.wz));g.restore()
+ const r=radarDial(true),scale=r/combatRadarRange,p=localToWorld(x,z);
+ const dx=(encounter.wx-p.wx)*scale,dy=(p.wz-encounter.wz)*scale;
+ const edge=battleHalf*scale;g.strokeStyle='#efc27e';g.strokeRect(dx-edge,dy-edge,2*edge,2*edge);
+ const distance=Math.hypot(dx,dy),pin=Math.min(1,(r-5)/(distance||1));
+ g.save();g.translate(dx*pin,dy*pin);g.strokeRect(-2,-2,4,4);
+ if(distance>r){g.rotate(Math.atan2(dx,-dy));poly([[0,-5],[-2,-2],[2,-2]],'#efc27e')}g.restore();
+ for(const e of enemies){
+  const east=e.x-x,north=e.z-z;if(!e.hp||east*east+north*north>combatRadarRange**2)continue;
+  g.save();g.translate(east*scale,-north*scale);g.rotate(e.heading);
+  poly([[0,-4],[-3,3],[3,3]],'#ff7168');g.restore()
+ }
+ g.font='8px system-ui';g.fillStyle='#bfdbcb';g.fillText('0.5',r/3,0);g.fillText('1 km',0,r*2/3);
+ radarAircraft(0,0);g.restore()
 }
 let occupiedPorts=[];
 function clearEncounter(){encounter=null;nextAttack=0;grace=0;reload=0;enemies=[];bolts=[];hostile=[];locked=null;trigger=false;syncFireButton()}
@@ -2672,8 +2789,8 @@ function fight(dt){
   if(ready.length){switchMove(ready[0],'attack');ready[0].turn=Math.max(...enemies.map(e=>e.turn))+1;nextAttack=t+1}
  }
  chooseLock();
- if((trigger||keys.has('Space'))&&!trick&&reload<=0&&ammo>=1){
-  ammo-=1;
+ if((trigger||keys.has('Space'))&&!trick&&reload<=0&&adventure.ammo>=1){
+  adventure.ammo--;
   reload=.12;let vx=Math.sin(yaw),vz=Math.cos(yaw),vy=pitch*100/390;
   if(locked&&bearing(locked).angle<.19){
    const lead=bearing(locked).range/390,dx=locked.x-x+Math.sin(locked.heading)*80*lead,dz=locked.z-z+Math.cos(locked.heading)*80*lead,dy=locked.y-alt,n=Math.hypot(dx,dz,dy)||1;
@@ -3270,7 +3387,18 @@ function updateFlight(dt){
   lr=Math.max(-1,Math.min(1,error*2.6));
   if(Math.abs(error)<.12)returnHeading=null
  }
- bank+=(Math.max(-1,Math.min(1,lr))-bank)*(1-Math.exp(-8*dt));pitch+=(Math.max(-1,Math.min(1,ud))-pitch)*(1-Math.exp(-6*dt));yaw+=bank*dt*(returning?2:1.03+.15*power);if(!trick)applyClimb(dt);advance(dt);limitAirspace();if(adventure.cargo.length)recordFlight(Math.hypot(x-px,z-pz,alt-py));discoverRelics();if(!impact(px,pz,py)){fight(dt);updateSpray(dt)}cameraYaw+=(yaw-cameraYaw)*(1-Math.exp(-5.6*dt));t+=dt}
+ const reversing=trick==='loop';
+ bank+=((reversing?0:Math.max(-1,Math.min(1,lr)))-bank)*(1-Math.exp(-8*dt));
+ pitch+=((reversing?0:Math.max(-1,Math.min(1,ud)))-pitch)*(1-Math.exp(-6*dt));
+ if(!reversing)yaw+=bank*dt*(returning?2:1.03+.15*power);
+ if(!trick&&adventure.fuel>0)applyClimb(dt);
+ advance(dt);limitAirspace();
+ if(!impact(px,pz,py)){
+  recordFlight(Math.hypot(x-px,z-pz,alt-py));discoverRelics();fight(dt);updateSpray(dt)
+ }
+ const cameraTarget=reversing?turnHeading+Math.PI*smoothTurn(elapsedTrick/3.5):yaw;
+ cameraYaw+=angleDelta(cameraTarget-cameraYaw)*(1-Math.exp(-5.6*dt));t+=dt
+ }
 }
 function draw(dt){
  if(panel==='title'){
@@ -3351,7 +3479,7 @@ if(!inSky){
  const aboveIsland=levels&&alt>=levels.top;
  const floorY=aboveIsland?levels.top:onCarrier?deckHeight:ground(x,z),clearance=Math.max(0,alt-floorY);
  if(!inSky&&clearance<95&&!crash){
-  const offset=clearance*.48,roll=bank*.62+(trick==='roll'?hand*phase:0),loop=trick==='loop'?phase:0;
+  const offset=clearance*.48,roll=aircraftRoll(),loop=aircraftPitch();
   const sx=x-Math.sin(.12)*offset,sz=z-Math.cos(.12)*offset;
   const silhouette=shadowOutline.map(([side,nose])=>{
    const u=side*Math.cos(roll),v=nose*Math.cos(loop)+side*Math.sin(roll)*Math.sin(loop);
@@ -3383,7 +3511,7 @@ if(!inSky){
  // Sample both wing tips in world space so the wake stays behind the aircraft.
  if(live&&airspeed>0&&t>=wakeTime){
   wakeTime=t+.035;
-  const roll=bank*.62+(trick==='roll'?hand*phase:0), tilt=trick==='loop'?phase:0;
+  const roll=aircraftRoll(), tilt=aircraftPitch();
   const span=Math.min(w/79,h/115)*26*32/f;
   const tips=[-1,1].map(sign=>{
    const lateral=sign*span*Math.cos(roll),vertical=sign*span*Math.sin(roll);
@@ -3432,8 +3560,8 @@ if(!inSky){
  }
  if(deckMode&&live)$('place').textContent=landingSite.name;
  $('feedback').textContent=t<messageUntil?message:'';
- const scoreboard=(encounter?'弾 '+Math.floor(ammo)+'　EN '+Math.ceil(energy)+'%　':'')+score+' pt';
- if($('score').textContent!==scoreboard)$('score').textContent=scoreboard}
+ updateResourceHud()
+}
 function journalEntry(selected){
  const detail=$('entryDetail');detail.replaceChildren();
  if(selected){const h=document.createElement('h3'),p=document.createElement('p');h.textContent=selected.name;
@@ -3472,7 +3600,7 @@ function tutorialFlightHints(){
  }
 }
 function flightHelp(back){
- showPanel('guide','飛行手帳','離陸ボタンで発進。推力はスライダー、旋回と昇降は操縦桿または矢印キー。空賊は照準内で捕捉し、射撃ボタンかスペースで迎撃します。戦闘空域外へ逃走できますが、所持品を失うことがあります。着陸時は滑走路に沿って低速・低空で進入してください。');
+ showPanel('guide','飛行手帳','離陸ボタンで発進。推力はスライダー、旋回と昇降は操縦桿または矢印キー。空賊は照準内で捕捉し、射撃ボタンかスペースで迎撃します。戦闘空域外へ逃走できますが、所持品を失うことがあります。操縦桿を上に2回で半回転と半ロール、左右に2回でロール。燃料切れは滑空に移ります。中断中の積荷から予備品を使用できます。着陸時は滑走路に沿って低速・低空で進入してください。');
  action('戻る',back)
 }
 function tutorialArrival(port){

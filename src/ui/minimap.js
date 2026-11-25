@@ -65,11 +65,19 @@ function worldMinimap(){
   g.save();g.translate(dx*k,dy*k);g.strokeStyle='#ffdf69';if(d>radarRange){g.rotate(Math.atan2(dx,-dy));poly([[0,-4],[-4,3],[4,3]],'#ffdf69')}else g.strokeRect(-4,-4,8,8);g.restore()}
  radarAircraft(0,0);g.restore()
 }
+const combatRadarRange=1500;
 function battleMinimap(){
- const r=radarDial(true),scale=(r-4)/(Math.SQRT2*battleHalf),p=localToWorld(x,z);
- const X=wx=>(wx-encounter.wx)*scale,Y=wz=>(encounter.wz-wz)*scale;
- const edge=battleHalf*scale;g.strokeStyle='#efc27e';g.strokeRect(-edge,-edge,2*edge,2*edge);
- g.strokeRect(-2,-2,4,4);
- for(const e of enemies)if(e.hp){const b=localToWorld(e.x,e.z);g.fillStyle='#ff7168';g.beginPath();g.arc(X(b.wx),Y(b.wz),2.5,0,tau);g.fill()}
- radarAircraft(X(p.wx),Y(p.wz));g.restore()
+ const r=radarDial(true),scale=r/combatRadarRange,p=localToWorld(x,z);
+ const dx=(encounter.wx-p.wx)*scale,dy=(p.wz-encounter.wz)*scale;
+ const edge=battleHalf*scale;g.strokeStyle='#efc27e';g.strokeRect(dx-edge,dy-edge,2*edge,2*edge);
+ const distance=Math.hypot(dx,dy),pin=Math.min(1,(r-5)/(distance||1));
+ g.save();g.translate(dx*pin,dy*pin);g.strokeRect(-2,-2,4,4);
+ if(distance>r){g.rotate(Math.atan2(dx,-dy));poly([[0,-5],[-2,-2],[2,-2]],'#efc27e')}g.restore();
+ for(const e of enemies){
+  const east=e.x-x,north=e.z-z;if(!e.hp||east*east+north*north>combatRadarRange**2)continue;
+  g.save();g.translate(east*scale,-north*scale);g.rotate(e.heading);
+  poly([[0,-4],[-3,3],[3,3]],'#ff7168');g.restore()
+ }
+ g.font='8px system-ui';g.fillStyle='#bfdbcb';g.fillText('0.5',r/3,0);g.fillText('1 km',0,r*2/3);
+ radarAircraft(0,0);g.restore()
 }

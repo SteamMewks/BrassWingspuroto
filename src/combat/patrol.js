@@ -56,8 +56,8 @@ function fight(dt){
   if(ready.length){switchMove(ready[0],'attack');ready[0].turn=Math.max(...enemies.map(e=>e.turn))+1;nextAttack=t+1}
  }
  chooseLock();
- if((trigger||keys.has('Space'))&&!trick&&reload<=0&&ammo>=1){
-  ammo-=1;
+ if((trigger||keys.has('Space'))&&!trick&&reload<=0&&adventure.ammo>=1){
+  adventure.ammo--;
   reload=.12;let vx=Math.sin(yaw),vz=Math.cos(yaw),vy=pitch*100/390;
   if(locked&&bearing(locked).angle<.19){
    const lead=bearing(locked).range/390,dx=locked.x-x+Math.sin(locked.heading)*80*lead,dz=locked.z-z+Math.cos(locked.heading)*80*lead,dy=locked.y-alt,n=Math.hypot(dx,dz,dy)||1;
